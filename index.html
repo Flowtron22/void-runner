@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#071018" />
+  <title>Void Runner — Tactical Survival</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <main id="game-shell">
+    <canvas id="game-canvas" aria-label="Tactical view of player and enemy ships"></canvas>
+
+    <header class="top-hud glass">
+      <div class="brand"><span class="brand-mark">VR</span><div><b>VOID RUNNER</b><small>COURIER / ACTIVE CONTACT</small></div></div>
+      <div class="resource"><small>HULL</small><b id="hull-value">30 / 30</b><i class="meter"><span id="hull-meter"></span></i></div>
+      <div class="resource compact"><small>FUEL</small><b>12</b></div>
+      <div class="resource compact"><small>SCRAP</small><b id="scrap-value">18</b></div>
+      <div class="resource compact"><small>MISSILES</small><b id="missile-value">4</b></div>
+      <button id="pause-button" class="primary">Ⅱ PAUSE <kbd>SPACE</kbd></button>
+    </header>
+
+    <section class="enemy-hud glass">
+      <div><small>HOSTILE / WARDEN CUTTER</small><strong id="enemy-hull">HULL 18 / 18</strong></div>
+      <div class="enemy-status"><span id="enemy-shields">SHIELDS ◉</span><span id="target-hint">ARM A WEAPON</span></div>
+    </section>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="pause-banner">TACTICAL PAUSE <small>Orders and power controls remain active</small></div>
+
+    <aside class="room-card glass" id="room-card">
+      <div><small>SELECTED ROOM</small><b id="room-name">None</b></div>
+      <div class="room-stats"><span id="room-oxygen">O₂ —</span><span id="room-system">SYSTEM —</span></div>
+      <button id="door-control" disabled>Cycle connected doors</button>
+      <button id="vent-control" disabled>Open airlock</button>
+    </aside>
+
+    <section class="bottom-console glass">
+      <nav class="tabs" aria-label="Ship controls">
+        <button data-tab="crew" class="active">CREW</button>
+        <button data-tab="systems">SYSTEMS</button>
+        <button data-tab="weapons">WEAPONS</button>
+      </nav>
+
+      <div class="panel active" data-panel="crew">
+        <div id="crew-list" class="crew-list"></div>
+        <p class="instruction">Select crew, then tap a room. Crew repair systems and suppress fire automatically.</p>
+      </div>
+
+      <div class="panel" data-panel="systems">
+        <div class="power-header"><span>REACTOR OUTPUT</span><b id="reactor-value">8 / 10</b></div>
+        <div id="power-grid" class="power-grid"></div>
+      </div>
+
+      <div class="panel" data-panel="weapons">
+        <div id="weapon-list" class="weapon-list"></div>
+        <p class="instruction">Arm a ready weapon, then tap an enemy room. Damaged systems lose function.</p>
+      </div>
+    </section>
+
+    <dialog id="intro-dialog" class="modal">
+      <div class="eyebrow">TACTICAL TRANSMISSION 07-A</div>
+      <h1>The data must survive.</h1>
+      <p>A Warden cutter has intercepted the courier <b>Aster Vale</b>. Keep the ship alive, disable the hostile, and escape the blockade.</p>
+      <div class="tutorial-grid">
+        <span><b>1</b>Select crew and move them between rooms.</span>
+        <span><b>2</b>Shift power to shields, engines, oxygen, or weapons.</span>
+        <span><b>3</b>Pause often. Vent fire through the airlock.</span>
+        <span><b>4</b>Arm charged weapons and target enemy systems.</span>
+      </div>
+      <button id="start-button" class="primary large">BEGIN ENGAGEMENT</button>
+    </dialog>
+
+    <dialog id="end-dialog" class="modal">
+      <div class="eyebrow" id="end-eyebrow">CONTACT RESOLVED</div>
+      <h1 id="end-title">Courier survives.</h1>
+      <p id="end-copy">The hostile cutter breaks apart. The data route is open—for now.</p>
+      <div id="end-stats" class="end-stats"></div>
+      <button id="restart-button" class="primary large">RUN AGAIN</button>
+    </dialog>
+
+    <section id="debug-panel" class="debug glass" hidden>
+      <b>DEBUG / F1</b>
+      <button data-debug="scrap">+100 Scrap</button><button data-debug="repair">Repair Hull</button>
+      <button data-debug="fire">Start Fire</button><button data-debug="breach">Create Breach</button>
+      <button data-debug="damage">Damage System</button><button data-debug="kill">Kill Enemy</button>
+    </section>
+  </main>
+  <script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
