@@ -346,7 +346,8 @@ FTL/
 │   └── ship/
 │       └── Ship.js             # Ship, rooms, crew, power, atmosphere, repair
 ├── scripts/
-│   └── dev-server.mjs          # Dependency-free local static server
+│   └── dev-server.mjs          # Legacy minimal static server utility
+├── vercel.json                 # Vercel build and output configuration
 ├── package.json
 ├── package-lock.json
 ├── README.md
@@ -381,7 +382,14 @@ Syntax checks:
 npm run check
 ```
 
-The game deliberately uses a static server because browser ES modules should not be launched directly through `file://`.
+The game uses Vite as a development server and production bundler because browser ES modules should not be launched directly through `file://`. The production build bundles Three.js into `dist/assets/`, avoiding runtime access to `node_modules` on static hosts such as Vercel.
+
+Production build and preview:
+
+```powershell
+npm run build
+npm run preview
+```
 
 ## 19. Validation checklist
 

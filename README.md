@@ -11,6 +11,15 @@ npm run dev
 
 Open `http://127.0.0.1:4173`.
 
+## Production build
+
+```powershell
+npm run build
+npm run preview
+```
+
+Vercel uses `vercel.json` to build the static site into `dist/`. Three.js is bundled into the production assets, so deployments do not depend on serving `node_modules`.
+
 ## Controls
 
 - Click or tap a crew member, then a room, to issue movement orders.
