@@ -2,6 +2,8 @@
 
 A portrait-first, real-time-with-pause spaceship survival vertical slice built with Three.js and vanilla ES modules.
 
+The default **Guided Run** teaches the combat loop one action at a time, slows enemy pressure, and auto-pauses on major emergencies. Visual production follows the locked luminous pixel-art rules in `ART_BIBLE.md`.
+
 ## Run locally
 
 ```powershell

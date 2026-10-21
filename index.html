@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#071018" />
+  <meta name="theme-color" content="#070812" />
   <title>Void Runner — Tactical Survival</title>
   <link rel="stylesheet" href="css/main.css" />
 </head>
@@ -11,8 +11,8 @@
   <main id="game-shell">
     <canvas id="game-canvas" aria-label="Tactical view of player and enemy ships"></canvas>
 
-    <header class="top-hud glass">
-      <div class="brand"><span class="brand-mark">VR</span><div><b>VOID RUNNER</b><small>COURIER / ACTIVE CONTACT</small></div></div>
+    <header class="top-hud pixel-panel">
+      <div class="brand"><span class="brand-mark">VR</span><div><b>VOID RUNNER</b><small>ASTER VALE // COMBAT LINK</small></div></div>
       <div class="resource"><small>HULL</small><b id="hull-value">30 / 30</b><i class="meter"><span id="hull-meter"></span></i></div>
       <div class="resource compact"><small>FUEL</small><b>12</b></div>
       <div class="resource compact"><small>SCRAP</small><b id="scrap-value">18</b></div>
@@ -20,22 +20,31 @@
       <button id="pause-button" class="primary">Ⅱ PAUSE <kbd>SPACE</kbd></button>
     </header>
 
-    <section class="enemy-hud glass">
+    <section class="enemy-hud pixel-panel">
       <div><small>HOSTILE / WARDEN CUTTER</small><strong id="enemy-hull">HULL 18 / 18</strong></div>
-      <div class="enemy-status"><span id="enemy-shields">SHIELDS ◉</span><span id="target-hint">ARM A WEAPON</span></div>
+      <div class="enemy-status"><span id="enemy-shields">SHIELDS ◉</span><span id="threat-value">NEXT VOLLEY --</span><span id="target-hint">ARM A WEAPON</span></div>
+    </section>
+
+    <section id="coach-panel" class="coach-panel pixel-panel" aria-live="polite">
+      <span id="coach-step">GUIDE 1/5</span>
+      <div><b id="coach-title">Pause. Read the ship.</b><small id="coach-copy">Select a crew card below. Time is stopped while you decide.</small></div>
+    </section>
+
+    <section id="priority-strip" class="priority-strip pixel-panel" aria-live="polite">
+      <span id="priority-icon">◆</span><div><small>CAPTAIN'S PRIORITY</small><b id="priority-text">Select a crew member to begin.</b></div>
     </section>
 
     <div id="toast" role="status" aria-live="polite"></div>
     <div id="pause-banner">TACTICAL PAUSE <small>Orders and power controls remain active</small></div>
 
-    <aside class="room-card glass" id="room-card">
+    <aside class="room-card pixel-panel" id="room-card">
       <div><small>SELECTED ROOM</small><b id="room-name">None</b></div>
       <div class="room-stats"><span id="room-oxygen">O₂ —</span><span id="room-system">SYSTEM —</span></div>
       <button id="door-control" disabled>Cycle connected doors</button>
       <button id="vent-control" disabled>Open airlock</button>
     </aside>
 
-    <section class="bottom-console glass">
+    <section class="bottom-console pixel-panel">
       <nav class="tabs" aria-label="Ship controls">
         <button data-tab="crew" class="active">CREW</button>
         <button data-tab="systems">SYSTEMS</button>
@@ -44,7 +53,7 @@
 
       <div class="panel active" data-panel="crew">
         <div id="crew-list" class="crew-list"></div>
-        <p class="instruction">Select crew, then tap a room. Crew repair systems and suppress fire automatically.</p>
+        <p class="instruction"><b>HOW:</b> Select crew → select a room. They walk there, fight fire, then repair.</p>
       </div>
 
       <div class="panel" data-panel="systems">
@@ -54,24 +63,26 @@
 
       <div class="panel" data-panel="weapons">
         <div id="weapon-list" class="weapon-list"></div>
-        <p class="instruction">Arm a ready weapon, then tap an enemy room. Damaged systems lose function.</p>
+        <p class="instruction"><b>HOW:</b> Wait for READY → arm weapon → tap the enemy's red Weapons room first.</p>
       </div>
     </section>
 
-    <dialog id="intro-dialog" class="modal">
-      <div class="eyebrow">TACTICAL TRANSMISSION 07-A</div>
-      <h1>The data must survive.</h1>
-      <p>A Warden cutter has intercepted the courier <b>Aster Vale</b>. Keep the ship alive, disable the hostile, and escape the blockade.</p>
-      <div class="tutorial-grid">
-        <span><b>1</b>Select crew and move them between rooms.</span>
-        <span><b>2</b>Shift power to shields, engines, oxygen, or weapons.</span>
-        <span><b>3</b>Pause often. Vent fire through the airlock.</span>
-        <span><b>4</b>Arm charged weapons and target enemy systems.</span>
+    <dialog id="intro-dialog" class="modal pixel-panel">
+      <div class="eyebrow">// INCOMING COMBAT TUTORIAL</div>
+      <h1>Keep the ship alive.</h1>
+      <p>You do not pilot the ship. You command its <b>crew, power, doors and weapons</b>. Pause whenever the situation becomes confusing.</p>
+      <div class="mode-picker" role="group" aria-label="Difficulty mode">
+        <button class="mode-option active" data-mode="guided"><b>GUIDED RUN</b><small>Recommended · slower enemy · auto-pause · live instructions</small></button>
+        <button class="mode-option" data-mode="standard"><b>STANDARD</b><small>Original pressure · no automatic pauses</small></button>
       </div>
-      <button id="start-button" class="primary large">BEGIN ENGAGEMENT</button>
+      <div class="survival-rule">
+        <b>THE ONE RULE</b>
+        <span><i>1</i> Pause</span><span><i>2</i> Fix red rooms</span><span><i>3</i> Fire at enemy Weapons</span>
+      </div>
+      <button id="start-button" class="primary large">START GUIDED RUN</button>
     </dialog>
 
-    <dialog id="end-dialog" class="modal">
+    <dialog id="end-dialog" class="modal pixel-panel">
       <div class="eyebrow" id="end-eyebrow">CONTACT RESOLVED</div>
       <h1 id="end-title">Courier survives.</h1>
       <p id="end-copy">The hostile cutter breaks apart. The data route is open—for now.</p>
@@ -79,7 +90,7 @@
       <button id="restart-button" class="primary large">RUN AGAIN</button>
     </dialog>
 
-    <section id="debug-panel" class="debug glass" hidden>
+    <section id="debug-panel" class="debug pixel-panel" hidden>
       <b>DEBUG / F1</b>
       <button data-debug="scrap">+100 Scrap</button><button data-debug="repair">Repair Hull</button>
       <button data-debug="fire">Start Fire</button><button data-debug="breach">Create Breach</button>

@@ -2,6 +2,8 @@
 
 This file is the canonical handoff document for humans and Codex agents continuing the project on another computer. It describes the intended game, the current Milestone 1 implementation, the simulation rules, the source layout, and the next development steps.
 
+The locked visual specification is in `ART_BIBLE.md`. Read it before creating or changing any visual asset.
+
 ## 1. Project identity
 
 **Title:** VOID RUNNER  
@@ -27,6 +29,8 @@ The game is inspired by systemic spaceship-management games, but its names, pres
 ## 3. Current player experience
 
 The current build starts directly in a single combat encounter:
+
+The default **Guided Run** begins in tactical pause and teaches crew selection, room movement, time control, weapon readiness, and subsystem targeting as a five-step interaction sequence. It gives the player 40 hull and 11 reactor power, accelerates player weapon and shield recovery, slows enemy weapon charge, reduces incoming damage and hazard chances, and auto-pauses for major hits or the first ready weapon. **Standard** preserves the original 30-hull, 10-reactor pressure without automatic pauses.
 
 1. Read the mission briefing and begin the engagement.
 2. Select one of three crew members and tap a player room to issue a movement order.
@@ -531,7 +535,7 @@ Do not hardcode individual events, weapons, species, or enemies into control flo
 
 When continuing this repository:
 
-1. Read this file and `README.md` first.
+1. Read this file, `ART_BIBLE.md`, and `README.md` first.
 2. Run `npm install`, `npm run check`, and `npm run dev` before editing.
 3. Inspect the current browser console and complete one combat loop.
 4. Preserve the fixed-step simulation and state/visual separation.

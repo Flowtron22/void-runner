@@ -7,9 +7,9 @@ import { AudioSystem } from './AudioSystem.js';
 
 export class Game {
   constructor(){
-    this.state='COMBAT'; this.started=false; this.paused=false; this.ended=false; this.scrap=18; this.missiles=4; this.elapsed=0; this.shots=0; this.salvos=[];this.audio=new AudioSystem();
-    this.player=new Ship({layout:PLAYER_LAYOUT,hull:30,reactor:10});
-    this.enemy=new Ship({layout:ENEMY_LAYOUT,hull:18,reactor:8,enemy:true});
+    this.state='COMBAT'; this.started=false; this.paused=false; this.ended=false; this.mode='guided'; this.coachStep=0; this.lastAutoPause=-99; this.scrap=18; this.missiles=4; this.elapsed=0; this.shots=0; this.salvos=[];this.audio=new AudioSystem();
+    this.player=new Ship({layout:PLAYER_LAYOUT,hull:40,reactor:11});
+    this.enemy=new Ship({layout:ENEMY_LAYOUT,hull:16,reactor:8,enemy:true});
     this.scene=new SceneManager(document.querySelector('#game-canvas'),data=>this.handlePick(data));
     this.scene.buildShip(this.player,{offsetZ:5.15,scale:.88}); this.scene.buildShip(this.enemy,{offsetZ:-7.2,scale:.7,enemy:true});
     this.player.addCrew({id:'crew_nova',name:'Nova',species:'human',roomId:'bridge'});
@@ -27,7 +27,8 @@ export class Game {
 
   makeWeapon(data){return{...data,charge:0,ready:false};}
   bindUI(){
-    document.querySelector('#start-button').onclick=()=>{this.audio.unlock();document.querySelector('#intro-dialog').close();this.started=true;this.toast('ENGAGEMENT LIVE');};
+    for(const button of document.querySelectorAll('.mode-option'))button.onclick=()=>{this.mode=button.dataset.mode;for(const option of document.querySelectorAll('.mode-option'))option.classList.toggle('active',option===button);document.querySelector('#start-button').textContent=this.mode==='guided'?'START GUIDED RUN':'START STANDARD RUN';};
+    document.querySelector('#start-button').onclick=()=>{this.audio.unlock();document.querySelector('#intro-dialog').close();this.started=true;if(this.mode==='guided'){this.setPaused(true);this.setCoachStep(0);this.toast('TIME STOPPED — START WITH CREW');}else{this.player.maxHull=30;this.player.hull=Math.min(this.player.hull,30);this.player.reactor=10;this.player.maxReactor=10;this.enemy.maxHull=18;this.enemy.hull=18;this.setPaused(false);document.querySelector('#coach-panel').hidden=true;this.toast('ENGAGEMENT LIVE');}this.updateUI();};
     document.querySelector('#restart-button').onclick=()=>location.reload();
     document.querySelector('#pause-button').onclick=()=>this.togglePause();
     document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat){e.preventDefault();this.togglePause();}if(e.key==='F1'){e.preventDefault();const p=document.querySelector('#debug-panel');p.hidden=!p.hidden;}});
@@ -38,8 +39,9 @@ export class Game {
   }
 
   setTab(id){for(const b of document.querySelectorAll('.tabs button'))b.classList.toggle('active',b.dataset.tab===id);for(const p of document.querySelectorAll('.panel'))p.classList.toggle('active',p.dataset.panel===id);}
-  togglePause(){if(!this.started||this.ended)return;this.paused=!this.paused;document.body.classList.toggle('paused',this.paused);document.querySelector('#pause-button').innerHTML=this.paused?'▶ RESUME <kbd>SPACE</kbd>':'Ⅱ PAUSE <kbd>SPACE</kbd>';}
-  selectCrew(id){const crew=this.player.crew.find(c=>c.id===id&&!c.dead);if(!crew)return;this.selectedCrew=crew;for(const c of this.player.crew)c.selected=c===crew;this.setTab('crew');this.updateUI();}
+  setPaused(value){this.paused=value;document.body.classList.toggle('paused',this.paused);document.querySelector('#pause-button').innerHTML=this.paused?'▶ RESUME <kbd>SPACE</kbd>':'Ⅱ PAUSE <kbd>SPACE</kbd>';}
+  togglePause(){if(!this.started||this.ended)return;this.setPaused(!this.paused);if(this.mode==='guided'&&this.coachStep===2&&!this.paused)this.setCoachStep(3);else if(this.mode==='guided'&&this.coachStep===5&&!this.paused)this.setCoachStep(6);}
+  selectCrew(id){const crew=this.player.crew.find(c=>c.id===id&&!c.dead);if(!crew)return;this.selectedCrew=crew;for(const c of this.player.crew)c.selected=c===crew;this.setTab('crew');if(this.mode==='guided'&&this.coachStep===0)this.setCoachStep(1);this.updateUI();}
 
   handlePick(data){
     if(this.ended)return;
@@ -50,7 +52,7 @@ export class Game {
     if(data.enemy&&this.armedWeapon){this.firePlayerWeapon(this.armedWeapon,room);return;}
     if(data.enemy){this.toast('ARM A READY WEAPON FIRST');this.setTab('weapons');return;}
     for(const r of this.player.rooms.values())r.selected=false;room.selected=true;this.selectedRoom=room;
-    if(this.selectedCrew&&this.selectedCrew.currentRoom!==room.id){if(this.player.routeCrew(this.selectedCrew,room.id))this.toast(`${this.selectedCrew.name.toUpperCase()} → ${room.name.toUpperCase()}`);else this.toast('NO OPEN ROUTE — CHECK DOORS');}
+    if(this.selectedCrew&&this.selectedCrew.currentRoom!==room.id){if(this.player.routeCrew(this.selectedCrew,room.id)){this.toast(`${this.selectedCrew.name.toUpperCase()} → ${room.name.toUpperCase()}`);if(this.mode==='guided'&&this.coachStep===1)this.setCoachStep(2);}else this.toast('NO OPEN ROUTE — CHECK DOORS');}
     this.updateUI();
   }
 
@@ -58,7 +60,7 @@ export class Game {
     if(!weapon.ready||this.player.effective('weapons')<weapon.power)return;
     weapon.charge=0;weapon.ready=false;this.armedWeapon=null;this.shots++;
     for(let i=0;i<weapon.shots;i++)this.salvos.push({delay:i*.22,source:this.player,target:this.enemy,weapon,roomId:room.id});
-    this.audio.tone(weapon.id==='cannon'?'cannon':'laser');this.toast(`TARGET LOCK — ${room.name.toUpperCase()}`);this.updateUI();
+    this.audio.tone(weapon.id==='cannon'?'cannon':'laser');this.toast(`TARGET LOCK — ${room.name.toUpperCase()}`);if(this.mode==='guided'&&this.coachStep<=4)this.setCoachStep(5);this.updateUI();
   }
 
   launchShot(s){
@@ -68,26 +70,53 @@ export class Game {
   resolveHit(s,pos){
     const evade=Math.min(.42,s.target.effective('engines')*.07+s.target.effective('bridge')*.035);
     if(Math.random()<evade){this.toast(s.target===this.player?'EVASIVE MANEUVER':'TARGET EVADED');return;}
-    const result=s.target.takeHit(s.roomId,s.weapon.damage,s.weapon.shieldDamage);this.scene.impact(pos,result.shield?0x5df2dd:s.weapon.color);this.audio.tone(result.shield?'shield':'hit');
-    if(!result.shield&&s.target===this.player)this.toast(`${result.room.name.toUpperCase()} HIT — ${s.weapon.damage} HULL`);
+    const guidedHit=this.mode==='guided'&&s.target===this.player;const damage=guidedHit?s.weapon.damage*.55:s.weapon.damage;const result=s.target.takeHit(s.roomId,damage,s.weapon.shieldDamage,guidedHit ? .35 : 1);this.scene.impact(pos,result.shield?0x42f5d7:s.weapon.color);this.audio.tone(result.shield?'shield':'hit');
+    if(!result.shield&&s.target===this.player){this.toast(`${result.room.name.toUpperCase()} HIT — SEND CREW`);this.maybeAutoPause(`AUTO-PAUSED: ${result.room.name.toUpperCase()} DAMAGED`);}
   }
 
   update(dt){
-    this.elapsed+=dt;this.player.update(dt);this.enemy.update(dt);this.chargeWeapons(this.player,this.weapons,dt);this.chargeWeapons(this.enemy,this.enemyWeapons,dt);
+    this.elapsed+=dt;this.player.update(dt);this.enemy.update(dt);if(this.mode==='guided')this.player.shieldTimer+=dt*.65;this.chargeWeapons(this.player,this.weapons,dt,this.mode==='guided'?1.3:1);this.chargeWeapons(this.enemy,this.enemyWeapons,dt,this.mode==='guided'?.58:1);
     for(let i=this.salvos.length-1;i>=0;i--){this.salvos[i].delay-=dt;if(this.salvos[i].delay<=0){this.launchShot(this.salvos[i]);this.salvos.splice(i,1);}}
     for(const w of this.enemyWeapons)if(w.ready&&this.enemy.effective('weapons')>=w.power){w.charge=0;w.ready=false;const room=this.randomTargetRoom();for(let i=0;i<w.shots;i++)this.salvos.push({delay:i*.2,source:this.enemy,target:this.player,weapon:w,roomId:room.id});this.audio.tone('laser');}
+    if(this.mode==='guided'&&this.coachStep===3&&this.weapons.some(w=>w.ready)){this.setCoachStep(4);this.setTab('weapons');this.maybeAutoPause('WEAPON READY — CHOOSE ARC PULSE');}
     if(this.enemy.hull<=0)this.finish(true);else if(this.player.hull<=0||this.player.crew.every(c=>c.dead))this.finish(false);
   }
 
-  chargeWeapons(ship,weapons,dt){let capacity=ship.effective('weapons');for(const w of weapons){if(capacity>=w.power){capacity-=w.power;if(!w.ready){w.charge=Math.min(w.cooldown,w.charge+dt);w.ready=w.charge>=w.cooldown;}}}}
+  chargeWeapons(ship,weapons,dt,rate=1){let capacity=ship.effective('weapons');for(const w of weapons){if(capacity>=w.power){capacity-=w.power;if(!w.ready){w.charge=Math.min(w.cooldown,w.charge+dt*rate);w.ready=w.charge>=w.cooldown;}}}}
   randomRoom(ship){const rooms=[...ship.rooms.values()].filter(r=>!r.airlock);return rooms[Math.floor(Math.random()*rooms.length)];}
   randomTargetRoom(){const urgent=[...this.player.rooms.values()].filter(r=>r.system&&Math.random()<.45);return urgent.length?urgent[Math.floor(Math.random()*urgent.length)]:this.randomRoom(this.player);}
 
   updateUI(){
-    const p=this.player,e=this.enemy;document.querySelector('#hull-value').textContent=`${Math.ceil(p.hull)} / ${p.maxHull}`;document.querySelector('#hull-meter').style.width=`${p.hull/p.maxHull*100}%`;document.querySelector('#enemy-hull').textContent=`HULL ${Math.ceil(e.hull)} / ${e.maxHull}`;document.querySelector('#enemy-shields').textContent=`SHIELDS ${'◉'.repeat(e.shield)}${'○'.repeat(Math.max(0,2-e.shield))}`;document.querySelector('#scrap-value').textContent=this.scrap;document.querySelector('#missile-value').textContent=this.missiles;
+    const p=this.player,e=this.enemy;document.querySelector('#hull-value').textContent=`${Math.ceil(p.hull)} / ${p.maxHull}`;document.querySelector('#hull-meter').style.width=`${p.hull/p.maxHull*100}%`;document.querySelector('#enemy-hull').textContent=`HULL ${Math.ceil(e.hull)} / ${e.maxHull}`;document.querySelector('#enemy-shields').textContent=`SHIELDS ${'■'.repeat(e.shield)}${'□'.repeat(Math.max(0,2-e.shield))}`;document.querySelector('#scrap-value').textContent=this.scrap;document.querySelector('#missile-value').textContent=this.missiles;
+    const nextVolley=Math.min(...this.enemyWeapons.map(w=>Math.max(0,w.cooldown-w.charge)));document.querySelector('#threat-value').textContent=`NEXT VOLLEY ${Math.ceil(nextVolley)}s`;
     const room=this.selectedRoom;document.querySelector('#room-name').textContent=room?.name||'None';document.querySelector('#room-oxygen').textContent=room?`O₂ ${Math.round(room.oxygen)}%`:'O₂ —';document.querySelector('#room-system').textContent=room?.system?`${room.system.toUpperCase()} ${Math.max(0,Math.round((this.player.systems[room.system]?.health||0)*10)/10)}`:'SYSTEM —';document.querySelector('#door-control').disabled=!room;document.querySelector('#vent-control').disabled=!room?.airlock;document.querySelector('#vent-control').textContent=p.airlockOpen?'Seal airlock':'Open airlock';
     document.querySelector('#target-hint').textContent=this.armedWeapon?'TAP ENEMY ROOM':'ARM A WEAPON';
-    this.renderCrewUI();this.renderPowerUI();this.renderWeaponUI();
+    this.renderCrewUI();this.renderPowerUI();this.renderWeaponUI();this.updatePriority();
+  }
+
+  setCoachStep(step){
+    this.coachStep=step;const guide=[
+      ['1/5','SELECT CREW','Tap Nova, IX-4, or Bram in the CREW panel.'],
+      ['2/5','MOVE CREW','Now tap a room on your ship. Crew walk there and work automatically.'],
+      ['3/5','RESUME TIME','Press RESUME. Watch the enemy volley timer and weapon charge bars.'],
+      ['4/5','CHARGE WEAPONS','Stay alive until Arc Pulse flashes READY. You can pause at any time.'],
+      ['5/5','FIRE AT WEAPONS','Tap Arc Pulse, then tap the enemy red Weapons room.'],
+      ['LOCK','TARGET LOCKED','Press RESUME to launch the volley.'],
+      ['CLEAR','YOU HAVE COMMAND','Follow the priority alert. Pause whenever it turns red.']
+    ][step]||['CLEAR','YOU HAVE COMMAND','Keep shields powered and disable enemy Weapons first.'];
+    document.querySelector('#coach-step').textContent=`GUIDE ${guide[0]}`;document.querySelector('#coach-title').textContent=guide[1];document.querySelector('#coach-copy').textContent=guide[2];document.querySelector('#coach-panel').classList.toggle('complete',step>=5);
+  }
+
+  maybeAutoPause(message){if(this.mode!=='guided'||this.paused||this.elapsed-this.lastAutoPause<6)return;this.lastAutoPause=this.elapsed;this.setPaused(true);this.toast(message);}
+  updatePriority(){
+    const rooms=[...this.player.rooms.values()];const fire=rooms.find(r=>r.fire>2),lowOxygen=rooms.find(r=>r.oxygen<30),damaged=rooms.find(r=>r.damage>.1);let level='',icon='◆',text='Keep shields powered. Target enemy Weapons first.';
+    if(fire){level='danger';icon='!';text=`FIRE IN ${fire.name.toUpperCase()}: send crew or vent through Airlock.`;}
+    else if(lowOxygen){level='danger';icon='O₂';text=`LOW OXYGEN IN ${lowOxygen.name.toUpperCase()}: seal breaches and power Oxygen.`;}
+    else if(damaged){level='warning';icon='+';text=`${damaged.name.toUpperCase()} DAMAGED: move crew there to repair.`;}
+    else if(this.player.shield===0){level='warning';icon='□';text='SHIELDS DOWN: keep Shield power on while it recharges.';}
+    else if(this.weapons.some(w=>w.ready)){icon='▶';text='WEAPON READY: arm it, then target enemy Weapons.';}
+    else if(this.selectedCrew===null){text='Select a crew member, then tap a room to move them.';}
+    const strip=document.querySelector('#priority-strip');strip.className=`priority-strip pixel-panel ${level}`;document.querySelector('#priority-icon').textContent=icon;document.querySelector('#priority-text').textContent=text;
   }
 
   renderCrewUI(){const box=document.querySelector('#crew-list');box.innerHTML='';for(const c of this.player.crew){const b=document.createElement('button');b.className=`crew-card ${c.selected?'active':''}`;b.style.setProperty('--crew',`#${c.color.toString(16).padStart(6,'0')}`);const room=this.player.rooms.get(c.currentRoom);b.innerHTML=`<i class="crew-dot"></i><span><b>${c.name}${c.dead?' / LOST':''}</b><small>${c.species.toUpperCase()} · ${room.name}</small></span><i class="health"><i style="width:${c.health/c.maxHealth*100}%"></i></i>`;b.disabled=c.dead;b.onclick=()=>this.selectCrew(c.id);box.append(b);}}

@@ -82,12 +82,12 @@ export class Ship {
     if(this.shield<capacity){ this.shieldTimer+=dt; if(this.shieldTimer>=7){this.shield++;this.shieldTimer=0;} }
   }
 
-  takeHit(roomId,damage,shieldDamage=1){
+  takeHit(roomId,damage,shieldDamage=1,hazardScale=1){
     if(this.shield>0){ this.shield=Math.max(0,this.shield-shieldDamage); this.shieldTimer=0; return { shield:true, damage:0 }; }
     const room=this.rooms.get(roomId)||[...this.rooms.values()][0];
     this.hull=Math.max(0,this.hull-damage); room.damage=Math.min(3,room.damage+damage*.45);
     const sys=room.system&&this.systems[room.system]; if(sys){ sys.health=Math.max(0,sys.health-damage*.55); sys.power=Math.min(sys.power,Math.ceil(sys.health)); }
-    if(Math.random()<.24) room.fire=Math.max(room.fire,28); if(Math.random()<.12) room.breach=true;
+    if(Math.random()<.24*hazardScale) room.fire=Math.max(room.fire,28); if(Math.random()<.12*hazardScale) room.breach=true;
     return { shield:false, damage, room };
   }
 }
