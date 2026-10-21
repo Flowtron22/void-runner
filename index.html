@@ -3,99 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#070812" />
-  <title>Void Runner — Tactical Survival</title>
+  <meta name="theme-color" content="#05050b" />
+  <meta name="description" content="Build a point-limited warband, route through hostile sectors, and watch your formation fight automatically." />
+  <title>VOID RUNNER — Protocol Front</title>
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
-  <main id="game-shell">
-    <canvas id="game-canvas" aria-label="Tactical view of player and enemy ships"></canvas>
-
-    <header class="top-hud pixel-panel">
-      <div class="brand"><span class="brand-mark">VR</span><div><b>VOID RUNNER</b><small>ASTER VALE // COMBAT LINK</small></div></div>
-      <div class="resource"><small>HULL</small><b id="hull-value">30 / 30</b><i class="meter"><span id="hull-meter"></span></i></div>
-      <div class="resource compact"><small>FUEL</small><b>12</b></div>
-      <div class="resource compact"><small>SCRAP</small><b id="scrap-value">18</b></div>
-      <div class="resource compact"><small>MISSILES</small><b id="missile-value">4</b></div>
-      <button id="pause-button" class="primary">Ⅱ PAUSE <kbd>SPACE</kbd></button>
+  <main id="app" class="app-shell">
+    <header class="topbar pixel-panel">
+      <button id="home-button" class="brand-button" aria-label="Return to command">VR</button>
+      <div class="brand-copy"><b>VOID RUNNER</b><small id="location-label">PROTOCOL FRONT</small></div>
+      <div class="top-stat"><small>WAR CHESTS</small><b id="meta-currency">0</b></div>
+      <button id="help-button" class="icon-button" aria-label="How to play">?</button>
     </header>
 
-    <section class="enemy-hud pixel-panel">
-      <div><small>HOSTILE / WARDEN CUTTER</small><strong id="enemy-hull">HULL 18 / 18</strong></div>
-      <div class="enemy-status"><span id="enemy-shields">SHIELDS ◉</span><span id="threat-value">NEXT VOLLEY --</span><span id="target-hint">ARM A WEAPON</span></div>
+    <section id="home-screen" class="screen active" aria-labelledby="home-title">
+      <div class="hero-art" aria-hidden="true"><div class="pixel-moon"></div><div class="carrier-sprite"><i></i><i></i><i></i><i></i><i></i></div><div class="scan-line"></div></div>
+      <div class="hero-copy">
+        <p class="eyebrow">// ROGUELIKE AUTO-CAMPAIGN</p>
+        <h1 id="home-title">BUILD THE BOX.<br><span>BREAK THE FRONT.</span></h1>
+        <p>Pack a legal strike force by <b>points</b> and <b>physical grid space</b>. Choose a route. Battles resolve automatically from your formation, units, gear, and run protocols.</p>
+      </div>
+      <div class="rule-strip pixel-panel">
+        <div><b>01</b><span>PACK<br>UNITS</span></div><i></i><div><b>02</b><span>CHOOSE<br>PATH</span></div><i></i><div><b>03</b><span>AUTO<br>BATTLE</span></div><i></i><div><b>04</b><span>TAKE<br>POWER</span></div>
+      </div>
+      <div class="home-actions">
+        <button id="new-run-button" class="primary large">BEGIN 500 PT EXPEDITION</button>
+        <button id="resume-button" class="large" hidden>RESUME ACTIVE RUN</button>
+        <button id="research-button" class="large">R&amp;D / PERMANENT UPGRADES</button>
+      </div>
+      <p class="portrait-note">DESIGNED FOR PORTRAIT · PROGRESS SAVES ON THIS DEVICE</p>
     </section>
 
-    <section id="coach-panel" class="coach-panel pixel-panel" aria-live="polite">
-      <span id="coach-step">GUIDE 1/5</span>
-      <div><b id="coach-title">Pause. Read the ship.</b><small id="coach-copy">Select a crew card below. Time is stopped while you decide.</small></div>
+    <section id="map-screen" class="screen" aria-labelledby="map-title">
+      <div class="section-head">
+        <div><p class="eyebrow" id="region-kicker">REGION 1 / 4</p><h2 id="map-title">ASHEN APPROACH</h2></div>
+        <div class="cap-badge"><small>ARMY LIMIT</small><b id="map-cap">500</b><span>PTS</span></div>
+      </div>
+      <div class="run-stats pixel-panel">
+        <span><small>HULL</small><b id="run-hull">3/3</b></span><span><small>RUN DATA</small><b id="run-data">0</b></span><span><small>PROTOCOLS</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button">EDIT FORCE</button>
+      </div>
+      <div id="route-map" class="route-map" aria-label="Expedition route"></div>
+      <div id="route-detail" class="route-detail pixel-panel"><small>COMMAND</small><b>Choose one illuminated route.</b><p>Rewards shown on each contact are guaranteed. The other paths close when you deploy.</p></div>
     </section>
 
-    <section id="priority-strip" class="priority-strip pixel-panel" aria-live="polite">
-      <span id="priority-icon">◆</span><div><small>CAPTAIN'S PRIORITY</small><b id="priority-text">Select a crew member to begin.</b></div>
+    <section id="loadout-screen" class="screen" aria-labelledby="loadout-title">
+      <div class="section-head compact-head">
+        <div><p class="eyebrow">// MANUAL PREPARATION</p><h2 id="loadout-title">STRIKE CASE</h2></div>
+        <div class="cap-badge"><small>DEPLOYED</small><b id="used-points">0</b><span id="loadout-cap">/ 500</span></div>
+      </div>
+      <div class="capacity-meter"><i id="capacity-fill"></i></div>
+      <div class="loadout-tip pixel-panel"><b>PACKING RULE</b><span>Tap a unit, then tap a cyan grid cell. Every silhouette occupies real case space and costs command points.</span></div>
+      <div class="case-wrap"><div class="case-axis"><span>FRONT / +THREAT</span><span>BACK / +SAFETY</span></div><div id="formation-grid" class="formation-grid" aria-label="Six by five deployment case"></div></div>
+      <div class="prep-actions"><button id="rotate-button">ROTATE UNIT</button><button id="remove-button" class="danger">REMOVE SELECTED</button><button id="clear-button">CLEAR</button></div>
+      <nav class="subtabs" aria-label="Preparation inventory"><button data-prep-tab="units" class="active">UNITS</button><button data-prep-tab="gear">GEAR <span id="gear-count">0</span></button><button data-prep-tab="protocols">PROTOCOLS</button></nav>
+      <div id="unit-roster" class="prep-list active"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
+      <div class="sticky-action pixel-panel"><div><small id="prep-status-label">FORCE STATUS</small><b id="prep-status">SELECT A UNIT TO PACK</b></div><button id="deploy-button" class="primary" disabled>RETURN TO MAP</button></div>
     </section>
 
-    <div id="toast" role="status" aria-live="polite"></div>
-    <div id="pause-banner">TACTICAL PAUSE <small>Orders and power controls remain active</small></div>
-
-    <aside class="room-card pixel-panel" id="room-card">
-      <div><small>SELECTED ROOM</small><b id="room-name">None</b></div>
-      <div class="room-stats"><span id="room-oxygen">O₂ —</span><span id="room-system">SYSTEM —</span></div>
-      <button id="door-control" disabled>Cycle connected doors</button>
-      <button id="vent-control" disabled>Open airlock</button>
-    </aside>
-
-    <section class="bottom-console pixel-panel">
-      <nav class="tabs" aria-label="Ship controls">
-        <button data-tab="crew" class="active">CREW</button>
-        <button data-tab="systems">SYSTEMS</button>
-        <button data-tab="weapons">WEAPONS</button>
-      </nav>
-
-      <div class="panel active" data-panel="crew">
-        <div id="crew-list" class="crew-list"></div>
-        <p class="instruction"><b>HOW:</b> Select crew → select a room. They walk there, fight fire, then repair.</p>
-      </div>
-
-      <div class="panel" data-panel="systems">
-        <div class="power-header"><span>REACTOR OUTPUT</span><b id="reactor-value">8 / 10</b></div>
-        <div id="power-grid" class="power-grid"></div>
-      </div>
-
-      <div class="panel" data-panel="weapons">
-        <div id="weapon-list" class="weapon-list"></div>
-        <p class="instruction"><b>HOW:</b> Wait for READY → arm weapon → tap the enemy's red Weapons room first.</p>
-      </div>
+    <section id="battle-screen" class="screen" aria-labelledby="battle-title">
+      <div class="section-head battle-head"><div><p class="eyebrow" id="battle-kicker">AUTOMATED ENGAGEMENT</p><h2 id="battle-title">CONTACT</h2></div><div class="round-badge"><small>ROUND</small><b id="round-value">0</b></div></div>
+      <div id="enemy-banner" class="army-banner enemy"><span>HOSTILE SIGNAL</span><b id="enemy-power">0 PTS</b></div><div id="enemy-field" class="battle-field enemy-field"></div>
+      <div class="battle-divider"><span>AUTO RESOLUTION</span><i></i></div>
+      <div id="player-field" class="battle-field player-field"></div><div class="army-banner player"><span>STRIKE CASE</span><b id="player-power">0 PTS</b></div>
+      <div id="battle-log" class="battle-log pixel-panel" aria-live="polite"></div>
+      <div class="battle-controls"><button id="speed-button">SPEED ×1</button><button id="skip-button">RESOLVE NOW</button></div>
     </section>
 
-    <dialog id="intro-dialog" class="modal pixel-panel">
-      <div class="eyebrow">// INCOMING COMBAT TUTORIAL</div>
-      <h1>Keep the ship alive.</h1>
-      <p>You do not pilot the ship. You command its <b>crew, power, doors and weapons</b>. Pause whenever the situation becomes confusing.</p>
-      <div class="mode-picker" role="group" aria-label="Difficulty mode">
-        <button class="mode-option active" data-mode="guided"><b>GUIDED RUN</b><small>Recommended · slower enemy · auto-pause · live instructions</small></button>
-        <button class="mode-option" data-mode="standard"><b>STANDARD</b><small>Original pressure · no automatic pauses</small></button>
-      </div>
-      <div class="survival-rule">
-        <b>THE ONE RULE</b>
-        <span><i>1</i> Pause</span><span><i>2</i> Fix red rooms</span><span><i>3</i> Fire at enemy Weapons</span>
-      </div>
-      <button id="start-button" class="primary large">START GUIDED RUN</button>
+    <section id="reward-screen" class="screen" aria-labelledby="reward-title">
+      <div class="reward-sigil">◆</div><p class="eyebrow">// VICTORY SALVAGE</p><h2 id="reward-title">CHOOSE ONE PROTOCOL</h2><p class="reward-copy">It modifies this expedition only. It is erased when the run ends.</p>
+      <div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>DATA RECOVERED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO GEAR CACHE</span></div>
+    </section>
+
+    <section id="research-screen" class="screen" aria-labelledby="research-title">
+      <div class="section-head"><div><p class="eyebrow">// PERSISTENT COMMAND</p><h2 id="research-title">R&amp;D ARRAY</h2></div><div class="cap-badge"><small>WAR CHESTS</small><b id="research-currency">0</b></div></div>
+      <p class="screen-copy">Research survives every expedition. It improves your starting options without replacing the temporary build decisions inside a run.</p><div id="research-grid" class="research-grid"></div><button id="research-back-button" class="large">BACK TO COMMAND</button>
+    </section>
+
+    <dialog id="help-dialog" class="modal pixel-panel">
+      <p class="eyebrow">// FIELD MANUAL</p><h2>FOUR DECISIONS. ONE RUN.</h2>
+      <ol><li><b>Pack a legal force.</b><span>Stay under the point limit and fit units inside the 6×5 case.</span></li><li><b>Build a formation.</b><span>Armor belongs forward. Medics and artillery survive longer in back.</span></li><li><b>Choose your route.</b><span>Normal fights are safer; elites give stronger rewards; repair nodes restore hull.</span></li><li><b>Adapt after victory.</b><span>Pick one temporary protocol and equip recovered gear before the next battle.</span></li></ol>
+      <button id="close-help-button" class="primary large">UNDERSTOOD</button>
     </dialog>
 
-    <dialog id="end-dialog" class="modal pixel-panel">
-      <div class="eyebrow" id="end-eyebrow">CONTACT RESOLVED</div>
-      <h1 id="end-title">Courier survives.</h1>
-      <p id="end-copy">The hostile cutter breaks apart. The data route is open—for now.</p>
-      <div id="end-stats" class="end-stats"></div>
-      <button id="restart-button" class="primary large">RUN AGAIN</button>
+    <dialog id="run-end-dialog" class="modal pixel-panel">
+      <p class="eyebrow" id="run-end-kicker">// EXPEDITION COMPLETE</p><h2 id="run-end-title">THE FRONT BREAKS.</h2><p id="run-end-copy"></p><div id="run-end-stats" class="end-ledger"></div><button id="run-end-button" class="primary large">RETURN TO COMMAND</button>
     </dialog>
-
-    <section id="debug-panel" class="debug pixel-panel" hidden>
-      <b>DEBUG / F1</b>
-      <button data-debug="scrap">+100 Scrap</button><button data-debug="repair">Repair Hull</button>
-      <button data-debug="fire">Start Fire</button><button data-debug="breach">Create Breach</button>
-      <button data-debug="damage">Damage System</button><button data-debug="kill">Kill Enemy</button>
-    </section>
   </main>
   <script type="module" src="js/main.js"></script>
 </body>

@@ -1,10 +1,10 @@
-# VOID RUNNER — Luminous Pixel Art Bible
+# VOID RUNNER: PROTOCOL FRONT — Luminous Pixel Art Bible
 
 This is the locked visual specification for all game art, UI, effects, icons, loading screens, and promotional assets.
 
 ## Visual thesis
 
-VOID RUNNER is a luminous pixel diorama on a nearly black foundation. Large, readable silhouettes carry the form; small saturated lights communicate function. Glow is a secondary echo around a crisp pixel shape, never the shape itself.
+VOID RUNNER is a luminous portrait command board on a nearly black foundation. Large, readable unit silhouettes carry the form; small saturated lights communicate function. Glow is a secondary echo around a crisp pixel shape, never the shape itself.
 
 ## Locked palette
 
@@ -27,34 +27,33 @@ Do not add free-form neon colors. New colors must be darker structural shades de
 ## Pixel density and asset specifications
 
 - Reference game canvas: `480 × 854` logical pixels for 9:16 layouts.
-- WebGL scene renders at roughly 80% of CSS resolution with antialiasing disabled.
+- The current build uses code-native HTML/CSS pixel forms. Future raster sprites must use integer scaling and disabled smoothing.
 - UI spacing uses a 4 px base unit; borders are 2 px; hard shadows offset 3–4 px.
 - Minimum touch target: 40 CSS px.
 - Minimum body text: 9 CSS px in the monospace pixel language; critical values are 11 px or larger.
 - Icons: design on a `16 × 16` grid, scale only by integer multiples when exported.
-- Character footprint: approximately `12 × 18` logical pixels at reference size.
-- Room labels must remain legible at the default tactical zoom.
+- Unit icons: design on a `24 × 24` logical grid with a dominant shape readable at 1×.
+- Deployment cells: minimum `41 × 41` CSS px on supported narrow screens.
+- Unit footprints must be recognizable as 1×1, 1×2, 2×1, 2×2, or 3×2 without reading text.
 - All raster assets use nearest-neighbor scaling and no smoothing.
 
 ## Silhouettes and proportions
 
-- Ships use tall, unmistakable outer silhouettes with stepped or chamfered corners.
-- Player silhouettes are cyan-edged; hostile silhouettes are red-edged.
-- Rooms are broad rectangles with bright perimeter pixels and one dominant equipment shape.
-- Crew use block heads, rectangular torsos, and separated square limbs. Species differ first by proportion, then by color.
+- Units use unmistakable block silhouettes with stepped or chamfered corners.
+- Player silhouettes use their role color; hostile silhouettes use alarm-red edges.
+- Large units must earn their footprint through visibly heavier mass, not scaled-up detail noise.
+- Roles differ first by proportion: low/wide artillery, tall guards, compact support, massive heavies.
 - Props should be recognizable from a single large mass plus one luminous functional detail.
 - Avoid thin decorative noise that disappears at actual play size.
 
 ## Materials
 
-- **Hull:** near-black blue, matte, cyan or red hard edge.
-- **Room floor:** one dark system color with a bright border; never a soft gradient.
-- **Console:** charcoal block with one cyan rectangular screen.
-- **Engine:** paired dark blocks with amber vertical cores.
-- **Shield generator:** faceted violet or cyan diamond ring.
-- **Door:** solid signal cyan when open, alarm red when sealed.
-- **Fire:** three stacked square flames in red, orange, and amber.
-- **Breach:** black octagonal hole with a light structural rim when readability requires it.
+- **Deployment case:** near-black blue cells, steel borders, cyan legal-placement feedback.
+- **Infantry armor:** charcoal blocks with one role-color identification plate.
+- **Heavy chassis:** two or three joined dark masses with amber machinery cores.
+- **Artillery:** low horizontal silhouette with violet aiming elements.
+- **Hostiles:** dark bodies with alarm-red hard edges.
+- **Route nodes:** square tactical stamps; contact type is communicated by both color and text.
 
 ## Lighting hierarchy
 
@@ -90,11 +89,11 @@ The base form must remain readable without bloom. Limit glow to a small halo aro
 
 ## Readability rules
 
-- The player ship remains larger than the enemy ship.
+- The player's packed formation remains readable as a single composition at the reference viewport.
 - Red always means a current threat or hostile target.
 - Cyan always means a player-controlled selection or primary action.
-- A selected room changes both border/emission and UI text.
-- Low oxygen, fire, damage, and weapon readiness must remain distinguishable when simultaneous.
+- A selected unit changes both border treatment and UI text.
+- Health, armor role, temporary protocol, and hostile state must remain distinguishable when simultaneous.
 - Text must be readable without glow and at the actual target viewport.
 
 ## Mistakes to avoid

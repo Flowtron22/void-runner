@@ -1,547 +1,258 @@
-# VOID RUNNER — Game Design & Development Guide
+# VOID RUNNER: PROTOCOL FRONT — Game Design Document
 
-This file is the canonical handoff document for humans and Codex agents continuing the project on another computer. It describes the intended game, the current Milestone 1 implementation, the simulation rules, the source layout, and the next development steps.
+This document is the authoritative handoff for the current game. Read it with `ART_BIBLE.md` before changing mechanics or presentation.
 
-The locked visual specification is in `ART_BIBLE.md`. Read it before creating or changing any visual asset.
+## 1. Product definition
 
-## 1. Project identity
+VOID RUNNER: PROTOCOL FRONT is a portrait-first, single-player roguelike army-builder and auto-battler for web and touch devices.
 
-**Title:** VOID RUNNER  
-**Genre:** Real-time-with-pause spaceship survival and management game  
-**Presentation:** Portrait-first, low-poly 2.5D tactical diorama  
-**Technology:** HTML5, CSS, vanilla JavaScript ES modules, Three.js  
-**Repository:** `https://github.com/Flowtron22/void-runner`  
-**Current scope:** Milestone 1 combat vertical slice
+The player manually prepares a force under two simultaneous constraints:
 
-The player commands the courier vessel **Aster Vale**, which carries critical data through a collapsing region of space. The ship is fragile, its systems interact, and hostile forces are pursuing it. The fantasy is not manual piloting; it is keeping a living spacecraft functional while failures cascade.
+1. Every unit has a command-point cost.
+2. Every unit has a physical footprint that must fit inside a 6×5 deployment case.
 
-The game is inspired by systemic spaceship-management games, but its names, presentation, interface, ship layouts, factions, visuals, and writing are original.
+The player then selects a route through a four-region expedition. Combat is fully automatic. Strategy comes from force composition, spatial packing, front/back placement, equipment, route choice, and temporary run protocols.
 
-## 2. Design pillars
+The design combines three broad ideas without copying any protected setting, units, UI, names, or art:
 
-1. **The ship is the main character.** Rooms, systems, crew, atmosphere, damage, and power should feel interconnected.
-2. **Readable emergencies.** The player must immediately understand what failed, where it failed, and what can fix it.
-3. **Pause is a core verb.** Simulation stops, but the player may inspect the ship, move crew, operate doors, redistribute power, and choose targets.
-4. **Failures cascade but remain recoverable.** Fire consumes oxygen; doors affect airflow; crew leave stations to repair damage; lower engine staffing/power reduces evasion; subsequent hits create new problems.
-5. **Portrait-first tactical play.** Enemy ship at the top, projectile lane in the middle, player ship below, management controls at the bottom.
-6. **Simulation before spectacle.** Simple geometry with meaningful interactions is more important than elaborate models or shaders.
+- Point-budget army construction.
+- Spatial inventory-style unit packing.
+- A multi-region route with encounters, rewards, bosses, and between-run research.
 
-## 3. Current player experience
+## 2. Non-negotiable pillars
 
-The current build starts directly in a single combat encounter:
+- **Portrait is mandatory.** The reference frame is 480×854 and the desktop presentation remains a centered portrait command board.
+- **Preparation is manual.** The player chooses units, placement, orientation, and gear.
+- **Battle is automatic.** During combat the player may only change playback speed or resolve immediately.
+- **Every run changes.** Route choices, rewards, gear, and temporary protocols create the build.
+- **Points and space both matter.** A legal army can still be badly packed; an efficient shape can still exceed the point limit.
+- **Bosses test the full run build.** Each region ends in a boss. The fourth boss completes the expedition.
+- **Permanent power is bounded.** Research improves future starts but does not replace run decisions.
 
-The default **Guided Run** begins in tactical pause and teaches crew selection, room movement, time control, weapon readiness, and subsystem targeting as a five-step interaction sequence. It gives the player 40 hull and 11 reactor power, accelerates player weapon and shield recovery, slows enemy weapon charge, reduces incoming damage and hazard chances, and auto-pauses for major hits or the first ready weapon. **Standard** preserves the original 30-hull, 10-reactor pressure without automatic pauses.
-
-1. Read the mission briefing and begin the engagement.
-2. Select one of three crew members and tap a player room to issue a movement order.
-3. Open or close physical doors to control access and oxygen flow.
-4. Select the airlock room and vent it when fire or atmosphere management requires it.
-5. Redistribute a ten-unit reactor budget among ship systems.
-6. Wait for weapons to charge, arm one, and tap an enemy room to target that subsystem.
-7. Pause whenever needed to issue orders safely.
-8. Destroy the Warden cutter before the courier loses all hull or all crew.
-
-The encounter ends in a victory or defeat dialog and can be restarted.
-
-## 4. Controls
-
-### Pointer and touch
-
-- Select a crew card or its 3D character, then select a room to move that crew member.
-- Tap a physical door to open or close it.
-- Select a player room to inspect oxygen, system health, and room controls.
-- Use **Cycle connected doors** to toggle every door connected to the selected room.
-- Select the **Airlock** room to enable the vent/seal control.
-- Use **Systems** `+` and `−` controls to redistribute reactor power.
-- Use **Weapons** to arm a ready weapon, then tap an enemy room.
-- Use the top-right button to pause or resume.
-
-### Keyboard
-
-- `Space`: Pause/resume.
-- `F1`: Toggle debug panel.
-
-### Debug panel
-
-- Add 100 scrap.
-- Repair player hull.
-- Start a fire in a random player room.
-- Create a hull breach in a random player room.
-- Damage a random system.
-- Destroy the enemy immediately.
-
-## 5. Game states
-
-The current implementation uses `COMBAT`, `VICTORY`, and `GAME_OVER` behavior. The full design should eventually support these explicit states:
-
-- `MAIN_MENU`
-- `SHIP_SELECT`
-- `SECTOR_MAP`
-- `EVENT`
-- `COMBAT`
-- `STORE`
-- `UPGRADE`
-- `SECTOR_SELECT`
-- `FINAL_BATTLE`
-- `VICTORY`
-- `GAME_OVER`
-
-Only one state should own active simulation and input at a time.
-
-## 6. Player ship layout
-
-The Aster Vale is a narrow vertical courier. Its nose points upward on screen.
+## 3. Core loop
 
 ```text
-                 BRIDGE
-                    │
-          SHIELDS ──┴── WEAPONS
-              │           │
-           MEDBAY       OXYGEN
-              └─────┬─────┘
-                 ENGINE
-                    │
-                 AIRLOCK
+Command → Pack force → Choose route → Auto-battle → Choose protocol
+    ↑          ↓              ↓              ↓             ↓
+ Research   Equip gear    Risk/reward     Observe why   Rebuild/continue
 ```
 
-Room definitions live in `js/data/ships.js`. Each room contains:
+1. Start an expedition with a 500-point command limit.
+2. Choose units from the available roster.
+3. Place them inside the 6×5 case. Units occupy 1×1 through 3×2 footprints.
+4. Choose one available route contact.
+5. Make any final formation or equipment changes.
+6. Watch the battle resolve automatically.
+7. On victory, receive run data, War Chests, possible gear, and one of three protocols.
+8. Continue through three contacts and a boss.
+9. Enter the next region with a larger point limit and newly available heavy units.
+10. Finish the fourth boss or lose all campaign hull.
+11. Spend banked War Chests on permanent research.
 
-- `id`
-- `name`
-- `system`
-- local `x` and `z` position
-- width and depth
-- capacity
-- neighbor room IDs
-- optional `airlock` flag
+## 4. Expedition structure
 
-Runtime room state adds:
+There are four regions in one full run:
 
-- `oxygen`, clamped from 0 to 100
-- `fire`, clamped from 0 to 100
-- `breach`
-- `damage`
-- assigned crew IDs
-- selection state
+| Region | Name | Base point limit | New scale |
+|---|---|---:|---|
+| 1 | Ashen Approach | 500 | Infantry, guard, medic, artillery |
+| 2 | Glass Trench | 900 | Breaker units |
+| 3 | Iron Pilgrimage | 1,400 | Heavy engines |
+| 4 | Null Citadel | 2,000 | Titan-class units |
 
-## 7. Crew
+Each region contains three route contacts followed by a boss. Current contact types:
 
-The initial crew is:
+- **Skirmish:** safer battle and standard data.
+- **Salvage:** moderate battle with increased gear opportunity.
+- **Elite:** dangerous battle with guaranteed gear.
+- **Recovery:** no battle; restore one campaign hull and gain a small amount of data.
+- **Boss:** highest threat, larger rewards, and passage to the next region.
 
-| Crew | Species | Starting room | Role tendency |
-|---|---|---|---|
-| Nova | Terran | Bridge | Balanced |
-| IX-4 | Mechanist | Drive Core | Fast repair, lower health/combat |
-| Bram | Gravkin | Weapons | High health/combat, slower repair |
+The current map presents two or three choices at the active depth. Selecting one closes the alternatives. Completed contacts remain visible behind the player.
 
-Species data lives in `js/data/crewSpecies.js`. Crew currently track health, repair speed, movement speed, current room, target room, path, path progress, death state, and selection state.
+## 5. Resources
 
-### Movement logic
+### Command points
 
-1. The player selects a crew member.
-2. The player selects a destination room.
-3. Breadth-first search finds the shortest route through the room graph.
-4. Closed doors are considered impassable.
-5. The crew member interpolates physically from one room center to the next.
-6. On reaching a room, membership is removed from the old room and added to the new room.
-7. If a required door closes during travel, the route is cancelled instead of allowing movement through it.
+Command points cap the deployed force. A force must cost at least one point and may not exceed the region limit. Expanded Mandate research adds 50 starting points per rank to every regional limit.
 
-Pathfinding is implemented in `js/crew/CrewPathfinding.js`.
+### Case space
 
-### Automatic crew work
+The deployment case is six columns by five rows. Units cannot overlap or extend outside it. Rotation swaps width and height. The left two columns are treated as the front; the right side is the safer backline.
 
-When stationary, living crew automatically prioritize:
+### Campaign hull
 
-1. Fire suppression in the current room.
-2. Repairing room and system damage.
-3. Healing if located in a powered medbay.
+A run begins with three hull. Losing a battle removes one. At zero hull the expedition ends. Recovery contacts restore one hull up to the maximum. Hull Insurance research adds one maximum hull per rank.
 
-Crew take damage from room fire and from oxygen below 20%. Crew death is permanent for the encounter. Dead crew cannot move or work.
+### Run data
 
-## 8. Doors, airlocks, and atmosphere
+Run data is a score and future content hook earned during the current expedition. It resets after the run.
 
-Doors are generated from room-neighbor relationships. Each unique room pair creates one door. A door tracks open/closed state and a visual animation progress value.
+### War Chests
 
-### Atmosphere rules
+War Chests are permanent research currency. Battles accumulate them inside the run; all accumulated chests are banked on victory or defeat. Salvage Rights research increases the amount earned.
 
-- Powered life support slowly raises oxygen in sealed, non-breached rooms.
-- Hull breaches rapidly vent their room.
-- An open airlock rapidly vents the airlock room.
-- Open doors equalize oxygen between neighboring rooms.
-- Closed doors prevent oxygen transfer and crew movement.
-- Fire consumes oxygen.
-- Fire grows slowly when sufficient oxygen is available.
-- Fire declines quickly in low oxygen.
-- Oxygen can never fall below 0 or rise above 100.
+## 6. Units and force construction
 
-The systemic use case is to open a route from a burning room to the airlock, vent the atmosphere until the fire dies, then close the route and allow life support to refill the ship.
+| Unit | Role | Cost | Footprint | Region | Function |
+|---|---|---:|---:|---:|---|
+| Needle Team | Striker | 100 | 1×1 | 1 | Fast damage; front-line bonus |
+| Bastion Cohort | Guard | 160 | 1×2 | 1 | High health, armor, and threat |
+| Chirurgeon | Support | 140 | 1×1 | 1 | Repairs the most injured ally |
+| Hexgun Battery | Artillery | 210 | 2×1 | 1 | Strong but fragile ranged damage |
+| Rammer Lance | Breaker | 280 | 2×1 | 2 | Bonus damage against armored targets |
+| Bulwark Engine | Heavy | 420 | 2×2 | 3 | Large mobile fortress |
+| Null Colossus | Titan | 500 | 3×2 | 4 | Extremely durable high-damage centerpiece |
 
-## 9. Systems and reactor power
+Roster stock limits prevent unlimited copies. Unlock regions make the expanding point limit meaningful: later regions support both more small units and larger units.
 
-System defaults live in `js/data/ships.js`. Runtime systems track:
+## 7. Spatial formation rules
 
-- containing room ID
-- maximum power level
-- current power allocation
-- current system health
+- Enemy targeting usually prioritizes Guards and Heavy units.
+- Otherwise, hostile AI tends to attack the leftmost/frontmost deployed unit.
+- Needle Teams in the front two columns deal bonus damage.
+- Cohesion Field grants armor to units placed near another unit.
+- Formation coordinates persist between contacts until the player changes them.
+- One piece of gear can be equipped to each deployed unit.
 
-The player reactor provides ten power units. Allocated power may not exceed reactor output. A damaged system cannot accept or retain more power than its current functional health allows.
+The desired future direction is to add more adjacency, row, shape, and facing synergies without making the grid unreadable.
 
-Current systems:
+## 8. Automatic combat
 
-| System | Maximum power | Effect |
-|---|---:|---|
-| Bridge | 1 | Contributes to evasion |
-| Shields | 2 | Sets shield capacity and regeneration ceiling |
-| Weapons | 4 | Powers weapons in list order |
-| Medbay | 1 | Heals crew in the medbay |
-| Oxygen | 1 | Replenishes room oxygen |
-| Engines | 2 | Contributes to evasion |
+Combat progresses in rounds. Units act in initiative order, with minor randomization among similar speeds.
 
-Effective system strength is the lower of allocated power and remaining health.
+Per action:
 
-### Power behavior
+1. A Support unit repairs the most injured ally if one needs help.
+2. Otherwise, the unit selects a target according to threat and front position.
+3. Damage varies slightly, then armor is subtracted.
+4. Role bonuses and protocols modify the result.
+5. A unit at zero health is destroyed unless Last-Light Vow prevents its first lethal hit.
 
-- Power can be changed during tactical pause.
-- Power cannot become negative.
-- Total allocated power cannot exceed the reactor.
-- System power is reduced automatically when damage lowers its usable capacity.
-- Weapons charge only while enough weapon-system capacity remains to power them.
+All enemies destroyed means victory. All player units destroyed, or reaching the safety round limit without victory, means defeat. The player cannot issue combat orders. Available controls are ×1/×2 speed and immediate resolution.
 
-## 10. Shields and evasion
+## 9. Temporary run protocols
 
-Shield capacity is based on effective shield-system strength. Shields regenerate one layer after a seven-second timer until reaching capacity. Taking a shield hit removes shield layers and resets regeneration.
+After each battle victory, the player chooses one of three protocols. Protocols stack and last until the expedition ends.
 
-Evasion is calculated from effective engines and bridge levels, with a hard cap to avoid invulnerability. A successful evasion negates the incoming projectile.
+Current protocol families:
 
-## 11. Weapons and targeting
+- Global damage and health.
+- Per-round regeneration.
+- Improved support healing.
+- Artillery specialization.
+- Adjacency armor.
+- Guard durability.
+- Opening artillery volley.
+- Once-per-battle lethal-hit protection.
 
-Weapon data lives in `js/data/weapons.js`.
+Protocols are the main run-to-run build layer. Never make these permanent research purchases.
 
-### Player weapons
+## 10. Gear
 
-| Weapon | Power | Cooldown | Shots | Damage |
-|---|---:|---:|---:|---:|
-| Arc Pulse | 2 | 6.5 s | 2 | 1 per shot |
-| Mass Driver | 2 | 10 s | 1 | 3 |
+Gear drops from some normal contacts and is favored by salvage, elite, and boss contacts. Current effects include health, damage, armor, healing, and initiative.
 
-### Enemy weapons
+Gear belongs to the current expedition and is erased when it ends. In preparation, select a packed unit and then tap a gear item to equip or unequip it. Each unit may carry one item.
 
-- Needle Array
-- Rift Cannon
+## 11. Permanent research
 
-### Firing sequence
+War Chests buy persistent research in the R&D Array:
 
-1. A powered weapon accumulates charge.
-2. At full charge it becomes ready.
-3. The player arms the weapon.
-4. The enemy ship becomes the active targeting surface.
-5. The player selects a specific enemy room.
-6. A salvo entry is queued for each shot.
-7. Three.js projectile meshes interpolate from the weapon room to the target room.
-8. On arrival, evasion is checked.
-9. If not evaded, shields absorb the shot first.
-10. An unshielded hit damages hull, the room, and its system.
-11. Hits may also start fires or create breaches.
+- **Expanded Mandate:** +50 command points to each regional limit per rank.
+- **Veteran Doctrine:** +5% unit damage per rank.
+- **Salvage Rights:** +15% War Chests earned per rank.
+- **Hull Insurance:** +1 campaign hull per rank.
 
-The enemy follows the same projectile and damage rules where practical. Enemy targeting favors functional player rooms but retains randomness.
+Research and aggregate run statistics are stored in browser `localStorage`. The active run is also stored and can be resumed from the command screen.
 
-## 12. Damage and repair
+## 12. UX rules
 
-Unshielded hits:
+- At every screen, make the next meaningful decision visually dominant.
+- Show both used and maximum points during preparation.
+- Locked units state the region that unlocks them.
+- Every unit card states cost, footprint, role, stock, and tactical purpose.
+- Route nodes show contact type and expected reward before commitment.
+- Combat must explain important events through a compact live log.
+- Temporary and permanent upgrades must never use ambiguous language.
+- No gameplay interaction may depend on hover.
 
-- Reduce hull by weapon damage.
-- Add room damage.
-- Reduce system health when the room contains a system.
-- Clamp system power to remaining usable system health.
-- Have a chance to start a fire.
-- Have a smaller chance to create a breach.
+## 13. Visual direction
 
-Stationary crew repair their current room. Repairing reduces room damage and restores system health up to its maximum. Repair speed is multiplied by species ability.
+The locked visual specification is in `ART_BIBLE.md`. The current implementation uses crisp HTML/CSS pixel forms rather than external artwork so it remains fast and consistent.
 
-The player loses when hull reaches zero or every crew member is dead. The enemy loses when its hull reaches zero.
+Functional color hierarchy:
 
-## 13. Pause and time model
+- Cyan: player action, selection, and navigation.
+- Amber: points, rewards, timers, and caution.
+- Red: hostile threats and damage.
+- Green: repair, health, and recovery.
+- Violet: protocols, rare systems, and elite content.
 
-Simulation uses a fixed timestep of `1 / 30` second. Rendering continues with `requestAnimationFrame`.
-
-When paused, simulation delta does not advance. This freezes:
-
-- Crew movement
-- Weapon charging
-- Projectiles
-- Shield regeneration
-- Fire and oxygen simulation
-- Repairs and healing
-- Enemy AI
-
-The following remain available:
-
-- Crew selection and movement orders
-- Door and airlock controls
-- Reactor power redistribution
-- Weapon arming and target selection
-- UI navigation and inspection
-
-Do not replace the fixed-step model with frame-dependent simulation.
-
-## 14. Rendering and camera
-
-`js/render/SceneManager.js` owns Three.js setup and rendering.
-
-- Orthographic tactical camera with no free rotation.
-- Rooms lie mainly on the X/Z plane.
-- Camera looks downward at an angle for a miniature/dollhouse effect.
-- Enemy ship is smaller and above the player ship.
-- Player ship occupies the larger lower play area.
-- Room floors are raycast targets.
-- Crew, doors, shields, projectiles, impacts, fires, and breaches are rendered as simple geometry.
-- Ambient, hemisphere, and directional lighting keep the diorama readable.
-- The background uses a lightweight point-star field.
-- Camera shake is brief and subtle after impacts.
-
-Performance rules:
-
-- Avoid expensive post-processing.
-- Avoid dynamic shadow-heavy lighting.
-- Reuse geometry and materials when expanding content.
-- Prefer pooling for projectiles and particles if object counts increase.
-- Keep mobile pixel ratio capped.
-
-## 15. Interface and responsive behavior
-
-HTML/CSS owns the HUD, resource counters, pause button, enemy status, selected-room panel, crew cards, system-power grid, weapon cards, dialogs, and debug panel.
-
-The interface is designed for a 9:16 portrait viewport first. At narrow widths:
-
-- Controls stay large enough for touch.
-- Bottom management panels use tabs.
-- The player ship remains the dominant visual.
-- Compact header presentation hides nonessential labels.
-
-Desktop uses the same layout at a wider scale. No interaction should depend on hover.
-
-## 16. Audio
-
-`js/core/AudioSystem.js` contains lightweight synthesized audio hooks for lasers, cannons, shield impacts, hull impacts, doors, victory, and defeat. Audio is unlocked after the first user gesture to comply with browser restrictions.
-
-The game must continue to work when audio is unavailable. Future external audio assets should remain optional and use the same event-oriented interface.
-
-## 17. Source architecture
+## 14. Code architecture
 
 ```text
 FTL/
-├── index.html                  # Game shell, HUD, dialogs, import map
-├── css/
-│   └── main.css                # Full visual and responsive design
-├── js/
-│   ├── main.js                 # DOM-ready entry point
-│   ├── core/
-│   │   ├── Game.js             # Game state, loop, combat, UI binding
-│   │   └── AudioSystem.js      # Optional synthesized sounds
-│   ├── crew/
-│   │   └── CrewPathfinding.js  # Breadth-first room routing
-│   ├── data/
-│   │   ├── crewSpecies.js      # Species statistics
-│   │   ├── ships.js            # Room layouts and system defaults
-│   │   └── weapons.js          # Weapon definitions
-│   ├── render/
-│   │   └── SceneManager.js     # Three.js scene and interaction rendering
-│   └── ship/
-│       └── Ship.js             # Ship, rooms, crew, power, atmosphere, repair
-├── scripts/
-│   └── dev-server.mjs          # Legacy minimal static server utility
-├── vercel.json                 # Vercel build and output configuration
-├── package.json
-├── package-lock.json
-├── README.md
-└── ggd.md                      # This handoff document
+├── index.html              # All game screens and dialogs
+├── css/main.css            # Portrait layout and luminous pixel art system
+├── js/main.js              # DOM-ready entry point
+├── js/core/Game.js         # Run state, grid packing, map, combat, rewards, saves
+├── js/data/units.js        # Units, gear, protocols, regions, research
+├── ART_BIBLE.md            # Locked visual rules
+├── ggd.md                  # This design and handoff document
+├── README.md               # Setup and short feature summary
+└── vercel.json             # Vercel configuration
 ```
 
-### Ownership boundaries
+Legacy Three.js ship files remain in the repository for reference but are no longer imported by the current game.
 
-- Put reusable content definitions in `js/data/`.
-- Put simulation truth in `Ship` or future dedicated simulation modules.
-- Put encounter flow and coordination in `Game`.
-- Keep Three.js object creation and visual state in `SceneManager`.
-- Keep gameplay-independent presentation in HTML/CSS.
-- Do not encode gameplay state only in DOM or meshes; visuals must reflect simulation state.
-
-## 18. Local setup after cloning
-
-Requirements: a recent Node.js version and Git.
+## 15. Local development
 
 ```powershell
-git clone https://github.com/Flowtron22/void-runner.git
-cd void-runner
 npm install
 npm run dev
 ```
 
 Open `http://127.0.0.1:4173`.
 
-Syntax checks:
+Validation:
 
 ```powershell
 npm run check
-```
-
-The game uses Vite as a development server and production bundler because browser ES modules should not be launched directly through `file://`. The production build bundles Three.js into `dist/assets/`, avoiding runtime access to `node_modules` on static hosts such as Vercel.
-
-Production build and preview:
-
-```powershell
 npm run build
 npm run preview
 ```
 
-## 19. Validation checklist
+## 16. Validation checklist
 
-Before committing gameplay changes, verify:
+- The command screen explains the complete loop in under four steps.
+- New run opens the 500-point preparation screen.
+- Unit selection plus an empty grid cell places the correct footprint.
+- Rotation changes the footprint and collision test.
+- Units cannot overlap, exceed the case, exceed stock, or exceed points.
+- A legal force can return to the map and select a route.
+- All combat actions run without player commands.
+- Speed and resolve controls complete a battle safely.
+- Victory offers exactly three available protocols when possible.
+- Gear can be equipped to a selected deployed unit.
+- Boss victory advances the region and point limit.
+- Region 4 boss victory completes the run.
+- Defeat removes hull and eventually ends the run.
+- War Chests persist and research purchases apply correctly.
+- An active run survives page reload.
+- Layout remains fully usable at 360×640 and the 480×854 reference size.
+- Browser console has no errors.
 
-- Game loads with no browser-console errors.
-- Intro dialog opens and combat begins.
-- Every crew card selects correctly with mouse and touch.
-- Crew traverse valid open-door paths physically.
-- Closed doors block paths and cancel interrupted movement.
-- Door animation matches logical state.
-- Oxygen stays within 0–100.
-- Open doors equalize atmosphere.
-- Breaches and the open airlock vent correctly.
-- Fire consumes oxygen and dies in vacuum.
-- Crew suppress fire and repair damage.
-- Reactor allocation never becomes negative or exceeds capacity.
-- Damaged systems cannot use excess power.
-- Weapons charge only when powered.
-- Weapon arming remains reliable while UI values refresh.
-- Targeted projectiles stop during pause.
-- Shield impacts remove shields before hull damage.
-- Enemy subsystem damage changes enemy capability.
-- Enemy stops attacking after defeat.
-- Victory and defeat dialogs appear once.
-- Restart creates only one animation loop.
-- Portrait and desktop layouts remain readable.
+## 17. Next development priorities
 
-## 20. Important implementation constraints
+1. Add deterministic seeded route and reward generation.
+2. Add drag-and-drop placement with tap placement retained as the accessible fallback.
+3. Add formation-specific traits, faction keywords, and set bonuses.
+4. Add boss-specific combat rules and readable telegraphs.
+5. Add unit damage/recovery that persists between contacts.
+6. Add a post-battle breakdown explaining damage, healing, and protocol value.
+7. Add sound, reduced-motion settings, and optional haptics.
+8. Replace procedural CSS silhouettes with original sprite sheets only when a complete consistent batch is available.
 
-- No backend or server-side game logic.
-- No React, Vue, TypeScript, external UI framework, or physics engine.
-- Use ES modules.
-- Use Three.js for the tactical world and HTML/CSS for interface panels.
-- Do not allow free camera rotation.
-- Never let simulation behavior depend heavily on render frame rate.
-- Do not teleport crew between rooms.
-- Do not allow dead crew to act.
-- Do not allow crew through closed doors.
-- Do not let weapons fire when disabled or unpowered.
-- Clean up projectiles and encounter state before starting another combat.
-- Preserve portrait-first readability.
-- Keep names, writing, factions, art, and UI original.
+## 18. Content and IP constraint
 
-## 21. Known limitations of the current slice
-
-- Only one player ship and one enemy layout exist.
-- Enemy crew use the repair simulation but are not rendered or given full tactical AI.
-- No boarding combat exists yet.
-- Door controls toggle all connected doors rather than selecting individual doors through the panel; physical doors remain individually clickable.
-- Weapon targeting does not yet enlarge the enemy ship.
-- Fire and breach effects are deliberately simple.
-- Crew station bonuses and experience are not implemented.
-- Current-run saving is not implemented.
-- There is no sector map, campaign, store, upgrade screen, event system, or boss.
-- Some future systems described below remain design targets, not current functionality.
-
-## 22. Development roadmap
-
-### Milestone 2 — Sector journey
-
-- Procedural sector map with roughly 18–22 connected nodes.
-- Fuel cost of one per jump.
-- Hidden node types revealed on visit.
-- Combat, event, distress, store, and exit nodes.
-- Hostile fleet territory advancing after every jump.
-- Scrap rewards.
-- Upgrade and repair screen.
-- Randomized stores selling fuel, missiles, repairs, weapons, and crew.
-
-### Milestone 3 — Crew and combat depth
-
-- Full species roster, including an energy being and oxygen-independent voidborn species.
-- Crew experience for piloting, engines, weapons, shields, repair, and combat.
-- Skill levels 0–2.
-- Boarding and enemy boarders.
-- More weapons and enemy variants.
-- Environmental hazards.
-- Blue special event choices gated by crew, equipment, or system levels.
-
-### Milestone 4 — Campaign
-
-- Eight sectors.
-- Sector selection.
-- Engineer and Raider player ships in addition to Courier.
-- Ship unlocks, achievements, statistics, and settings in `localStorage`.
-- Final command ship with three phases:
-  1. Heavy weapons
-  2. Drone assault
-  3. Energy barrier and boarding pressure
-- Complete victory flow.
-
-## 23. Data-driven expansion rules
-
-New content should be declared as data and consumed by generic systems.
-
-### Weapons
-
-A weapon entry should define at least:
-
-```js
-{
-  id: 'exampleWeapon',
-  name: 'Example Weapon',
-  power: 2,
-  cooldown: 8,
-  damage: 1,
-  shots: 2,
-  shieldDamage: 1,
-  color: 0x5df2dd
-}
-```
-
-### Events
-
-Future events should use a structure similar to:
-
-```js
-{
-  id: 'silent_relay',
-  title: 'The Silent Relay',
-  description: 'A dead communication spindle tumbles above the moon.',
-  choices: [
-    { label: 'Search the relay', outcome: 'searchRelay' },
-    { label: 'Leave it', outcome: 'leave' },
-    {
-      label: '[Mechanist] Restore auxiliary power',
-      requirement: { species: 'mechanist' },
-      special: true,
-      outcome: 'safeRelayAccess'
-    }
-  ]
-}
-```
-
-Do not hardcode individual events, weapons, species, or enemies into control flow when a data definition can describe them.
-
-## 24. Guidance for the next Codex session
-
-When continuing this repository:
-
-1. Read this file, `ART_BIBLE.md`, and `README.md` first.
-2. Run `npm install`, `npm run check`, and `npm run dev` before editing.
-3. Inspect the current browser console and complete one combat loop.
-4. Preserve the fixed-step simulation and state/visual separation.
-5. Make the smallest coherent milestone change rather than starting multiple incomplete systems.
-6. Update this file whenever mechanics, architecture, controls, limitations, or roadmap status change.
-7. Run the validation checklist before committing.
-8. Commit changes with a descriptive message and push `main` only after verification.
-
-The success criterion is always the same: the player should feel that they are managing a living spaceship whose systems affect one another, not merely controlling a 3D model.
+The game may draw on the general design language of tabletop point budgets, spatial inventory games, route-based roguelikes, and auto-battlers. Do not copy names, factions, characters, unit silhouettes, interface layouts, lore, text, icons, or artwork from Warhammer 40,000, Alchemortis, Mecharashi, or any other commercial game.
