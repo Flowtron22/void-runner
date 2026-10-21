@@ -99,3 +99,10 @@ button:active{transform:translateY(2px);box-shadow:inset 0 1px #ffffff0d,0 1px 0
   .app-shell.combat-shake{animation:frameHit .34s steps(4,end)}.app-shell.combat-shake-heavy{animation:frameHitHeavy .7s steps(8,end)}
 }
 @media(min-width:1100px) and (prefers-reduced-motion:reduce){body.battle-active .desktop-battle-stage{display:none!important}}
+
+/* Minimal command chrome: identity and actions only. */
+.topbar{grid-template-columns:40px 1fr}
+.brand-copy b{font-size:13px;letter-spacing:.13em}
+#home-screen .faction-picker{margin-top:14px}
+.sticky-action{grid-template-columns:1fr}
+.sticky-action button{width:100%}

@@ -1,4 +1,4 @@
-# VOID RUNNER — 40K Roguelike Campaign GDD
+# INTERSTELLAR — 40K Roguelike Campaign GDD
 
 This is the authoritative gameplay and implementation handoff. Read it with `ART_BIBLE.md` before editing the project.
 

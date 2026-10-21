@@ -1,10 +1,10 @@
-# VOID RUNNER — Grimdark Command Table Art Bible
+# INTERSTELLAR — Grimdark Command Table Art Bible
 
 This is the locked visual specification for all game UI, effects, icons, loading screens, and future promotional assets. The direction is derived from the project owner's KS interface: a tactile military command table built from iron, bone, brass, parchment and oxblood. Designs must remain original; do not copy official logos, characters, faction marks, or illustrations.
 
 ## Visual thesis
 
-VOID RUNNER should feel like a battered campaign console in a vast gothic warship. Information is dense but ordered. Bone dice and parchment labels sit over soot-black iron. Brass identifies command and progress; oxblood identifies danger and violence. Decoration must strengthen hierarchy, never bury rules.
+INTERSTELLAR should feel like a battered campaign console in a vast gothic warship. Information is dense but ordered. Bone dice and parchment labels sit over soot-black iron. Brass identifies command and progress; oxblood identifies danger and violence. Decoration must strengthen hierarchy, never bury rules.
 
 ## Locked palette
 

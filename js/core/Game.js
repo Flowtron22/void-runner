@@ -178,7 +178,7 @@ export class Game {
       const button = document.createElement('button');
       button.className = `faction-option ${this.selectedFaction === faction.id ? 'active' : ''}`;
       button.style.setProperty('--faction-color', faction.color);
-      button.innerHTML = `<b>${faction.name}</b><small>▦ ${faction.units.length}</small>`;
+      button.innerHTML = `<b>${faction.name}</b>`;
       button.disabled = Boolean(this.run);
       button.onclick = () => { this.selectedFaction = faction.id; this.renderHome(); };
       options.append(button);
