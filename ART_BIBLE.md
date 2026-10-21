@@ -61,6 +61,10 @@ Glow is not part of the base language. Depth comes from hard shadows, bevels, te
 - State must be communicated by text, position, and border treatment as well as color.
 - The current actionable choice gets one dominant accent. Avoid several equally loud buttons.
 - Keep all combat math visible: target numbers appear beside the relevant dice stage.
+- Active play screens are icon-first. Do not repeat a concept in a heading, paragraph, and button.
+- Prefer one stable symbol plus a number over a written label: `♥` attempts, `◆` currency/score, `✦` honours, `⚙` Wargear, `▦` army, `⌖` route, `⚄` dice, `♛` Leader.
+- Unit profiles use compact stat chips (`T`, `S`, `W`, `L`, `O`) and rule symbols. Full names belong in accessible labels, native tooltips, or the Help dialog.
+- Prose on an active screen must either change a decision or explain an error. Lore, repeated instructions, and definitions stay behind Help.
 
 ## Dice motion
 

@@ -19,6 +19,8 @@ The previous original unit roster and flat-damage combat are no longer active.
 - The global visual direction follows the KS project's tactile grimdark command-table language: soot-black iron, aged bone, brass, oxblood, restrained military typography, and original gothic-industrial motifs.
 - No interaction depends on hover.
 - Minimum touch target is 40 CSS px.
+- Active screens use symbols, stat chips and numbers before prose. Full rule names live in tooltips and Help.
+- Never repeat the same instruction in a heading, paragraph and action label.
 
 ## 3. Player flow
 

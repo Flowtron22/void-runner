@@ -13,7 +13,7 @@
     <header class="topbar pixel-panel">
       <button id="home-button" class="brand-button" aria-label="Return to command">✠</button>
       <div class="brand-copy"><b>VOID RUNNER</b><small id="location-label">CRUSADE COMMAND</small></div>
-      <div class="top-stat"><small>REQUISITION</small><b id="meta-currency">0</b></div>
+      <div class="top-stat" title="Requisition"><small>◆</small><b id="meta-currency">0</b></div>
       <button id="help-button" class="icon-button" aria-label="How to play">?</button>
     </header>
 
@@ -22,18 +22,17 @@
       <div class="hero-copy">
         <p class="eyebrow">// GRIMDARK ROGUELIKE CAMPAIGN</p>
         <h1 id="home-title">MUSTER AN ARMY.<br><span>ROLL THE BATTLE.</span></h1>
-        <p>Choose a faction, build an army under the <b>points limit</b>, and arrange it on the deployment grid. Every attack automatically rolls Attacks, Hits, Wounds, Saves, and Damage.</p>
+        <p><b>MUSTER</b> · DEPLOY · AUTO-BATTLE · ASCEND</p>
       </div>
       <div class="rule-strip pixel-panel">
-        <div><b>01</b><span>BUILD<br>ARMY</span></div><i></i><div><b>02</b><span>CHOOSE<br>MISSION</span></div><i></i><div><b>03</b><span>ROLL<br>DICE</span></div><i></i><div><b>04</b><span>GAIN<br>HONOUR</span></div>
+        <div title="Build army"><b>▦</b><span>MUSTER</span></div><i></i><div title="Choose mission"><b>⌖</b><span>ROUTE</span></div><i></i><div title="Automatic battle"><b>⚄</b><span>BATTLE</span></div><i></i><div title="Gain rewards"><b>◆</b><span>REWARD</span></div>
       </div>
-      <div class="faction-picker pixel-panel"><small>YOUR FACTION</small><div id="faction-options"></div></div>
+      <div class="faction-picker pixel-panel"><small>⚑ FACTION</small><div id="faction-options"></div></div>
       <div class="home-actions">
-        <button id="new-run-button" class="primary large">BEGIN 500 PT CAMPAIGN</button>
-        <button id="resume-button" class="large" hidden>RESUME CAMPAIGN</button>
-        <button id="research-button" class="large">PERMANENT UPGRADES</button>
+        <button id="new-run-button" class="primary large">⚔ BEGIN · 500 PTS</button>
+        <button id="resume-button" class="large" hidden>▶ RESUME</button>
+        <button id="research-button" class="large">⚙ ARMOURY</button>
       </div>
-      <p class="portrait-note">DESIGNED FOR PORTRAIT · PROGRESS SAVES ON THIS DEVICE</p>
     </section>
 
     <section id="map-screen" class="screen" aria-labelledby="map-title">
@@ -42,24 +41,23 @@
         <div class="cap-badge"><small>POINTS LIMIT</small><b id="map-cap">500</b><span>PTS</span></div>
       </div>
       <div class="run-stats pixel-panel">
-        <span><small>ATTEMPTS</small><b id="run-hull">3/3</b></span><span><small>CAMPAIGN SCORE</small><b id="run-data">0</b></span><span><small>HONOURS</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button">EDIT ARMY</button>
+        <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Campaign score"><small>◆</small><b id="run-data">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button" aria-label="Edit army">▦ EDIT</button>
       </div>
       <div id="route-map" class="route-map" aria-label="Expedition route"></div>
-      <div id="route-detail" class="route-detail pixel-panel"><small>CAMPAIGN MAP</small><b>Choose one available mission.</b><p>The displayed enemy faction and reward are known before deployment.</p></div>
     </section>
 
     <section id="loadout-screen" class="screen" aria-labelledby="loadout-title">
       <div class="section-head compact-head">
-        <div><p class="eyebrow">// ARMY BUILDER</p><h2 id="loadout-title">DEPLOYMENT</h2></div>
+        <div><h2 id="loadout-title">DEPLOYMENT</h2></div>
         <div class="cap-badge"><small>DEPLOYED</small><b id="used-points">0</b><span id="loadout-cap">/ 500</span></div>
       </div>
       <div class="capacity-meter"><i id="capacity-fill"></i></div>
-      <div class="loadout-tip pixel-panel"><b>DEPLOYMENT RULE</b><span>Tap a unit, then an empty grid cell. Units cost Army Points and occupy different amounts of space.</span></div>
+      <div class="loadout-tip pixel-panel"><b>① UNIT</b><span>→</span><b>② GRID</b></div>
       <div class="case-wrap"><div class="case-axis"><span>FRONT LINE</span><span>REAR LINE</span></div><div id="formation-grid" class="formation-grid" aria-label="Six by five deployment grid"></div></div>
-      <div class="prep-actions"><button id="rotate-button">ROTATE UNIT</button><button id="remove-button" class="danger">REMOVE SELECTED</button><button id="clear-button">CLEAR</button></div>
-      <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">UNITS</button><button data-prep-tab="gear">WARGEAR <span id="gear-count">0</span></button><button data-prep-tab="protocols">HONOURS</button></nav>
+      <div class="prep-actions"><button id="rotate-button" aria-label="Rotate unit">↻ ROTATE</button><button id="remove-button" class="danger" aria-label="Remove selected unit">✕ REMOVE</button><button id="clear-button" aria-label="Clear formation">⌫</button></div>
+      <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">▦ UNITS</button><button data-prep-tab="gear">⚙ <span id="gear-count">0</span></button><button data-prep-tab="protocols">✦ HONOURS</button></nav>
       <div id="unit-roster" class="prep-list active"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
-      <div class="sticky-action pixel-panel"><div><small id="prep-status-label">ARMY STATUS</small><b id="prep-status">SELECT A UNIT</b></div><button id="deploy-button" class="primary" disabled>RETURN TO MAP</button></div>
+      <div class="sticky-action pixel-panel"><div><small id="prep-status-label">▦</small><b id="prep-status">SELECT A UNIT</b></div><button id="deploy-button" class="primary" disabled>RETURN TO MAP</button></div>
     </section>
 
     <section id="battle-screen" class="screen" aria-labelledby="battle-title">
@@ -74,13 +72,13 @@
     </section>
 
     <section id="reward-screen" class="screen" aria-labelledby="reward-title">
-      <div class="reward-sigil">◆</div><p class="eyebrow">// VICTORY</p><h2 id="reward-title">CHOOSE ONE BATTLE HONOUR</h2><p class="reward-copy">This bonus lasts for the current campaign only.</p>
+      <div class="reward-sigil">◆</div><p class="eyebrow">// VICTORY</p><h2 id="reward-title">CHOOSE 1 HONOUR</h2>
       <div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>SCORE GAINED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO WARGEAR FOUND</span></div>
     </section>
 
     <section id="research-screen" class="screen" aria-labelledby="research-title">
-      <div class="section-head"><div><p class="eyebrow">// PERMANENT PROGRESSION</p><h2 id="research-title">UPGRADES</h2></div><div class="cap-badge"><small>REQUISITION</small><b id="research-currency">0</b></div></div>
-      <p class="screen-copy">Permanent upgrades apply to future campaigns. Battle Honours and Wargear are temporary and disappear when a campaign ends.</p><div id="research-grid" class="research-grid"></div><button id="research-back-button" class="large">BACK TO COMMAND</button>
+      <div class="section-head"><div><h2 id="research-title">ARMOURY</h2></div><div class="cap-badge"><small>◆</small><b id="research-currency">0</b></div></div>
+      <div id="research-grid" class="research-grid"></div><button id="research-back-button" class="large">← COMMAND</button>
     </section>
 
     <dialog id="help-dialog" class="modal pixel-panel">

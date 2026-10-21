@@ -8,6 +8,13 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const pick = list => list[Math.floor(Math.random() * list.length)];
 const shuffle = list => [...list].sort(() => Math.random() - .5);
 const d6 = () => 1 + Math.floor(Math.random() * 6);
+const RULE_SYMBOLS = [
+  [/Blast/i,'✹'], [/Rapid Fire/i,'»'], [/Melta/i,'◈'], [/Torrent/i,'≋'],
+  [/Devastating/i,'☠'], [/Twin-?linked/i,'⟳'], [/Sustained/i,'✦'], [/Lethal/i,'†'],
+  [/Anti-/i,'⌖'], [/Assault/i,'➜'], [/Heavy/i,'▰'], [/Oath/i,'◎'], [/Deep Strike/i,'⇣'],
+  [/Synapse/i,'⌁'], [/Waaagh/i,'!'], [/Chivalric/i,'♜'], [/Leader|Rites|Alpha Warrior|Da Boss/i,'♛']
+];
+const ruleSymbol = rule => RULE_SYMBOLS.find(([pattern]) => pattern.test(rule))?.[1] || '◆';
 
 function weaponRules(weapon, halfRange = false) {
   const rules = { unsupported: [] };
@@ -119,13 +126,13 @@ export class Game {
       const button = document.createElement('button');
       button.className = `faction-option ${this.selectedFaction === faction.id ? 'active' : ''}`;
       button.style.setProperty('--faction-color', faction.color);
-      button.innerHTML = `<b>${faction.name}</b><small>${faction.units.length} UNIT PROFILES</small>`;
+      button.innerHTML = `<b>${faction.name}</b><small>▦ ${faction.units.length}</small>`;
       button.disabled = Boolean(this.run);
       button.onclick = () => { this.selectedFaction = faction.id; this.renderHome(); };
       options.append(button);
     }
     $('#resume-button').hidden = !this.run;
-    $('#new-run-button').textContent = this.run ? 'ABANDON & BEGIN NEW CAMPAIGN' : 'BEGIN 500 PT CAMPAIGN';
+    $('#new-run-button').textContent = this.run ? '↺ NEW CAMPAIGN' : '⚔ BEGIN · 500 PTS';
     this.renderHeader();
   }
 
@@ -182,9 +189,9 @@ export class Game {
     this.renderProtocols();
     const legal = used > 0 && used <= this.run.cap;
     $('#deploy-button').disabled = !legal;
-    $('#deploy-button').textContent = this.run.pendingNode ? 'START AUTO-BATTLE' : 'RETURN TO MAP';
+    $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : '⌖ MAP';
     const chosen = this.unit(this.selectedBlueprint);
-    $('#prep-status').textContent = legal ? `${this.run.deployed.length} UNITS · ${this.run.cap - used} PTS FREE` : chosen ? `${chosen.name.toUpperCase()} SELECTED` : 'SELECT A UNIT';
+    $('#prep-status').textContent = legal ? `▦ ${this.run.deployed.length} · ${this.run.cap - used} FREE` : chosen ? `▸ ${chosen.name.toUpperCase()}` : '▦ SELECT';
   }
 
   renderFormation() {
@@ -231,9 +238,11 @@ export class Game {
       button.style.setProperty('--unit-color', unit.color);
       button.disabled = out || tooLarge;
       const weapon = unit.weapon;
-      const status = tooLarge ? `NEEDS ${unit.points} PT LIMIT` : unit.leader ? `LEADER · TAP AN ELIGIBLE DEPLOYED UNIT · ${unit.stock - deployedCount} LEFT` : `${unit.size[0]}×${unit.size[1]} · ${unit.models} MODEL${unit.models > 1 ? 'S' : ''} · ${unit.stock - deployedCount} LEFT`;
-      const ruleLine = [...(unit.weapon.keywords || []), ...(unit.abilities || [])].slice(0,4).join(' · ') || 'No special rules';
-      button.innerHTML = `<span class="unit-icon">${unit.mark}</span><span class="unit-copy"><b>${unit.name}</b><small>${status}<br>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · LD${unit.leadership}+ · OC${unit.oc}<br>${weapon.name}: ${weapon.attacks}A ${weapon.hit}+ S${weapon.strength} AP${weapon.ap} D${weapon.damage}<br><em>${ruleLine}</em></small></span><span class="unit-cost">${unit.points}</span>`;
+      const status = tooLarge ? `LOCKED · ${unit.points} PTS` : unit.leader ? `♛ → BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
+      const rules = [...(unit.weapon.keywords || []), ...(unit.abilities || [])].slice(0,5);
+      const badges = rules.map(rule => `<span class="rule-badge" title="${rule}" aria-label="${rule}">${ruleSymbol(rule)}</span>`).join('');
+      button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
+      button.innerHTML = `<span class="unit-icon">${unit.mark}</span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span><span class="rule-badges">${badges}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
       roster.append(button);
     }
@@ -243,7 +252,7 @@ export class Game {
     const list = $('#gear-inventory');
     list.innerHTML = '';
     if (!this.run.gear.length) {
-      list.innerHTML = '<div class="protocol-card"><span>—</span><div><b>NO WARGEAR</b><small>Elite missions and bosses are more likely to award Wargear.</small></div></div>';
+      list.innerHTML = '<div class="protocol-card"><span>⚙</span><div><b>EMPTY</b></div></div>';
       return;
     }
     this.run.gear.forEach((item, index) => {
@@ -251,7 +260,9 @@ export class Game {
       const owner = this.run.deployed.find(unit => unit.id === item.equippedTo);
       const button = document.createElement('button');
       button.className = `gear-card ${owner ? 'equipped' : ''}`;
-      button.innerHTML = `<span><b>${gear.name}</b><small>${gear.desc}</small></span><span>${owner ? this.unit(owner.unitId).name : 'UNEQUIPPED'}</span>`;
+      const effects = {hitBonus:'+1 HIT',saveBonus:'+1 SAVE',toughness:`+${gear.value} T`,attacksBonus:`+${gear.value} A`,invuln:`${gear.value}++`};
+      button.title = gear.desc;
+      button.innerHTML = `<span><b>⚙ ${gear.name}</b><small>${effects[gear.stat] || gear.desc}</small></span><span>${owner ? '●' : '○'}</span>`;
       button.onclick = () => this.equipGear(index);
       list.append(button);
     });
@@ -261,14 +272,15 @@ export class Game {
     const list = $('#protocol-list');
     list.innerHTML = '';
     if (!this.run.protocols.length) {
-      list.innerHTML = '<div class="protocol-card"><span>—</span><div><b>NO BATTLE HONOURS</b><small>Win a battle to choose a temporary campaign bonus.</small></div></div>';
+      list.innerHTML = '<div class="protocol-card"><span>✦</span><div><b>EMPTY</b></div></div>';
       return;
     }
     for (const id of this.run.protocols) {
       const honour = BATTLE_HONOURS.find(item => item.id === id);
       const el = document.createElement('div');
       el.className = 'protocol-card';
-      el.innerHTML = `<span>◆</span><div><b>${honour.name}</b><small>${honour.desc}</small></div>`;
+      el.title = honour.desc;
+      el.innerHTML = `<span>${ruleSymbol(`${honour.name} ${honour.tag}`)}</span><div><b>${honour.name}</b><small>${honour.tag}</small></div>`;
       list.append(el);
     }
   }
@@ -393,7 +405,8 @@ export class Game {
     button.className = `route-node ${classes}`;
     const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'WARZONE BOSS',closed:'UNKNOWN'};
     const faction = node.enemyFaction ? this.faction(node.enemyFaction).name : labels[node.type];
-    button.innerHTML = `<b>${node.name}</b><small>${faction}</small><span>${node.reward || ''}</span>`;
+    const rewardIcon = node.type === 'boss' ? '♜' : node.type === 'repair' ? '♥' : node.type === 'elite' ? '✦' : node.type === 'salvage' ? '⚙' : '◆';
+    button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}</small><span>${node.reward || ''}</span>`;
     button.disabled = !active;
     if (active) button.onclick = () => this.chooseNode(node);
     return button;
@@ -477,7 +490,7 @@ export class Game {
     const enemies = this.makeEnemyForce(node);
     this.battle = {
       node, players, enemies, round:0,
-      log:[`Mission started against <b>${this.faction(node.enemyFaction).name}</b>.`],
+      log:[`⚔ ${this.faction(node.enemyFaction).name}`],
       resolving:false, lastRoll:null, visibleStage:-1, actors:[], actorIndex:0, currentPlan:null,
       cp:{player:1,enemy:1}, insaneBravery:{player:false,enemy:false}, stratagemUsed:{player:false,enemy:false}, oathTarget:{player:null,enemy:null},
       shadowUsed:{player:false,enemy:false}, rangeBand:'LONG RANGE'
@@ -485,7 +498,7 @@ export class Game {
     this.battleSpeed = 1;
     $('#speed-button').textContent = 'SPEED ×1';
     $('#battle-title').textContent = node.name;
-    $('#battle-kicker').textContent = node.type === 'boss' ? '// BOSS BATTLE · D6 AUTO-ROLL' : '// D6 AUTOMATIC BATTLE';
+    $('#battle-kicker').textContent = node.type === 'boss' ? '// ♜ BOSS · AUTO-D6' : '// ⚄ AUTO-BATTLE';
     $('#player-power').textContent = `${this.usedPoints()} PTS`;
     $('#enemy-power').textContent = `${this.faction(node.enemyFaction).name.toUpperCase()} · THREAT ${Math.round(node.difficulty*100)}`;
     this.show('battle');
@@ -600,19 +613,20 @@ export class Game {
       const force = side === 'player' ? battle.players : battle.enemies;
       const foes = side === 'player' ? battle.enemies : battle.players;
       if (this.alive(force).some(unit => unit.keywords?.includes('Adeptus Astartes'))) {
+        const previousOath = battle.oathTarget[side];
         battle.oathTarget[side] = [...this.alive(foes)].sort((a,b) => b.currentHp - a.currentHp)[0]?.instanceId || null;
         const oath = this.alive(foes).find(unit => unit.instanceId === battle.oathTarget[side]);
-        if (oath) this.addLog(`${side === 'player' ? 'Your' : 'Hostile'} Oath of Moment marked <b>${oath.name}</b>.`);
+        if (oath && previousOath !== battle.oathTarget[side]) this.addLog(`◎ ${oath.name}`);
       }
       if (this.alive(force).some(unit => unit.abilities?.includes('Da Boss'))) battle.cp[side] = Math.min(5, battle.cp[side] + 1);
       if (!battle.shadowUsed[side] && battle.round === 2 && this.alive(force).some(unit => unit.abilities?.includes('Shadow in the Warp'))) {
         battle.shadowUsed[side] = true;
-        this.addLog(`<b>${side === 'player' ? 'Your' : 'Hostile'} Shadow in the Warp:</b> the opposing army tests Battle-shock.`);
+        this.addLog(`⌁ SHADOW · ${side === 'player' ? 'ENEMY' : 'PLAYER'} TEST`);
         for (const unit of this.alive(foes)) this.testBattleShock(unit, true);
       }
       if (battle.round === 2 && this.alive(force).some(unit => unit.abilities?.includes('Waaagh!'))) {
         for (const unit of this.alive(force)) if (unit.keywords?.includes('Orks')) unit.invuln = Math.min(unit.invuln, 5);
-        this.addLog(`<b>${side === 'player' ? 'Your' : 'Hostile'} Waaagh!:</b> Orks are riled up this round.`);
+        this.addLog(`! WAAAGH · ${side === 'player' ? 'PLAYER' : 'ENEMY'}`);
       }
     }
   }
@@ -632,11 +646,11 @@ export class Game {
     if (!forced && !this.battle.insaneBravery[side] && this.battle.cp[side] > 0) {
       this.battle.cp[side]--;
       this.battle.insaneBravery[side] = true;
-      this.addLog(`${unit.name} used <b>Insane Bravery</b> (1 CP).`);
+      this.addLog(`◆ BRAVERY · ${unit.name} · −1CP`);
       return;
     }
     unit.battleShocked = true;
-    this.addLog(`${unit.name} failed Battle-shock (${dice.join('+')} vs LD ${unit.leadership}+).`);
+    this.addLog(`☠ SHOCK · ${unit.name} · ${dice.join('+')}<${unit.leadership}`);
   }
 
   prepareDiceAttack(actor, target) {
@@ -713,7 +727,7 @@ export class Game {
     next[index] = d6();
     this.battle.cp[unit.side]--;
     this.battle.stratagemUsed[unit.side] = true;
-    this.addLog(`${unit.name} used <b>Command Re-roll</b> on a ${label} roll (1 CP).`);
+    this.addLog(`↻ ${label.toUpperCase()} · ${unit.name} · −1CP`);
     return next;
   }
 
@@ -726,7 +740,7 @@ export class Game {
     target.flash = 'hit';
     plan.applied = true;
     this.battle.lastRoll = plan;
-    this.addLog(`${plan.actor}: ${plan.attacks} attacks → ${plan.hits} hits → ${plan.wounds} wounds → ${plan.damageLost} damage${target.dead ? ' · DESTROYED' : ''}.`);
+    if (target.dead) this.addLog(`✕ ${target.name}`);
   }
 
   restoreWounds(unit, amount) {
@@ -739,7 +753,7 @@ export class Game {
 
   addLog(message) {
     this.battle.log.unshift(message);
-    this.battle.log = this.battle.log.slice(0, 4);
+    this.battle.log = this.battle.log.slice(0, 3);
   }
 
   renderBattle() {
@@ -844,7 +858,9 @@ export class Game {
     for (const honour of options) {
       const button = document.createElement('button');
       button.className = 'reward-option pixel-panel';
-      button.innerHTML = `<b>${honour.name}</b><small>${honour.desc}</small><span>${honour.tag} · THIS CAMPAIGN</span>`;
+      button.title = honour.desc;
+      button.setAttribute('aria-label', `${honour.name}: ${honour.desc}`);
+      button.innerHTML = `<b>${ruleSymbol(`${honour.name} ${honour.tag}`)} ${honour.name}</b><span>${honour.tag}</span>`;
       button.onclick = () => this.chooseReward(honour.id, node);
       list.append(button);
     }
