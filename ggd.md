@@ -4,7 +4,47 @@ This is the authoritative gameplay and implementation handoff. Read it with `ART
 
 ## 1. Clear design statement
 
-The game is now a portrait-first Warhammer 40,000 army-building roguelike with automatic dice combat.
+The game is now a portrait-first 40K-inspired army-building roguelike with automatic dice combat and a star-driven sector campaign.
+
+> Current flow (October 2026): this section supersedes any older linear-warzone wording later in this handoff.
+
+```text
+Main Menu: Play / Settings / Credits
+    ↓
+Choose campaign scale: 500 / 1000 / 1500 / 2000 / 3000 points
+    ↓
+Choose launch faction: Ultramarines / Imperial Fists / Grey Knights
+    ↓
+Choose one opening Battle Honour
+    ↓
+Galaxy sector map
+    ↓
+Connected area map: choose one of three star-rated battles
+    ↓
+Manual deployment → automatic visible-dice battle
+    ↓
+Post-War Affairs: Requisition / Honour / Stratagem
+    ↓
+Occasional recruit signal or field store
+    ↓
+Spend collected stars to unlock a stronger sector boss tier
+    ↓
+Secure every sector; bank permanent Requisition
+```
+
+Campaign scales are locked at 500, 1000, 1500, 2000 and 3000 points. They contain 4, 5, 6, 7 and 8 sectors respectively. Higher scales also lengthen each sector, multiply enemy strength and increase permanent boss rewards.
+
+Each normal area presents exactly three connected choices rated one, two and three stars. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
+
+Post-War rewards are run-only unless explicitly labeled permanent:
+
+- **Requisition:** currency spent in an occasional field store.
+- **Battle Honour:** passive army rule for the current run.
+- **Stratagem:** automatic command modifier for the current run.
+- **Reinforcement signal:** occasionally unlocks one of the faction's two unrecovered unit patterns.
+- **Field store:** occasionally offers three Wargear items for campaign Requisition.
+
+Only two unit patterns are available at campaign start. The other two are deliberately recovered through reinforcement events, giving the army a growth arc without changing its chosen points ceiling.
 
 - **40K supplies the army layer:** factions, units, points, models, Toughness, Saves, Wounds, Invulnerable Saves, weapon Attacks, Hit values, Strength, AP and Damage.
 - **The KS project supplies the data and dice model:** compact game data is derived from `D:/Projects/Minigames/KS/solo-lab/public/armies`, and attack resolution follows the KS sequence.
@@ -25,41 +65,22 @@ The previous original unit roster and flat-damage combat are no longer active.
 ## 3. Player flow
 
 ```text
-Choose faction
-    ↓
-Build army under points limit
-    ↓
-Place units on 6×5 deployment grid
-    ↓
-Choose campaign mission
-    ↓
-Automatic D6 battle
-    ↓
-Choose Battle Honour + collect Wargear
-    ↓
-Boss → larger points limit → next warzone
+Choose scale → faction → first Honour → sector → area → deploy → auto-battle → Post-War Affairs → boss tier
 ```
 
 ## 4. Campaign structure
 
-One complete campaign contains four warzones. Each warzone has three mission choices followed by a boss.
+The player chooses one points ceiling for the entire run. It never rises mid-run.
 
-| Warzone | Army Points limit | Boss |
-|---|---:|---|
-| Outer Warzone | 500 | Enemy Warlord |
-| Contested Sector | 1,000 | Armoured Spearhead |
-| Fortress Line | 1,500 | Titanic Assault |
-| Final Crusade | 2,000 | Supreme Command |
+| Scale | Sectors | Areas per sector | Enemy multiplier | Boss permanent reward |
+|---|---:|---:|---:|---:|
+| 500 Patrol | 4 | 3 + boss | 1.00× | 30 per tier |
+| 1,000 Strike Force | 5 | 4 + boss | 1.08× | 45 per tier |
+| 1,500 Battle Host | 6 | 4 + boss | 1.16× | 60 per tier |
+| 2,000 Onslaught | 7 | 5 + boss | 1.24× | 80 per tier |
+| 3,000 Apocalypse | 8 | 6 + boss | 1.34× | 110 per tier |
 
-Mission types:
-
-- **Battle:** standard threat and score reward.
-- **Supply:** battle with improved Wargear chance.
-- **Elite:** higher enemy points and guaranteed Wargear.
-- **Recovery:** no combat; restore one campaign attempt.
-- **Boss:** ends the current warzone and unlocks the next points limit.
-
-Enemy faction is shown before the mission is selected. Choosing one mission closes the other choices at that depth.
+Every area layer exposes three connected battle choices worth 1–3 stars. Enemy faction and star rating are visible before deployment. Choosing one area closes the other two choices at that layer. Recruit and store signals are deterministic within the generated route, so a saved run remains understandable and resumable.
 
 ## 5. Factions and JSON data
 

@@ -1,7 +1,8 @@
-import { BATTLE_HONOURS, WARGEAR, REGIONS, RESEARCH } from '../data/units.js';
+import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATAGEMS } from '../data/units.js';
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
-const RUN_KEY = 'void-runner-40k-active-v2';
+const RUN_KEY = 'combat-patrol-active-v3';
+const PLAYABLE_FACTIONS = ['space-marines','imperial-fists','grey-knights'];
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -103,7 +104,9 @@ export class Game {
     this.battle = null;
     this.battleTimer = null;
     this.battleSpeed = 1;
+    this.setupChoice = {tier:0,faction:null,honours:[]};
     this.bindUI();
+    document.body.classList.toggle('reduced-motion', Boolean(this.meta.settings?.reducedMotion));
     this.renderHome();
     this.show('home');
   }
@@ -120,10 +123,19 @@ export class Game {
   }
 
   bindUI() {
-    $('#new-run-button').onclick = () => this.startRun();
-    $('#resume-button').onclick = () => { this.renderMap(); this.show('map'); };
-    $('#research-button').onclick = () => { this.renderResearch(); this.show('research'); };
-    $('#research-back-button').onclick = () => this.show('home');
+    $('#new-run-button').onclick = () => this.beginSetup();
+    $('#resume-button').onclick = () => this.resumeRun();
+    $('#settings-button').onclick = () => $('#settings-dialog').showModal();
+    $('#credits-button').onclick = () => $('#credits-dialog').showModal();
+    $('#close-settings-button').onclick = () => $('#settings-dialog').close();
+    $('#close-credits-button').onclick = () => $('#credits-dialog').close();
+    $('#reduced-motion-toggle').onchange = event => {
+      this.meta.settings = {...this.meta.settings,reducedMotion:event.target.checked};
+      document.body.classList.toggle('reduced-motion', event.target.checked); this.save();
+    };
+    $('#setup-back-button').onclick = () => this.show('home');
+    $('#sector-loadout-button').onclick = () => this.openLoadout();
+    $('#event-continue-button').onclick = () => this.finishPostWarEvent();
     $('#home-button').onclick = () => { if (!this.battle) { this.save(); this.renderHome(); this.show('home'); } };
     $('#help-button').onclick = () => $('#help-dialog').showModal();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
@@ -199,36 +211,67 @@ export class Game {
   }
 
   renderHome() {
-    const options = $('#faction-options');
-    options.innerHTML = '';
-    for (const faction of this.factions) {
-      const button = document.createElement('button');
-      button.className = `faction-option ${this.selectedFaction === faction.id ? 'active' : ''}`;
-      button.style.setProperty('--faction-color', faction.color);
-      button.innerHTML = `<b>${faction.name}</b>`;
-      button.disabled = Boolean(this.run);
-      button.onclick = () => { this.selectedFaction = faction.id; this.renderHome(); };
-      options.append(button);
-    }
     $('#resume-button').hidden = !this.run;
-    $('#new-run-button').textContent = this.run ? '↺ NEW CAMPAIGN' : '⚔ BEGIN · 500 PTS';
+    $('#new-run-button').textContent = '▶ PLAY';
+    $('#reduced-motion-toggle').checked = Boolean(this.meta.settings?.reducedMotion);
     this.renderHeader();
   }
 
-  startRun() {
+  beginSetup() {
+    this.setupChoice = {tier:null,faction:null,honours:shuffle(BATTLE_HONOURS).slice(0,3)};
+    this.renderSetup('tier');
+    this.show('setup');
+  }
+
+  renderSetup(stage) {
+    const list = $('#setup-options'); list.innerHTML = '';
+    const stages = ['tier','faction','honour'];
+    const index = stages.indexOf(stage);
+    $('#setup-step').textContent = `0${index + 1} / 03 · ${stage === 'tier' ? 'CRUSADE SCALE' : stage === 'faction' ? 'COMMAND' : 'FIRST HONOUR'}`;
+    $('#setup-title').textContent = stage === 'tier' ? 'CHOOSE POINTS' : stage === 'faction' ? 'CHOOSE FACTION' : 'CHOOSE 1 HONOUR';
+    $$('.setup-progress i').forEach((dot,i) => dot.classList.toggle('active', i <= index));
+    if (stage === 'tier') CAMPAIGN_TIERS.forEach((tier,tierIndex) => {
+      const button = document.createElement('button'); button.className = 'setup-card tier-card';
+      button.innerHTML = `<span>0${tierIndex + 1}</span><b>${tier.points} PTS</b><small>${tier.name} · ${tier.sectors} SECTORS</small><i>${'◆'.repeat(Math.min(5,tierIndex + 1))}</i>`;
+      button.onclick = () => { this.setupChoice.tier = tierIndex; this.renderSetup('faction'); }; list.append(button);
+    });
+    if (stage === 'faction') PLAYABLE_FACTIONS.forEach(id => {
+      const faction = this.faction(id); const button = document.createElement('button'); button.className = 'setup-card faction-launch-card';
+      button.style.setProperty('--faction-color',faction.color);
+      button.innerHTML = `<span class="faction-mark">${faction.mark || '✠'}</span><b>${id === 'space-marines' ? 'ULTRAMARINES' : faction.name.toUpperCase()}</b><small>4 UNIT PATTERNS</small>`;
+      button.onclick = () => { this.setupChoice.faction = id; this.renderSetup('honour'); }; list.append(button);
+    });
+    if (stage === 'honour') this.setupChoice.honours.forEach(honour => {
+      const button = document.createElement('button'); button.className = 'setup-card honour-launch-card'; button.title = honour.desc;
+      button.innerHTML = `<span>${ruleSymbol(`${honour.name} ${honour.tag}`)}</span><b>${honour.name}</b><small>${honour.tag}</small>`;
+      button.onclick = () => this.startRun(honour.id); list.append(button);
+    });
+  }
+
+  startRun(honourId) {
+    const tier = CAMPAIGN_TIERS[this.setupChoice.tier ?? 0];
+    this.selectedFaction = this.setupChoice.faction || PLAYABLE_FACTIONS[0];
     const factionUnits = this.units.filter(unit => unit.faction === this.selectedFaction);
     this.run = {
-      seed: Date.now(), faction: this.selectedFaction, region: 0, step: 0, cap: 500,
+      seed: Date.now(), faction: this.selectedFaction, tierIndex:this.setupChoice.tier ?? 0, region:null, step:0, cap:tier.points,
       hull: 3 + (this.meta.research.insurance || 0), maxHull: 3 + (this.meta.research.insurance || 0),
-      data: 0, chests: 0, protocols: [], gear: [], deployed: [], history: [], offers: null,
-      battles: 0, bosses: 0, pendingNode: null
+      data:0, stars:0, sectorStars:0, currency:0, chests:0, protocols:[honourId], stratagems:[], gear:[], deployed:[], history:[], offers:null,
+      sectors:Array.from({length:tier.sectors},(_,i)=>({id:i,name:SECTOR_NAMES[i],status:i===0?'available':'locked',stars:0})),
+      unlockedUnits:factionUnits.slice(0,2).map(unit=>unit.id), battles:0, bosses:0, pendingNode:null, pendingPostWar:null
     };
     this.run.cap = this.getBaseCap();
     this.meta.runs++;
     this.selectedBlueprint = factionUnits[0]?.id || null;
     this.selectedPlaced = null;
     this.save();
-    this.openLoadout();
+    this.renderSectors(); this.show('sector');
+  }
+
+  resumeRun() {
+    if (!this.run) return;
+    if (this.run.pendingNode) return this.openLoadout();
+    if (this.run.region === null) { this.renderSectors(); this.show('sector'); }
+    else { this.renderMap(); this.show('map'); }
   }
 
   protocolEffects() {
@@ -241,7 +284,7 @@ export class Game {
   }
 
   getBaseCap() {
-    return REGIONS[this.run.region].cap + (this.meta.research.logistics || 0) * 50 + (this.protocolEffects().pointBonus || 0);
+    return CAMPAIGN_TIERS[this.run.tierIndex].points + (this.meta.research.logistics || 0) * 50 + (this.protocolEffects().pointBonus || 0);
   }
 
   usedPoints() {
@@ -312,12 +355,13 @@ export class Game {
       const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
       const out = deployedCount >= unit.stock;
       const tooLarge = unit.points > this.run.cap;
+      const unrecovered = !this.run.unlockedUnits.includes(unit.id);
       const button = document.createElement('button');
-      button.className = `unit-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${out || tooLarge ? 'locked' : ''}`;
+      button.className = `unit-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${out || tooLarge || unrecovered ? 'locked' : ''}`;
       button.style.setProperty('--unit-color', unit.color);
-      button.disabled = out || tooLarge;
+      button.disabled = out || tooLarge || unrecovered;
       const weapon = unit.weapon;
-      const status = tooLarge ? `LOCKED · ${unit.points} PTS` : unit.leader ? `♛ → BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
+      const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.leader ? `♛ → BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
       const rules = [...(unit.weapon.keywords || []), ...(unit.abilities || [])].slice(0,5);
       const badges = rules.map(rule => `<span class="rule-badge" title="${rule}" aria-label="${rule}">${ruleSymbol(rule)}</span>`).join('');
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
@@ -360,6 +404,12 @@ export class Game {
       el.className = 'protocol-card';
       el.title = honour.desc;
       el.innerHTML = `<span>${ruleSymbol(`${honour.name} ${honour.tag}`)}</span><div><b>${honour.name}</b><small>${honour.tag}</small></div>`;
+      list.append(el);
+    }
+    for (const id of this.run.stratagems || []) {
+      const stratagem = STRATAGEMS.find(item => item.id === id);
+      const el = document.createElement('div'); el.className = 'protocol-card'; el.title = stratagem.desc;
+      el.innerHTML = `<span>⌖</span><div><b>${stratagem.name}</b><small>STRATAGEM · ${stratagem.tag}</small></div>`;
       list.append(el);
     }
   }
@@ -442,38 +492,75 @@ export class Game {
     return pick(this.factions.filter(faction => faction.id !== this.run.faction));
   }
 
+  renderSectors() {
+    const tier = CAMPAIGN_TIERS[this.run.tierIndex];
+    $('#campaign-stars').textContent = this.run.stars;
+    $('#sector-kicker').textContent = `${tier.points} PTS · ${tier.name} · ${this.run.sectors.length} SECTORS`;
+    const map = $('#sector-map'); map.innerHTML = '';
+    this.run.sectors.forEach((sector,index) => {
+      const button = document.createElement('button');
+      button.className = `sector-card ${sector.status}`;
+      button.disabled = sector.status === 'locked';
+      const status = sector.status === 'complete' ? `${sector.stars} ★ SECURED` : sector.status === 'available' ? 'ROUTE AVAILABLE' : 'SIGNAL LOCKED';
+      button.innerHTML = `<span>0${index + 1}</span><i></i><b>${sector.name}</b><small>${status}</small>`;
+      button.onclick = () => this.enterSector(index); map.append(button);
+    });
+    this.save();
+  }
+
+  enterSector(index) {
+    const sector = this.run.sectors[index];
+    if (!sector || sector.status === 'locked' || sector.status === 'complete') return;
+    this.run.region = index; this.run.step = 0; this.run.sectorStars = 0; this.run.offers = null;
+    this.run.history = this.run.history.filter(node => node.region !== index);
+    this.save(); this.renderMap(); this.show('map');
+  }
+
   makeOffers() {
     const r = this.run.region;
     const s = this.run.step;
-    if (s === 3) {
+    const tier = CAMPAIGN_TIERS[this.run.tierIndex];
+    if (s === tier.depth) {
       const enemy = this.enemyFaction();
-      return [{ id:`r${r}-boss`, type:'boss', name:REGIONS[r].boss, reward:'BOSS REWARD', difficulty:1.08, enemyFaction:enemy.id }];
+      const thresholds = [0,tier.depth + 1,tier.depth * 2];
+      return [1,2,3].map(bossTier => ({
+        id:`r${r}-boss-${bossTier}`,type:'boss',bossTier,
+        name:['WARLORD','CHAMPION','APEX COMMANDER'][bossTier-1],
+        reward:`${bossTier}★ · +${tier.permanentReward * bossTier} PERMANENT REQ`,
+        difficulty:(1 + bossTier * .22) * tier.enemyScale, enemyFaction:enemy.id,
+        locked:this.run.sectorStars < thresholds[bossTier-1], threshold:thresholds[bossTier-1], stars:bossTier
+      }));
     }
-    const pools = [
-      [{type:'skirmish',name:'PATROL CLASH',reward:'+SCORE',difficulty:.65},{type:'salvage',name:'SUPPLY RAID',reward:'WARGEAR CHANCE',difficulty:.74}],
-      [{type:'skirmish',name:'LINE ENGAGEMENT',reward:'+SCORE',difficulty:.72},{type:'elite',name:'ELITE DETACHMENT',reward:'GUARANTEED WARGEAR',difficulty:.92},{type:'repair',name:'FIELD HOSPITAL',reward:'+1 ATTEMPT',difficulty:0}],
-      [{type:'elite',name:'ARMOURED COLUMN',reward:'RARE WARGEAR',difficulty:.98},{type:'skirmish',name:'BREAKTHROUGH',reward:'+SCORE',difficulty:.8}]
-    ];
-    return shuffle(pools[s]).slice(0, s === 1 ? 3 : 2).map((node, index) => ({...node,id:`r${r}s${s}n${index}`,enemyFaction:this.enemyFaction().id}));
+    const names = ['PATROL CLASH','SUPPLY RAID','LINE ENGAGEMENT','ARMOURED COLUMN','BREAKTHROUGH','VOID AMBUSH','RELIC DEFENCE'];
+    return [1,2,3].map((stars,index) => {
+      const eventRoll = (r * 7 + s * 3 + index) % 7;
+      const event = eventRoll === 2 ? 'recruit' : eventRoll === 5 ? 'store' : null;
+      const type = stars === 3 ? 'elite' : event === 'store' ? 'salvage' : 'skirmish';
+      return {id:`r${r}s${s}n${index}`,type,name:names[(r+s+index)%names.length],stars,event,
+        reward:event === 'recruit' ? 'RECRUIT SIGNAL' : event === 'store' ? 'FIELD STORE' : 'POST-WAR CHOICE',
+        difficulty:(.62 + stars * .14 + s * .035) * tier.enemyScale,enemyFaction:this.enemyFaction().id};
+    });
   }
 
   renderMap() {
     if (!this.run.offers) this.run.offers = this.makeOffers();
-    const region = REGIONS[this.run.region];
-    $('#region-kicker').textContent = `WARZONE ${this.run.region + 1} / 4 · MISSION ${this.run.step + 1} / 4`;
-    $('#map-title').textContent = region.name;
+    const tier = CAMPAIGN_TIERS[this.run.tierIndex];
+    const sector = this.run.sectors[this.run.region];
+    $('#region-kicker').textContent = `SECTOR ${this.run.region + 1} / ${this.run.sectors.length} · AREA ${Math.min(this.run.step + 1,tier.depth + 1)} / ${tier.depth + 1}`;
+    $('#map-title').textContent = sector.name;
     $('#map-cap').textContent = this.run.cap;
     $('#run-hull').textContent = `${this.run.hull}/${this.run.maxHull}`;
-    $('#run-data').textContent = this.run.data;
+    $('#run-data').textContent = this.run.sectorStars;
+    $('#run-currency').textContent = this.run.currency;
     $('#run-protocol-count').textContent = this.run.protocols.length;
     const map = $('#route-map');
     map.innerHTML = '';
     const history = this.run.history.filter(node => node.region === this.run.region);
-    for (let step = 3; step >= 0; step--) {
+    for (let step = tier.depth; step >= 0; step--) {
       const row = document.createElement('div'); row.className = 'route-row';
       if (step < this.run.step) row.append(this.makeNodeButton(history.find(node => node.step === step) || {type:'closed',name:'COMPLETED',reward:''}, 'completed', false));
       else if (step === this.run.step) for (const node of this.run.offers) row.append(this.makeNodeButton(node, `available ${node.type}`, true));
-      else row.append(this.makeNodeButton(step === 3 ? {type:'boss',name:region.boss,reward:'BOSS'} : {type:'closed',name:'UNKNOWN MISSION',reward:'LOCKED'}, `closed ${step === 3 ? 'boss' : 'closed'}`, false));
+      else row.append(this.makeNodeButton(step === tier.depth ? {type:'boss',name:'BOSS TIERS',reward:'EARN STARS TO UNLOCK'} : {type:'closed',name:'UNKNOWN AREA',reward:'LOCKED'}, `closed ${step === tier.depth ? 'boss' : 'closed'}`, false));
       map.append(row);
     }
     this.save();
@@ -482,23 +569,16 @@ export class Game {
   makeNodeButton(node, classes, active) {
     const button = document.createElement('button');
     button.className = `route-node ${classes}`;
-    const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'WARZONE BOSS',closed:'UNKNOWN'};
+    const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'SECTOR BOSS',closed:'UNKNOWN'};
     const faction = node.enemyFaction ? this.faction(node.enemyFaction).name : labels[node.type];
     const rewardIcon = node.type === 'boss' ? '♜' : node.type === 'repair' ? '♥' : node.type === 'elite' ? '✦' : node.type === 'salvage' ? '⚙' : '◆';
-    button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}</small><span>${node.reward || ''}</span>`;
-    button.disabled = !active;
-    if (active) button.onclick = () => this.chooseNode(node);
+    button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}${node.stars ? ` · ${'★'.repeat(node.stars)}` : ''}</small><span>${node.locked ? `NEEDS ${node.threshold} ★` : node.reward || ''}</span>`;
+    button.disabled = !active || node.locked;
+    if (active && !node.locked) button.onclick = () => this.chooseNode(node);
     return button;
   }
 
   chooseNode(node) {
-    if (node.type === 'repair') {
-      this.run.hull = Math.min(this.run.maxHull, this.run.hull + 1);
-      this.run.data += 10;
-      this.run.history.push({...node, region:this.run.region, step:this.run.step});
-      this.advanceRoute(false);
-      return;
-    }
     this.run.pendingNode = node;
     this.save();
     this.openLoadout();
@@ -548,8 +628,8 @@ export class Game {
       total += unit.points;
     }
     if (node.type === 'boss' && force[0]) {
-      force[0].name = REGIONS[this.run.region].boss;
-      force[0].hp = force[0].hp.map(value => Math.ceil(value * 1.5));
+      force[0].name = node.name;
+      force[0].hp = force[0].hp.map(value => Math.ceil(value * (1.25 + (node.bossTier || 1) * .2)));
       force[0].maxHp = force[0].hp.reduce((sum,value) => sum + value, 0);
       force[0].currentHp = force[0].maxHp;
       force[0].attacksBonus += 1;
@@ -571,7 +651,7 @@ export class Game {
       node, players, enemies, round:0,
       log:[`⚔ ${this.faction(node.enemyFaction).name}`],
       resolving:false, lastRoll:null, visibleStage:-1, actors:[], actorIndex:0, currentPlan:null,
-      cp:{player:1,enemy:1}, insaneBravery:{player:false,enemy:false}, stratagemUsed:{player:false,enemy:false}, oathTarget:{player:null,enemy:null},
+      cp:{player:1 + (this.stratagemEffects().startingCp || 0),enemy:1}, insaneBravery:{player:false,enemy:false}, stratagemUsed:{player:false,enemy:false}, oathTarget:{player:null,enemy:null},
       shadowUsed:{player:false,enemy:false}, rangeBand:'LONG RANGE'
     };
     this.battleSpeed = 1;
@@ -584,6 +664,15 @@ export class Game {
     this.show('battle');
     this.renderBattle();
     this.scheduleRound();
+  }
+
+  stratagemEffects() {
+    const effects = {};
+    for (const id of this.run.stratagems || []) {
+      const effect = STRATAGEMS.find(item => item.id === id)?.effect || {};
+      for (const [key,value] of Object.entries(effect)) effects[key] = (effects[key] || 0) + value;
+    }
+    return effects;
   }
 
   scheduleRound() {
@@ -753,7 +842,8 @@ export class Game {
       if (rules.blast) attacks += Math.floor(target.hp.length / 5) * rules.blast;
     }
     const effects = actor.side === 'player' ? this.protocolEffects() : {};
-    const hitTarget = clamp(actor.weapon.hit - actor.hitBonus, 2, 6);
+    const tactics = actor.side === 'player' && this.battle.round === 1 ? this.stratagemEffects() : {};
+    const hitTarget = clamp(actor.weapon.hit - actor.hitBonus - (tactics.openingHit || 0), 2, 6);
     let hitRolls = rules.torrent ? [] : Array.from({length:attacks}, () => d6());
     const oathReroll = target.instanceId === this.battle.oathTarget[actor.side];
     if (!rules.torrent && (oathReroll || leader.hitReroll === 'failed')) hitRolls = hitRolls.map(roll => roll !== 1 && roll >= hitTarget ? roll : d6());
@@ -763,7 +853,7 @@ export class Game {
     const autoWounds = effects.lethalHits || rules.lethalHits ? criticalHits : 0;
     const sustainedHits = Math.max(effects.sustainedHits || 0, rules.sustainedHits || 0, leader.sustainedHits || 0);
     if (sustainedHits) hits += criticalHits * sustainedHits;
-    const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness) - actor.woundBonus, 2, 6);
+    const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness) - actor.woundBonus - (tactics.openingWound || 0), 2, 6);
     const antiNeeded = target.keywords?.includes('Infantry') ? rules.antiInfantry : target.keywords?.includes('Monster') ? rules.antiMonster : target.keywords?.includes('Vehicle') ? rules.antiVehicle : null;
     const effectiveWoundNeeded = Math.min(woundNeeded, antiNeeded || 7);
     let woundRolls = Array.from({length:Math.max(0,hits-autoWounds)}, () => d6());
@@ -928,49 +1018,98 @@ export class Game {
   }
 
   openRewards(node) {
-    const score = node.type === 'boss' ? 90 : node.type === 'elite' ? 45 : 28;
-    const requisition = Math.round((node.type === 'boss' ? 45 : node.type === 'elite' ? 18 : 9) * (1 + (this.meta.research.salvage || 0) * .15));
+    const score = node.type === 'boss' ? 90 * (node.bossTier || 1) : 20 + node.stars * 10;
     this.run.data += score;
-    this.run.chests += requisition;
+    this.run.stars += node.stars || 0;
+    this.run.sectorStars += node.stars || 0;
     this.run.battles++;
     if (node.type === 'boss') this.run.bosses++;
-    let gear = null;
-    if (node.type === 'boss' || node.type === 'elite' || node.type === 'salvage' || Math.random() < .3) {
-      gear = pick(WARGEAR);
-      this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`});
-    }
-    const owned = new Set(this.run.protocols);
-    const options = shuffle(BATTLE_HONOURS.filter(honour => !owned.has(honour.id))).slice(0,3);
+    const honour = pick(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))) || pick(BATTLE_HONOURS);
+    const stratagem = pick(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))) || pick(STRATAGEMS);
+    const req = Math.round((18 + (node.stars || 1) * 8) * (1 + (this.meta.research.salvage || 0) * .15));
+    const options = [
+      {kind:'currency',icon:'◆',name:`${req} REQUISITION`,tag:'CAMPAIGN CURRENCY',desc:'Spend at field stores during this run.'},
+      {kind:'honour',id:honour.id,icon:ruleSymbol(`${honour.name} ${honour.tag}`),name:honour.name,tag:'BATTLE HONOUR',desc:honour.desc},
+      {kind:'stratagem',id:stratagem.id,icon:'⌖',name:stratagem.name,tag:'STRATAGEM',desc:stratagem.desc}
+    ];
     const list = $('#reward-options'); list.innerHTML = '';
-    for (const honour of options) {
+    for (const option of options) {
       const button = document.createElement('button');
       button.className = 'reward-option pixel-panel';
-      button.title = honour.desc;
-      button.setAttribute('aria-label', `${honour.name}: ${honour.desc}`);
-      button.innerHTML = `<b>${ruleSymbol(`${honour.name} ${honour.tag}`)} ${honour.name}</b><span>${honour.tag}</span>`;
-      button.onclick = () => this.chooseReward(honour.id, node);
+      button.title = option.desc;
+      button.setAttribute('aria-label', `${option.name}: ${option.desc}`);
+      button.innerHTML = `<b>${option.icon} ${option.name}</b><span>${option.tag}</span>`;
+      button.onclick = () => this.chooseReward(option, node, req);
       list.append(button);
     }
-    $('#reward-data').textContent = `+${score}`;
-    $('#reward-gear-line').textContent = gear ? `WARGEAR: ${gear.name.toUpperCase()}` : 'NO WARGEAR FOUND';
+    $('#reward-data').textContent = `+${node.stars || 0} ★`;
+    $('#reward-gear-line').textContent = node.event === 'recruit' ? 'SIGNAL: REINFORCEMENTS' : node.event === 'store' ? 'SIGNAL: FIELD STORE' : `${score} CAMPAIGN SCORE`;
     this.save();
     this.show('reward');
   }
 
-  chooseReward(honourId, node) {
-    this.run.protocols.push(honourId);
+  chooseReward(option, node, req) {
+    if (option.kind === 'currency') this.run.currency += req;
+    if (option.kind === 'honour' && !this.run.protocols.includes(option.id)) this.run.protocols.push(option.id);
+    if (option.kind === 'stratagem' && !this.run.stratagems.includes(option.id)) {
+      this.run.stratagems.push(option.id);
+      this.run.currency += STRATAGEMS.find(item => item.id === option.id)?.effect.currency || 0;
+    }
     this.run.history.push({...node,region:this.run.region,step:this.run.step});
     this.run.pendingNode = null;
-    this.advanceRoute(node.type === 'boss');
+    this.run.pendingPostWar = {node,wasBoss:node.type === 'boss'};
+    this.save();
+    if (node.event === 'recruit') return this.openRecruitEvent();
+    if (node.event === 'store') return this.openStoreEvent();
+    this.finishPostWarEvent();
   }
 
-  advanceRoute(wasBoss) {
+  openRecruitEvent() {
+    const locked = this.units.filter(unit => unit.faction === this.run.faction && !this.run.unlockedUnits.includes(unit.id));
+    if (!locked.length) { this.run.currency += 25; return this.finishPostWarEvent(); }
+    $('#event-kicker').textContent = '// POST-WAR · REINFORCEMENTS'; $('#event-title').textContent = 'CHOOSE A UNIT';
+    $('#event-copy').textContent = 'A surviving detachment answers your command signal.';
+    const list = $('#event-options'); list.innerHTML = '';
+    locked.forEach(unit => {
+      const button = document.createElement('button'); button.className = 'event-card';
+      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id)}"></span><b>${unit.name}</b><small>${unit.points} PTS · ${unit.role}</small>`;
+      button.onclick = () => { this.run.unlockedUnits.push(unit.id); this.save(); $('#event-dialog').close(); this.finishPostWarEvent(); }; list.append(button);
+    });
+    $('#event-continue-button').hidden = true; $('#event-dialog').showModal();
+  }
+
+  openStoreEvent() {
+    $('#event-kicker').textContent = '// POST-WAR · FIELD STORE'; $('#event-title').textContent = `REQUISITION ${this.run.currency}`;
+    $('#event-copy').textContent = 'Choose one recovered relic, or conserve Requisition.';
+    const list = $('#event-options'); list.innerHTML = '';
+    shuffle(WARGEAR).slice(0,3).forEach((gear,index) => {
+      const price = 20 + index * 10; const button = document.createElement('button'); button.className = 'event-card'; button.disabled = this.run.currency < price;
+      button.innerHTML = `<span>⚙</span><b>${gear.name}</b><small>◆ ${price} · ${gear.desc}</small>`;
+      button.onclick = () => { this.run.currency -= price; this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`}); this.save(); $('#event-dialog').close(); this.finishPostWarEvent(); }; list.append(button);
+    });
+    $('#event-continue-button').hidden = false; $('#event-dialog').showModal();
+  }
+
+  finishPostWarEvent() {
+    if ($('#event-dialog').open) $('#event-dialog').close();
+    const pending = this.run?.pendingPostWar; if (!pending) return;
+    this.run.pendingPostWar = null; this.advanceRoute(pending.wasBoss, pending.node);
+  }
+
+  advanceRoute(wasBoss, node = null) {
     this.run.offers = null;
     if (wasBoss) {
-      if (this.run.region === REGIONS.length - 1) return this.endRun(true);
-      this.run.region++;
-      this.run.step = 0;
-      this.run.cap = this.getBaseCap();
+      const sector = this.run.sectors[this.run.region];
+      sector.status = 'complete'; sector.stars = this.run.sectorStars;
+      const tier = CAMPAIGN_TIERS[this.run.tierIndex];
+      const permanent = tier.permanentReward * (node?.bossTier || 1);
+      this.run.chests += permanent;
+      const repair = this.stratagemEffects().bossRepair || 0;
+      this.run.hull = Math.min(this.run.maxHull, this.run.hull + repair);
+      const next = this.run.sectors[this.run.region + 1]; if (next) next.status = 'available';
+      if (!next) return this.endRun(true);
+      this.run.region = null; this.run.step = 0; this.run.sectorStars = 0;
+      this.save(); this.renderSectors(); this.show('sector'); return;
     } else this.run.step++;
     this.save();
     this.renderMap();
@@ -979,7 +1118,7 @@ export class Game {
 
   handleDefeat(node) {
     this.run.hull--;
-    this.run.pendingNode = null;
+    this.run.pendingNode = node;
     this.save();
     if (this.run.hull <= 0) return this.endRun(false);
     $('#run-end-kicker').textContent = '// BATTLE LOST';
@@ -992,16 +1131,16 @@ export class Game {
   }
 
   endRun(victory) {
-    const earned = this.run.chests;
+    const earned = this.run.chests + Math.floor(this.run.currency * .25);
     this.meta.currency += earned;
     if (victory) this.meta.wins++;
-    const snapshot = {battles:this.run.battles,bosses:this.run.bosses,data:this.run.data,chests:earned};
+    const snapshot = {battles:this.run.battles,bosses:this.run.bosses,data:this.run.data,stars:this.run.stars,chests:earned};
     this.run = null;
     this.save();
     $('#run-end-kicker').textContent = victory ? '// CAMPAIGN COMPLETE' : '// CAMPAIGN LOST';
     $('#run-end-title').textContent = victory ? 'VICTORY.' : 'THE OFFENSIVE ENDS.';
-    $('#run-end-copy').textContent = victory ? 'The final warzone is secured. Battle Honours and Wargear are cleared; Requisition remains.' : 'The army is lost, but recovered Requisition has reached command.';
-    $('#run-end-stats').innerHTML = `<span>BATTLES WON<b>${snapshot.battles}</b></span><span>BOSSES DEFEATED<b>${snapshot.bosses}</b></span><span>SCORE<b>${snapshot.data}</b></span><span>REQUISITION<b>+${snapshot.chests}</b></span>`;
+    $('#run-end-copy').textContent = victory ? 'Every sector is secured. Run-only Honours, Stratagems and Wargear are cleared; permanent Requisition remains.' : 'The army is lost, but secured boss rewards reached command.';
+    $('#run-end-stats').innerHTML = `<span>BATTLES WON<b>${snapshot.battles}</b></span><span>SECTORS CLEARED<b>${snapshot.bosses}</b></span><span>STARS<b>${snapshot.stars}</b></span><span>PERMANENT REQ<b>+${snapshot.chests}</b></span>`;
     $('#run-end-button').textContent = 'RETURN TO COMMAND';
     $('#run-end-button').dataset.action = 'home';
     $('#run-end-dialog').showModal();

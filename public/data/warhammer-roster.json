@@ -11,7 +11,7 @@
   "factions": [
     {
       "id": "space-marines",
-      "name": "Space Marines",
+      "name": "Ultramarines",
       "mark": "SM",
       "color": "#42f5d7",
       "units": [

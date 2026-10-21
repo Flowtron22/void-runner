@@ -34,12 +34,24 @@
       <div class="rule-strip pixel-panel" hidden>
         <div title="Build army"><b>▦</b><span>MUSTER</span></div><i></i><div title="Choose mission"><b>⌖</b><span>ROUTE</span></div><i></i><div title="Automatic battle"><b>⚄</b><span>BATTLE</span></div><i></i><div title="Gain rewards"><b>◆</b><span>REWARD</span></div>
       </div>
-      <div class="faction-picker pixel-panel"><small>⚑ FACTION</small><div id="faction-options"></div></div>
       <div class="home-actions">
-        <button id="new-run-button" class="primary large">⚔ BEGIN · 500 PTS</button>
+        <button id="new-run-button" class="primary large">▶ PLAY</button>
         <button id="resume-button" class="large" hidden>▶ RESUME</button>
-        <button id="research-button" class="large">⚙ ARMOURY</button>
+        <button id="settings-button" class="large">⚙ SETTINGS</button>
+        <button id="credits-button" class="large">◇ CREDITS</button>
       </div>
+    </section>
+
+    <section id="setup-screen" class="screen" aria-labelledby="setup-title">
+      <div class="section-head"><div><p class="eyebrow" id="setup-step">01 / 03 · CRUSADE SCALE</p><h2 id="setup-title">CHOOSE POINTS</h2></div><button id="setup-back-button">←</button></div>
+      <div id="setup-options" class="setup-options"></div>
+      <div class="setup-progress"><i class="active"></i><i></i><i></i></div>
+    </section>
+
+    <section id="sector-screen" class="screen" aria-labelledby="sector-title">
+      <div class="section-head"><div><p class="eyebrow" id="sector-kicker">GALAXY MAP</p><h2 id="sector-title">CHOOSE A SECTOR</h2></div><div class="cap-badge"><small>STARS</small><b id="campaign-stars">0</b><span>★</span></div></div>
+      <div id="sector-map" class="sector-map"></div>
+      <button id="sector-loadout-button" class="large">▦ EDIT ARMY</button>
     </section>
 
     <section id="map-screen" class="screen" aria-labelledby="map-title">
@@ -48,7 +60,7 @@
         <div class="cap-badge"><small>POINTS LIMIT</small><b id="map-cap">500</b><span>PTS</span></div>
       </div>
       <div class="run-stats pixel-panel">
-        <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Campaign score"><small>◆</small><b id="run-data">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button" aria-label="Edit army">▦ EDIT</button>
+        <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Sector stars"><small>★</small><b id="run-data">0</b></span><span title="Campaign Requisition"><small>◆</small><b id="run-currency">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button" aria-label="Edit army">▦ EDIT</button>
       </div>
       <div id="route-map" class="route-map" aria-label="Expedition route"></div>
     </section>
@@ -79,7 +91,7 @@
     </section>
 
     <section id="reward-screen" class="screen" aria-labelledby="reward-title">
-      <div class="reward-sigil">◆</div><p class="eyebrow">// VICTORY</p><h2 id="reward-title">CHOOSE 1 HONOUR</h2>
+      <div class="reward-sigil">◆</div><p class="eyebrow">// AREA SECURED</p><h2 id="reward-title">POST-WAR AFFAIRS</h2>
       <div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>SCORE GAINED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO WARGEAR FOUND</span></div>
     </section>
 
@@ -88,9 +100,23 @@
       <div id="research-grid" class="research-grid"></div><button id="research-back-button" class="large">← COMMAND</button>
     </section>
 
+    <dialog id="settings-dialog" class="modal pixel-panel">
+      <p class="eyebrow">// SYSTEM</p><h2>SETTINGS</h2>
+      <label class="setting-row"><span><b>REDUCED MOTION</b><small>Limits flashes, shake and transitions.</small></span><input id="reduced-motion-toggle" type="checkbox"></label>
+      <button id="close-settings-button" class="primary large">DONE</button>
+    </dialog>
+
+    <dialog id="credits-dialog" class="modal pixel-panel">
+      <p class="eyebrow">// ARCHIVE</p><h2>COMBAT PATROL</h2><p>Original tactical roguelike prototype. Campaign design, interface and simulation created for this project. Unit data is adapted from the local KS roster.</p><button id="close-credits-button" class="primary large">BACK</button>
+    </dialog>
+
+    <dialog id="event-dialog" class="modal pixel-panel">
+      <p class="eyebrow" id="event-kicker">// FIELD EVENT</p><h2 id="event-title">REINFORCEMENTS</h2><p id="event-copy"></p><div id="event-options" class="event-options"></div><button id="event-continue-button" class="large">CONTINUE</button>
+    </dialog>
+
     <dialog id="help-dialog" class="modal pixel-panel">
       <p class="eyebrow">// HOW TO PLAY</p><h2>BUILD. DEPLOY. ROLL.</h2>
-      <ol><li><b>Choose a faction.</b><span>Each faction loads points, Keywords, Leadership, Objective Control, weapons and abilities from the KS-derived roster.</span></li><li><b>Build and attach.</b><span>Stay under the point limit. To join a Leader, select it and tap an eligible deployed Bodyguard unit.</span></li><li><b>Watch the conditions.</b><span>Weapon rules activate only when their condition is shown. Round 1 is Long Range; round 2 onward is Half Range.</span></li><li><b>Follow command status.</b><span>CP powers automatic core Stratagems. Below-half-strength units test Battle-shock and cannot receive Stratagems when shocked.</span></li><li><b>Improve the campaign.</b><span>Choose a temporary Battle Honour and equip recovered Wargear before the next mission.</span></li></ol>
+      <ol><li><b>Choose the campaign.</b><span>Higher point limits add sectors, longer routes, stronger enemies and larger permanent rewards.</span></li><li><b>Build and attach.</b><span>Stay under the point limit. Select an unlocked unit, then tap the deployment grid.</span></li><li><b>Claim stars.</b><span>Every area offers three threats. More stars mean more danger and unlock stronger final bosses.</span></li><li><b>Let the dice resolve.</b><span>Combat is automatic. Hit, wound, save and damage rolls remain visible as they resolve.</span></li><li><b>Choose one reward.</b><span>Post-War Affairs offers Requisition, an Honour or a Stratagem. Some areas reveal recruits or stores.</span></li></ol>
       <button id="close-help-button" class="primary large">UNDERSTOOD</button>
     </dialog>
 

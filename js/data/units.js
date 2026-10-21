@@ -18,11 +18,26 @@ export const WARGEAR = [
   {id:'shield',name:'Conversion Field',desc:'Grant this unit a 5+ Invulnerable Save.',stat:'invuln',value:5}
 ];
 
-export const REGIONS = [
-  {name:'OUTER WARZONE',cap:500,boss:'ENEMY WARLORD',tone:'#42f5d7'},
-  {name:'CONTESTED SECTOR',cap:1000,boss:'ARMOURED SPEARHEAD',tone:'#9b6dff'},
-  {name:'FORTRESS LINE',cap:1500,boss:'TITANIC ASSAULT',tone:'#ffd166'},
-  {name:'FINAL CRUSADE',cap:2000,boss:'SUPREME COMMAND',tone:'#ff496c'}
+export const CAMPAIGN_TIERS = [
+  {points:500, name:'PATROL', sectors:4, depth:3, enemyScale:1, permanentReward:30},
+  {points:1000, name:'STRIKE FORCE', sectors:5, depth:4, enemyScale:1.08, permanentReward:45},
+  {points:1500, name:'BATTLE HOST', sectors:6, depth:4, enemyScale:1.16, permanentReward:60},
+  {points:2000, name:'ONSLAUGHT', sectors:7, depth:5, enemyScale:1.24, permanentReward:80},
+  {points:3000, name:'APOCALYPSE', sectors:8, depth:6, enemyScale:1.34, permanentReward:110}
+];
+
+export const SECTOR_NAMES = [
+  'ASHEN REACH','KARST VOID','MOURNING GATE','CINDER CROWN',
+  'VESPER LINE','IRON HALO','NULL CITADEL','THRONE OF DUST'
+];
+
+export const STRATAGEMS = [
+  {id:'command-relay',name:'Command Relay',tag:'START +1 CP',desc:'Begin every battle with one additional Command Point.',effect:{startingCp:1}},
+  {id:'orbital-mark',name:'Orbital Mark',tag:'FIRST SALVO',desc:'Improve hit rolls during the first battle round.',effect:{openingHit:1}},
+  {id:'reserve-wave',name:'Reserve Wave',tag:'RECOVER',desc:'Recover one campaign attempt when the current sector boss falls.',effect:{bossRepair:1}},
+  {id:'auspex-grid',name:'Auspex Grid',tag:'TARGET LOCK',desc:'Improve wound rolls during the first battle round.',effect:{openingWound:1}},
+  {id:'field-cache',name:'Field Cache',tag:'+20 REQ',desc:'Gain 20 campaign Requisition immediately.',effect:{currency:20}},
+  {id:'armour-doctrine',name:'Armour Doctrine',tag:'ROUND 1 SAVE',desc:'Improve saves during the first battle round.',effect:{openingSave:1}}
 ];
 
 export const RESEARCH = [
