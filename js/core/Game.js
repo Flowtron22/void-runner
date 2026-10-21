@@ -426,7 +426,11 @@ export class Game {
   startBattle(node) {
     const players = this.run.deployed.map(placed => this.buildFighter(placed));
     const enemies = this.makeEnemyForce(node);
-    this.battle = { node, players, enemies, round:0, log:[`Mission started against <b>${this.faction(node.enemyFaction).name}</b>.`], resolving:false, lastRoll:null };
+    this.battle = {
+      node, players, enemies, round:0,
+      log:[`Mission started against <b>${this.faction(node.enemyFaction).name}</b>.`],
+      resolving:false, lastRoll:null, visibleStage:-1, actors:[], actorIndex:0, currentPlan:null
+    };
     this.battleSpeed = 1;
     $('#speed-button').textContent = 'SPEED ×1';
     $('#battle-title').textContent = node.name;
@@ -440,7 +444,7 @@ export class Game {
 
   scheduleRound() {
     clearTimeout(this.battleTimer);
-    this.battleTimer = setTimeout(() => this.runRound(), this.battleSpeed === 1 ? 1050 : 360);
+    this.battleTimer = setTimeout(() => this.beginAnimatedRound(), this.battleSpeed === 1 ? 900 : 320);
   }
 
   alive(force) { return force.filter(unit => !unit.dead); }
@@ -454,7 +458,8 @@ export class Game {
       const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
       if (!this.alive(foes).length) break;
       const target = this.chooseTarget(this.alive(foes), actor.side);
-      this.resolveDiceAttack(actor, target);
+      const plan = this.prepareDiceAttack(actor, target);
+      this.applyDiceAttack(plan);
     }
     const regen = this.protocolEffects().regen || 0;
     if (regen) for (const unit of this.alive(this.battle.players)) this.restoreWounds(unit, regen);
@@ -464,12 +469,65 @@ export class Game {
     if (render) this.scheduleRound();
   }
 
+  beginAnimatedRound() {
+    if (!this.battle || this.battle.resolving) return;
+    if (!this.alive(this.battle.enemies).length) return this.finishBattle(true);
+    if (!this.alive(this.battle.players).length || this.battle.round >= 30) return this.finishBattle(false);
+    this.battle.round++;
+    this.battle.actors = shuffle([...this.alive(this.battle.players), ...this.alive(this.battle.enemies)]);
+    this.battle.actorIndex = 0;
+    this.battle.currentPlan = null;
+    this.battle.visibleStage = -1;
+    this.renderBattle();
+    this.nextAnimatedActor();
+  }
+
+  stageDelay() { return this.battleSpeed === 1 ? 520 : 190; }
+
+  nextAnimatedActor() {
+    if (!this.battle || this.battle.resolving) return;
+    let actor = this.battle.actors[this.battle.actorIndex++];
+    while (actor?.dead) actor = this.battle.actors[this.battle.actorIndex++];
+    if (!actor) return this.endAnimatedRound();
+    const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
+    if (!this.alive(foes).length) return this.endAnimatedRound();
+    const target = this.chooseTarget(this.alive(foes), actor.side);
+    this.battle.currentPlan = this.prepareDiceAttack(actor, target);
+    this.battle.lastRoll = this.battle.currentPlan;
+    this.battle.visibleStage = 0;
+    this.renderBattle();
+    clearTimeout(this.battleTimer);
+    this.battleTimer = setTimeout(() => this.advanceDiceStage(), this.stageDelay());
+  }
+
+  advanceDiceStage() {
+    if (!this.battle || this.battle.resolving || !this.battle.currentPlan) return;
+    if (this.battle.visibleStage < 4) {
+      this.battle.visibleStage++;
+      if (this.battle.visibleStage === 4) this.applyDiceAttack(this.battle.currentPlan);
+      this.renderBattle();
+      this.battleTimer = setTimeout(() => this.advanceDiceStage(), this.stageDelay());
+      return;
+    }
+    this.battle.currentPlan = null;
+    this.battleTimer = setTimeout(() => this.nextAnimatedActor(), this.battleSpeed === 1 ? 360 : 110);
+  }
+
+  endAnimatedRound() {
+    const regen = this.protocolEffects().regen || 0;
+    if (regen) for (const unit of this.alive(this.battle.players)) this.restoreWounds(unit, regen);
+    this.renderBattle();
+    if (!this.alive(this.battle.enemies).length) return this.finishBattle(true);
+    if (!this.alive(this.battle.players).length || this.battle.round >= 30) return this.finishBattle(false);
+    this.scheduleRound();
+  }
+
   chooseTarget(foes, side) {
     if (side === 'enemy') return [...foes].sort((a,b) => a.x - b.x || a.currentHp - b.currentHp)[0];
     return [...foes].sort((a,b) => a.currentHp - b.currentHp)[0];
   }
 
-  resolveDiceAttack(actor, target) {
+  prepareDiceAttack(actor, target) {
     const models = actor.hp.length;
     const attackDice = [];
     let attacks = 0;
@@ -496,7 +554,8 @@ export class Game {
     const unsaved = wounds - saves;
     const damageRolls = [];
     let damageLost = 0;
-    for (let i = 0; i < unsaved && target.hp.length; i++) {
+    const remainingHp = [...target.hp];
+    for (let i = 0; i < unsaved && remainingHp.length; i++) {
       const result = rollExpression(actor.weapon.damage);
       damageRolls.push(...(result.rolls.length ? result.rolls : [result.total]));
       let damage = result.total;
@@ -504,16 +563,24 @@ export class Game {
         const ignored = Array.from({length:damage}, () => d6()).filter(roll => roll >= target.fnp).length;
         damage -= ignored;
       }
-      const lost = Math.min(target.hp[0], damage);
-      target.hp[0] -= lost;
+      const lost = Math.min(remainingHp[0], damage);
+      remainingHp[0] -= lost;
       damageLost += lost;
-      if (target.hp[0] <= 0) target.hp.shift();
+      if (remainingHp[0] <= 0) remainingHp.shift();
     }
+    return {actor:actor.name,target:target.name,actorRef:actor,targetRef:target,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost,remainingHp,applied:false};
+  }
+
+  applyDiceAttack(plan) {
+    if (!plan || plan.applied) return;
+    const target = plan.targetRef;
+    target.hp = [...plan.remainingHp];
     target.currentHp = target.hp.reduce((sum,value) => sum + value, 0);
     target.dead = target.hp.length === 0;
     target.flash = 'hit';
-    this.battle.lastRoll = {actor:actor.name,target:target.name,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost};
-    this.addLog(`${actor.name}: ${attacks} attacks → ${hits} hits → ${wounds} wounds → ${damageLost} damage${target.dead ? ' · DESTROYED' : ''}.`);
+    plan.applied = true;
+    this.battle.lastRoll = plan;
+    this.addLog(`${plan.actor}: ${plan.attacks} attacks → ${plan.hits} hits → ${plan.wounds} wounds → ${plan.damageLost} damage${target.dead ? ' · DESTROYED' : ''}.`);
   }
 
   restoreWounds(unit, amount) {
@@ -561,28 +628,39 @@ export class Game {
     const tray = $('#dice-tray');
     const roll = this.battle.lastRoll;
     if (!roll) { tray.innerHTML = '<span class="dice-empty">WAITING FOR FIRST DICE ROLL</span>'; return; }
-    tray.innerHTML = `<div class="dice-caption"><span>${roll.actor}</span><span>VS ${roll.target}</span></div><div class="dice-sequence">
-      <div class="dice-stage"><small>ATTACKS</small><div class="dice-pool">${this.diceHTML(roll.attackDice,1,false,true)}</div><b class="dice-result">${roll.attacks} TOTAL</b></div>
-      <div class="dice-stage"><small>HIT ${roll.hitTarget}+</small><div class="dice-pool">${this.diceHTML(roll.hitRolls,roll.hitTarget,true)}</div><b class="dice-result">${roll.hits} HITS</b></div>
-      <div class="dice-stage"><small>WOUND ${roll.woundNeeded}+</small><div class="dice-pool">${this.diceHTML(roll.woundRolls,roll.woundNeeded,true)}</div><b class="dice-result">${roll.wounds} WOUNDS</b></div>
-      <div class="dice-stage"><small>SAVE ${roll.saveTarget <= 6 ? `${roll.saveTarget}+` : '—'}</small><div class="dice-pool">${this.diceHTML(roll.saveRolls,roll.saveTarget)}</div><b class="dice-result">${roll.saves} SAVED</b></div>
-      <div class="dice-stage"><small>DAMAGE</small><div class="dice-pool">${this.diceHTML(roll.damageRolls,1,false,true)}</div><b class="dice-result">${roll.damageLost} LOST</b></div>
-    </div>`;
+    const visible = this.battle.visibleStage < 0 ? 4 : this.battle.visibleStage;
+    const stage = (index, label, dice, result) => `<div class="dice-stage ${index <= visible ? 'revealed' : 'waiting'} ${index === visible ? 'current' : ''}"><div class="stage-heading"><small>${label}</small><b>${result}</b></div><div class="dice-pool">${dice}</div></div>`;
+    tray.innerHTML = `<div class="dice-caption"><span>${roll.actor}</span><i>ENGAGING</i><span>${roll.target}</span></div><div class="dice-sequence">
+      ${stage(0,'01 · ATTACKS',this.diceHTML(roll.attackDice,1,false,true),`${roll.attacks} TOTAL`)}
+      ${stage(1,`02 · HIT · ${roll.hitTarget}+`,this.diceHTML(roll.hitRolls,roll.hitTarget,true),`${roll.hits} HITS`)}
+      ${stage(2,`03 · WOUND · ${roll.woundNeeded}+`,this.diceHTML(roll.woundRolls,roll.woundNeeded,true),`${roll.wounds} WOUNDS`)}
+      ${stage(3,`04 · SAVE · ${roll.saveTarget <= 6 ? `${roll.saveTarget}+` : 'NONE'}`,this.diceHTML(roll.saveRolls,roll.saveTarget),`${roll.saves} SAVED`)}
+      ${stage(4,'05 · DAMAGE',this.diceHTML(roll.damageRolls,1,false,true),`${roll.damageLost} LOST`)}
+    </div><div class="dice-outcome ${visible === 4 ? 'revealed' : ''}">${visible === 4 ? `${roll.damageLost} WOUNDS INFLICTED${roll.remainingHp.length ? '' : ' · UNIT DESTROYED'}` : 'RESOLUTION IN PROGRESS'}</div>`;
   }
 
   toggleSpeed() {
     if (!this.battle) return;
     this.battleSpeed = this.battleSpeed === 1 ? 2 : 1;
     $('#speed-button').textContent = `SPEED ×${this.battleSpeed}`;
-    this.scheduleRound();
   }
 
   resolveBattleNow() {
     if (!this.battle || this.battle.resolving) return;
     clearTimeout(this.battleTimer);
-    let safety = 40;
-    while (this.battle && this.alive(this.battle.players).length && this.alive(this.battle.enemies).length && safety-- > 0) this.runRound(false);
-    if (this.battle) this.renderBattle();
+    if (this.battle.currentPlan) this.applyDiceAttack(this.battle.currentPlan);
+    while (this.battle.actorIndex < this.battle.actors.length && this.alive(this.battle.players).length && this.alive(this.battle.enemies).length) {
+      const actor = this.battle.actors[this.battle.actorIndex++];
+      if (actor.dead) continue;
+      const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
+      if (!this.alive(foes).length) break;
+      this.applyDiceAttack(this.prepareDiceAttack(actor, this.chooseTarget(this.alive(foes), actor.side)));
+    }
+    let safety = 30;
+    while (this.alive(this.battle.players).length && this.alive(this.battle.enemies).length && this.battle.round < 30 && safety-- > 0) this.runRound(false);
+    this.battle.visibleStage = 4;
+    this.renderBattle();
+    this.finishBattle(this.alive(this.battle.enemies).length === 0);
   }
 
   finishBattle(victory) {

@@ -16,7 +16,7 @@ The previous original unit roster and flat-damage combat are no longer active.
 
 - Portrait-first reference frame: 480×854.
 - Desktop keeps the game inside a centered portrait command board.
-- Luminous high-contrast pixel art remains the global visual direction.
+- The global visual direction follows the KS project's tactile grimdark command-table language: soot-black iron, aged bone, brass, oxblood, restrained military typography, and original gothic-industrial motifs.
 - No interaction depends on hover.
 - Minimum touch target is 40 CSS px.
 
@@ -166,7 +166,7 @@ Feel No Pain rolls, when active, are rolled per lost wound.
 - Lose every deployed model to lose one campaign attempt.
 - A safety limit ends stalled battles after 30 rounds.
 
-The battle UI always displays the most recent attack as five columns: Attacks, Hits, Wounds, Saves and Damage. Successful dice are green, critical sixes are amber, failures are dimmed, and damage dice are red.
+The battle UI reveals the most recent attack in five timed stages: Attacks, Hits, Wounds, Saves and Damage. At normal speed each stage remains visible for about 520 ms; fast speed uses about 190 ms. Dice tumble and settle with staggered timing. Completed stages stay visible, future stages remain obscured, and damage is not applied until the Damage stage appears. `Resolve now` bypasses presentation but uses the same prepared rolls and rules result.
 
 ## 8. Target selection
 
@@ -264,4 +264,4 @@ Required checks:
 4. Add rerolls, cover, Devastating Wounds, Anti keywords, Blast, Melta and Twin-linked.
 5. Add battle breakdowns that show damage contribution per unit.
 6. Add faction-specific Battle Honours and boss rules.
-7. Add original pixel sprites for each unit silhouette while preserving the locked art bible.
+7. Add original grimdark unit silhouettes while preserving the locked art bible and avoiding official faction artwork or logos.

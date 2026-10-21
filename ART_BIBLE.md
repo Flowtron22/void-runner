@@ -1,110 +1,92 @@
-# VOID RUNNER: PROTOCOL FRONT — Luminous Pixel Art Bible
+# VOID RUNNER — Grimdark Command Table Art Bible
 
-This is the locked visual specification for all game art, UI, effects, icons, loading screens, and promotional assets.
+This is the locked visual specification for all game UI, effects, icons, loading screens, and future promotional assets. The direction is derived from the project owner's KS interface: a tactile military command table built from iron, bone, brass, parchment and oxblood. Designs must remain original; do not copy official logos, characters, faction marks, or illustrations.
 
 ## Visual thesis
 
-VOID RUNNER is a luminous portrait command board on a nearly black foundation. Large, readable unit silhouettes carry the form; small saturated lights communicate function. Glow is a secondary echo around a crisp pixel shape, never the shape itself.
+VOID RUNNER should feel like a battered campaign console in a vast gothic warship. Information is dense but ordered. Bone dice and parchment labels sit over soot-black iron. Brass identifies command and progress; oxblood identifies danger and violence. Decoration must strengthen hierarchy, never bury rules.
 
 ## Locked palette
 
 | Role | Color | Hex |
 |---|---|---|
-| Deep void | Near-black violet | `#05050B` |
-| Panel foundation | Navy black | `#090D18` |
-| Raised surface | Blue slate | `#121A29` |
-| Structure line | Steel blue | `#293851` |
-| Primary text | Warm white | `#F2F4DF` |
-| Secondary text | Cool gray | `#8490A6` |
-| Player / selection / navigation | Signal cyan | `#42F5D7` |
-| Safe / healthy | Life green | `#78F08B` |
-| Ready / caution / engine | Reactor amber | `#FFD166` |
-| Enemy / damage / hazard | Alarm red | `#FF496C` |
-| Shields / rare energy | Ion violet | `#9B6DFF` |
+| Soot background | Near black | `#090B0D` |
+| Iron panel | Blue charcoal | `#171C21` |
+| Raised plate | Gunmetal | `#222930` |
+| Structural edge | Worn steel | `#48463E` |
+| Primary text / dice | Aged bone | `#E8E3D6` |
+| Secondary text | Ash gray | `#98978F` |
+| Command / selection | Tarnished brass | `#C5A86C` |
+| Health / recovery | Drab olive | `#9BAD72` |
+| Enemy / damage / primary action | Oxblood | `#B74332` |
+| Rare / veteran accent | Umber | `#917757` |
 
-Do not add free-form neon colors. New colors must be darker structural shades derived from this palette.
+Faction colors may tint unit borders at no more than roughly 55% saturation. Brass, not faction color, remains the main navigation color.
 
-## Pixel density and asset specifications
+## Display and asset specifications
 
-- Reference game canvas: `480 × 854` logical pixels for 9:16 layouts.
-- The current build uses code-native HTML/CSS pixel forms. Future raster sprites must use integer scaling and disabled smoothing.
-- UI spacing uses a 4 px base unit; borders are 2 px; hard shadows offset 3–4 px.
-- Minimum touch target: 40 CSS px.
-- Minimum body text: 9 CSS px in the monospace pixel language; critical values are 11 px or larger.
-- Icons: design on a `16 × 16` grid, scale only by integer multiples when exported.
-- Unit icons: design on a `24 × 24` logical grid with a dominant shape readable at 1×.
-- Deployment cells: minimum `41 × 41` CSS px on supported narrow screens.
-- Unit footprints must be recognizable as 1×1, 1×2, 2×1, 2×2, or 3×2 without reading text.
-- All raster assets use nearest-neighbor scaling and no smoothing.
+- Reference canvas: `480 × 854` CSS pixels, portrait-first.
+- Minimum supported width: `320` CSS pixels.
+- Minimum touch target: `42 × 42` CSS pixels.
+- Body text: 9 CSS px minimum; consequential values: 11 CSS px or larger.
+- UI spacing follows a 4 px base unit. Borders are usually 1 px; priority plates may use a 2–3 px top or left rule.
+- Icons should be designed at `24 × 24` logical pixels with a single dominant silhouette.
+- Unit footprints remain 1×1 through 3×2 on the 6×5 deployment grid.
+- Texture is a low-opacity overlay. Text, dice, and state borders must remain crisp.
 
-## Silhouettes and proportions
+## Shape and material rules
 
-- Units use unmistakable block silhouettes with stepped or chamfered corners.
-- Player silhouettes use their role color; hostile silhouettes use alarm-red edges.
-- Large units must earn their footprint through visibly heavier mass, not scaled-up detail noise.
-- Roles differ first by proportion: low/wide artillery, tall guards, compact support, massive heavies.
-- Props should be recognizable from a single large mass plus one luminous functional detail.
-- Avoid thin decorative noise that disappears at actual play size.
+- Panels are squared or barely rounded, layered like bolted metal plates.
+- Important panels may use rivets, double rules, bevel highlights, heraldic symmetry, or restrained cathedral geometry.
+- Infantry is compact and upright; artillery is low and wide; walkers and super-heavies must feel top-heavy and monumental.
+- A large unit earns its grid footprint through mass and negative space, not tiny surface noise.
+- Bone dice are bright physical objects with dark values. Failed dice invert to dark iron and muted red.
+- Never use official insignia. Use original crosses, shields, cog geometry, campaign stripes, and numeral systems.
 
-## Materials
+## Lighting and hierarchy
 
-- **Deployment case:** near-black blue cells, steel borders, cyan legal-placement feedback.
-- **Infantry armor:** charcoal blocks with one role-color identification plate.
-- **Heavy chassis:** two or three joined dark masses with amber machinery cores.
-- **Artillery:** low horizontal silhouette with violet aiming elements.
-- **Hostiles:** dark bodies with alarm-red hard edges.
-- **Route nodes:** square tactical stamps; contact type is communicated by both color and text.
+1. Oxblood: attack, enemy, damage, destructive primary action.
+2. Brass: navigation, selection, points, campaign progress.
+3. Bone: readable content and physical dice.
+4. Olive: health, recovery, successful defense.
+5. Ash: inactive or supporting information.
 
-## Lighting hierarchy
+Glow is not part of the base language. Depth comes from hard shadows, bevels, texture, and warm/cool material contrast.
 
-1. Alarm red: immediate danger requiring action.
-2. Signal cyan: player selection, navigation, and primary action.
-3. Reactor amber: weapon readiness, timers, and caution.
-4. Life green: healthy hull, crew health, and successful recovery.
-5. Ion violet: shields and rare energy systems.
+## Typography and UI
 
-The base form must remain readable without bloom. Limit glow to a small halo around status pixels. Never cover room borders, crew silhouettes, or hazard shapes with effects.
+- Use a restrained serif for campaign titles, creeds, and major headings.
+- Use a condensed military sans-serif for controls, rules, stats, and labels.
+- Uppercase labels are short, tracked, and action-first.
+- State must be communicated by text, position, and border treatment as well as color.
+- The current actionable choice gets one dominant accent. Avoid several equally loud buttons.
+- Keep all combat math visible: target numbers appear beside the relevant dice stage.
 
-## UI and icons
+## Dice motion
 
-- Use square panels, stepped corners, 2 px borders, and hard offset shadows.
-- Use uppercase monospace labels and short action-first instructions.
-- One panel owns the current priority; do not present multiple competing alerts.
-- Buttons show state with both color and text, never color alone.
-- Ready weapons flash amber in a two-frame stepped pulse.
-- Dangerous alerts flash red slowly; no rapid strobing.
-- Bars have hard ends and discrete-looking fills.
-- Interactive targets retain at least 3:1 contrast against their immediate background.
-
-## Motion
-
-- Idle light pulse: 800–1200 ms, two or three stepped frames.
-- Button response: immediate 2 px down/right shift.
-- Projectile: straight readable path, 500–800 ms.
-- Impact: 4–8 square particles, 300–450 ms.
-- Damage shake: under 200 ms and under 4 logical pixels.
-- Door movement: 120–180 ms.
-- Fire: alternate between two block configurations every 100–140 ms.
-- Never use motion blur. Never tween a crisp base sprite into softness.
+- Resolve one stage at a time: Attacks → Hits → Wounds → Saves → Damage.
+- Normal speed: about 520 ms per stage, plus a short pause between units.
+- Fast speed: about 190 ms per stage; it remains readable rather than becoming instant.
+- Dice tumble in from above with X/Y/Z rotation, a short bounce, and small per-die timing variation.
+- Only the active stage animates. Completed stages remain stable and future stages are obscured.
+- `Resolve now` may bypass presentation but must produce identical rules results.
+- Respect `prefers-reduced-motion` by removing tumble and transitions.
 
 ## Readability rules
 
-- The player's packed formation remains readable as a single composition at the reference viewport.
-- Red always means a current threat or hostile target.
-- Cyan always means a player-controlled selection or primary action.
-- A selected unit changes both border treatment and UI text.
-- Health, armor role, temporary protocol, and hostile state must remain distinguishable when simultaneous.
-- Text must be readable without glow and at the actual target viewport.
+- The full attack sequence must fit the portrait combat view without horizontal scrolling.
+- Current attacker and defender names remain visible above the dice.
+- Target thresholds and totals must be readable without interpreting color.
+- Damage application occurs when the Damage stage is revealed, so unit health and dice agree.
+- Background texture stays under 25% opacity and never crosses text contrast requirements.
 
-## Mistakes to avoid
+## Avoid
 
-- Unrestricted rainbow neon.
-- Bloom used to hide weak silhouettes.
-- Blurred or antialiased base sprites.
-- Rounded glassmorphism panels.
-- Tiny unreadable labels.
-- Decorative darkness with no navigation cues.
-- Effects that obscure hazards or crew.
-- Smooth high-poly characters mixed with pixel UI.
-- Different pixel densities between asset batches.
-- Copying another game's characters, logos, ship layouts, or interface.
+- Cyan-heavy neon or unrestricted rainbow accents.
+- Blurred bloom, glassmorphism, or holographic UI.
+- Official faction logos, copied illustrations, or copied compositions.
+- Decorative gothic detail that competes with controls.
+- Tiny faux-technical text.
+- Showing every dice stage at once.
+- Applying damage before the Damage stage appears.
+- Motion blur, excessive screen shake, or rapid strobing.

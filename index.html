@@ -3,24 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#05050b" />
+  <meta name="theme-color" content="#101419" />
   <meta name="description" content="Build a point-limited warband, route through hostile sectors, and watch your formation fight automatically." />
-  <title>VOID RUNNER — Protocol Front</title>
+  <title>VOID RUNNER — Crusade Command</title>
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
   <main id="app" class="app-shell">
     <header class="topbar pixel-panel">
-      <button id="home-button" class="brand-button" aria-label="Return to command">VR</button>
-      <div class="brand-copy"><b>VOID RUNNER</b><small id="location-label">PROTOCOL FRONT</small></div>
+      <button id="home-button" class="brand-button" aria-label="Return to command">✠</button>
+      <div class="brand-copy"><b>VOID RUNNER</b><small id="location-label">CRUSADE COMMAND</small></div>
       <div class="top-stat"><small>REQUISITION</small><b id="meta-currency">0</b></div>
       <button id="help-button" class="icon-button" aria-label="How to play">?</button>
     </header>
 
     <section id="home-screen" class="screen active" aria-labelledby="home-title">
-      <div class="hero-art" aria-hidden="true"><div class="pixel-moon"></div><div class="carrier-sprite"><i></i><i></i><i></i><i></i><i></i></div><div class="scan-line"></div></div>
+      <div class="hero-art" aria-hidden="true"><div class="pixel-moon"></div><div class="carrier-sprite"><i></i><i></i><i></i><i></i><i></i></div><div class="scan-line"></div><div class="hero-creed">IN THE VOID · ONLY DUTY ENDURES</div></div>
       <div class="hero-copy">
-        <p class="eyebrow">// 40K ROGUELIKE CAMPAIGN</p>
+        <p class="eyebrow">// GRIMDARK ROGUELIKE CAMPAIGN</p>
         <h1 id="home-title">MUSTER AN ARMY.<br><span>ROLL THE BATTLE.</span></h1>
         <p>Choose a faction, build an army under the <b>points limit</b>, and arrange it on the deployment grid. Every attack automatically rolls Attacks, Hits, Wounds, Saves, and Damage.</p>
       </div>
@@ -66,7 +66,7 @@
       <div class="section-head battle-head"><div><p class="eyebrow" id="battle-kicker">AUTOMATED ENGAGEMENT</p><h2 id="battle-title">CONTACT</h2></div><div class="round-badge"><small>ROUND</small><b id="round-value">0</b></div></div>
       <div id="enemy-banner" class="army-banner enemy"><span>HOSTILE SIGNAL</span><b id="enemy-power">0 PTS</b></div><div id="enemy-field" class="battle-field enemy-field"></div>
       <div id="dice-tray" class="dice-tray pixel-panel"><span class="dice-empty">WAITING FOR FIRST DICE ROLL</span></div>
-      <div class="battle-divider"><span>AUTOMATIC DICE RESOLUTION</span><i></i></div>
+      <div class="battle-divider"><span>ATTACKS · HITS · WOUNDS · SAVES · DAMAGE</span><i></i></div>
       <div id="player-field" class="battle-field player-field"></div><div class="army-banner player"><span>YOUR ARMY</span><b id="player-power">0 PTS</b></div>
       <div id="battle-log" class="battle-log pixel-panel" aria-live="polite"></div>
       <div class="battle-controls"><button id="speed-button">SPEED ×1</button><button id="skip-button">RESOLVE NOW</button></div>
