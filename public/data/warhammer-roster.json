@@ -56,6 +56,18 @@
         {"id":"knight-paladin","name":"Knight Paladin","points":375,"stock":1,"size":[3,2],"models":1,"role":"Titanic","keywords":["Vehicle","Walker","Titanic","Character","Imperium","Imperial Knights"],"leadership":6,"oc":10,"abilities":["Code Chivalric","Seasoned Noble"],"defense":{"toughness":11,"save":3,"wounds":26,"invuln":5},"weapon":{"name":"Rapid-fire Battle Cannon","range":72,"attacks":"D6+3","hit":3,"strength":10,"ap":-1,"damage":"3","keywords":["Blast","Rapid Fire D6+3"]}},
         {"id":"acastus-knight-asterius","name":"Acastus Knight Asterius","points":785,"stock":1,"size":[3,3],"models":1,"role":"Titanic","keywords":["Vehicle","Walker","Titanic","Imperium","Imperial Knights"],"leadership":6,"oc":10,"abilities":["Code Chivalric","Sunderer of Fortresses"],"defense":{"toughness":13,"save":2,"wounds":30,"invuln":5},"weapon":{"name":"Twin Conversion Beam Cannon","range":72,"attacks":"6","hit":3,"strength":16,"ap":-2,"damage":"6","keywords":["Twin-linked","Sustained Hits 1"]}}
       ]
+    },
+    {
+      "id": "grey-knights",
+      "name": "Grey Knights",
+      "mark": "GK",
+      "color": "#79cfff",
+      "units": [
+        {"id":"grey-knight-strike-squad","name":"Strike Squad","points":125,"stock":3,"size":[2,1],"models":5,"role":"Battleline","keywords":["Infantry","Battleline","Grenades","Psyker","Imperium","Grey Knights"],"leadership":6,"oc":2,"abilities":["Sanctifying Ritual","Deep Strike","Gate of Infinity"],"defense":{"toughness":5,"save":2,"wounds":2,"invuln":7},"weapon":{"name":"Storm Bolter","range":24,"attacks":"2","hit":3,"strength":5,"ap":-1,"damage":"1","keywords":["Rapid Fire 2"]}},
+        {"id":"grey-knight-terminators","name":"Brotherhood Terminators","points":150,"stock":2,"size":[2,2],"models":4,"role":"Elite","keywords":["Infantry","Terminator","Psyker","Imperium","Grey Knights"],"leadership":6,"oc":2,"abilities":["Force Edge","Deep Strike","Gate of Infinity"],"defense":{"toughness":6,"save":2,"wounds":3,"invuln":4},"weapon":{"name":"Nemesis Force Weapon","range":0,"attacks":"4","hit":3,"strength":6,"ap":-2,"damage":"2","keywords":["Psychic"]}},
+        {"id":"nemesis-dreadknight","name":"Nemesis Dreadknight","points":205,"stock":2,"size":[2,2],"models":1,"role":"Walker","keywords":["Vehicle","Walker","Psyker","Imperium","Grey Knights"],"leadership":6,"oc":4,"abilities":["Indomitable Spirit","Deep Strike","Deadly Demise","Gate of Infinity"],"defense":{"toughness":9,"save":2,"wounds":13,"invuln":4},"weapon":{"name":"Nemesis Daemon Greathammer","range":0,"attacks":"5","hit":3,"strength":14,"ap":-3,"damage":"D6+1","keywords":["Psychic"]}},
+        {"id":"brotherhood-librarian","name":"Brotherhood Librarian","points":95,"stock":1,"size":[1,1],"models":1,"role":"Character · Leader","keywords":["Character","Infantry","Terminator","Psyker","Imperium","Grey Knights","Leader"],"leadership":6,"oc":1,"abilities":["Haloed in Soulfire","Sanctic Hood","Deep Strike","Gate of Infinity"],"leader":{"targets":["grey-knight-terminators"],"grant":{}},"defense":{"toughness":6,"save":2,"wounds":5,"invuln":4},"weapon":{"name":"Vortex of Doom","range":18,"attacks":"D6+3","hit":3,"strength":8,"ap":-2,"damage":"2","keywords":["Blast","Psychic"]}}
+      ]
     }
   ]
 }

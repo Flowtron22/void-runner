@@ -16,7 +16,8 @@ const RULE_SYMBOLS = [
 ];
 const ruleSymbol = rule => RULE_SYMBOLS.find(([pattern]) => pattern.test(rule))?.[1] || '◆';
 const BATTLE_ART = {
-  'space-marines': {src:new URL('../../gif/greyknight_A.gif', import.meta.url).href, facing:'right'},
+  'space-marines': {src:new URL('../../gif/spacemarine_A.gif', import.meta.url).href, facing:'right'},
+  'grey-knights': {src:new URL('../../gif/greyknight_A.gif', import.meta.url).href, facing:'right'},
   'orks': {src:new URL('../../gif/WAAAAAgon.gif', import.meta.url).href, facing:'left'},
   'tyranids': {src:new URL('../../gif/tyranids_A.gif', import.meta.url).href, facing:'right'},
   'imperial-knights': {src:new URL('../../gif/imperial_knight.gif', import.meta.url).href, facing:'left'}
@@ -25,7 +26,8 @@ const UNIT_SPRITES = {
   'intercessor-squad':[0,0], 'terminator-squad':[1,0], 'redemptor-dreadnought':[2,0], 'captain':[3,0],
   'boyz':[0,1], 'meganobz':[1,1], 'deff-dread':[2,1], 'warboss':[3,1],
   'termagants':[0,2], 'tyranid-warriors':[1,2], 'screamer-killer':[2,2], 'winged-tyranid-prime':[3,2],
-  'armiger-helverin':[0,3], 'armiger-warglaive':[1,3], 'knight-paladin':[2,3], 'acastus-knight-asterius':[3,3]
+  'armiger-helverin':[0,3], 'armiger-warglaive':[1,3], 'knight-paladin':[2,3], 'acastus-knight-asterius':[3,3],
+  'grey-knight-strike-squad':[0,0], 'grey-knight-terminators':[1,0], 'nemesis-dreadknight':[2,0], 'brotherhood-librarian':[3,0]
 };
 const unitSpriteStyle = id => {
   const [column, row] = UNIT_SPRITES[id] || [0,0];

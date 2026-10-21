@@ -71,6 +71,7 @@ Current factions:
 - Orks
 - Tyranids
 - Imperial Knights
+- Grey Knights
 
 Current units include:
 
