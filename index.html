@@ -68,11 +68,11 @@
     </section>
 
     <section id="battle-screen" class="screen" aria-labelledby="battle-title">
-      <div class="section-head battle-head"><div><p class="eyebrow" id="battle-kicker">AUTOMATED ENGAGEMENT</p><h2 id="battle-title">CONTACT</h2></div><div class="round-badge"><small>ROUND</small><b id="round-value">0</b></div></div>
+      <div class="section-head battle-head"><div><p class="eyebrow" id="battle-kicker" hidden>AUTOMATED ENGAGEMENT</p><h2 id="battle-title">CONTACT</h2></div><div class="round-badge"><small>ROUND</small><b id="round-value">0</b></div></div>
       <div id="enemy-banner" class="army-banner enemy"><span>HOSTILE SIGNAL</span><b id="enemy-power">0 PTS</b></div><div id="enemy-field" class="battle-field enemy-field"></div>
-      <div class="battle-resources pixel-panel"><span>ENEMY CP <b id="enemy-cp">1</b></span><span id="range-band">LONG RANGE</span><span>YOUR CP <b id="player-cp">1</b></span></div>
+      <div class="battle-resources pixel-panel"><span>ENEMY CP <b id="enemy-cp">1</b></span><span id="range-band" hidden>LONG RANGE</span><span>YOUR CP <b id="player-cp">1</b></span></div>
       <div id="dice-tray" class="dice-tray pixel-panel"><span class="dice-empty">WAITING FOR FIRST DICE ROLL</span></div>
-      <div class="battle-divider"><span>ATTACKS · HITS · WOUNDS · SAVES · DAMAGE</span><i></i></div>
+      <div class="battle-divider" aria-hidden="true"><i></i></div>
       <div id="player-field" class="battle-field player-field"></div><div class="army-banner player"><span>YOUR ARMY</span><b id="player-power">0 PTS</b></div>
       <div id="battle-log" class="battle-log pixel-panel" aria-live="polite"></div>
       <div class="battle-controls"><button id="speed-button">SPEED ×1</button><button id="skip-button">RESOLVE NOW</button></div>

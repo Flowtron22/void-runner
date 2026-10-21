@@ -801,6 +801,7 @@ export class Game {
     target.hp = [...plan.remainingHp];
     target.currentHp = target.hp.reduce((sum,value) => sum + value, 0);
     target.dead = target.hp.length === 0;
+    if (target.dead) target.deathEffectUntil = performance.now() + 900;
     target.flash = 'hit';
     plan.applied = true;
     this.battle.lastRoll = plan;
@@ -836,7 +837,8 @@ export class Game {
     container.innerHTML = '';
     for (const fighter of force) {
       const el = document.createElement('div');
-      el.className = `fighter ${fighter.dead ? 'dead' : ''} ${fighter.flash || ''}`;
+      const destroying = fighter.dead && performance.now() < (fighter.deathEffectUntil || 0);
+      el.className = `fighter ${fighter.dead ? 'dead' : ''} ${destroying ? 'destroying' : ''} ${fighter.flash || ''}`;
       el.style.setProperty('--fighter-color', fighter.side === 'enemy' ? '#ff496c' : fighter.color);
       const states = [fighter.battleShocked ? 'BATTLE-SHOCKED' : '', fighter.attachedTo ? 'LEADER' : '', fighter.protectedBy && !fighter.protectedBy.dead ? `ATTACHED TO ${fighter.protectedBy.name}` : ''].filter(Boolean).join(' · ');
       el.innerHTML = `<b>${fighter.name}</b><small>${fighter.hp.length}/${fighter.models} models · T${fighter.toughness} · SV${fighter.save}+${states ? `<br>${states}` : ''}</small><div class="hp"><i style="width:${clamp(fighter.currentHp/fighter.maxHp*100,0,100)}%"></i></div>`;
@@ -859,7 +861,7 @@ export class Game {
     if (!roll) { tray.innerHTML = '<span class="dice-empty">WAITING FOR FIRST DICE ROLL</span>'; return; }
     const visible = this.battle.visibleStage < 0 ? 4 : this.battle.visibleStage;
     const stage = (index, label, dice, result) => `<div class="dice-stage ${index <= visible ? 'revealed' : 'waiting'} ${index === visible ? 'current' : ''}"><div class="stage-heading"><small>${label}</small><b>${result}</b></div><div class="dice-pool">${dice}</div></div>`;
-    tray.innerHTML = `<div class="dice-caption"><span>${roll.actor}</span><i>ENGAGING</i><span>${roll.target}</span></div><div class="dice-sequence">
+    tray.innerHTML = `<div class="dice-caption"><span>${roll.actor}</span><span>${roll.target}</span></div><div class="dice-sequence">
       ${stage(0,'01 · ATTACKS',this.diceHTML(roll.attackDice,1,false,true),`${roll.attacks} TOTAL`)}
       ${stage(1,`02 · HIT · ${roll.hitTarget}+`,this.diceHTML(roll.hitRolls,roll.hitTarget,true),`${roll.hits} HITS`)}
       ${stage(2,`03 · WOUND · ${roll.woundNeeded}+`,this.diceHTML(roll.woundRolls,roll.woundNeeded,true),`${roll.wounds} WOUNDS`)}

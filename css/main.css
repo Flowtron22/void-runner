@@ -114,3 +114,14 @@ button:active{transform:translateY(2px);box-shadow:inset 0 1px #ffffff0d,0 1px 0
 .grid-unit{container-type:size}
 .grid-unit-icon{position:absolute;left:50%;top:50%;width:min(86cqw,86cqh);height:min(86cqw,86cqh);transform:translate(-50%,-50%);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--unit-color) 50%,transparent))}
 @media(max-width:390px){.unit-card{grid-template-columns:44px 1fr 38px}.unit-icon{width:42px;height:42px}}
+
+/* Combat stays visual: dead cards rupture instead of explaining the event with more copy. */
+.battle-resources{grid-template-columns:1fr 1fr}
+.dice-caption{grid-template-columns:1fr 1fr}
+.battle-divider{height:9px}.battle-divider::before,.battle-divider i{background:linear-gradient(90deg,transparent,#575047 18%,#575047 82%,transparent)}
+@keyframes unitRupture{0%{opacity:1;transform:none;filter:brightness(1);clip-path:inset(0)}14%{transform:translate(-3px,1px) rotate(-1deg);filter:brightness(3)}28%{transform:translate(4px,-2px) rotate(1deg);clip-path:polygon(0 0,48% 0,44% 43%,100% 36%,100% 100%,52% 100%,56% 55%,0 63%)}48%{opacity:.9;transform:scale(1.04);filter:brightness(1.8) saturate(1.8);clip-path:polygon(0 0,42% 0,35% 35%,100% 22%,100% 46%,62% 52%,100% 69%,100% 100%,54% 100%,48% 67%,0 88%,0 58%,30% 49%)}72%{opacity:.45;transform:scale(.94) translateY(5px);filter:brightness(.7) saturate(.3);clip-path:polygon(0 5%,31% 12%,38% 37%,71% 20%,100% 31%,93% 55%,61% 59%,78% 91%,49% 100%,32% 68%,0 84%,9% 49%)}100%{opacity:0;transform:scale(.72) translateY(16px);filter:brightness(0) blur(2px);clip-path:polygon(4% 30%,21% 38%,32% 53%,44% 43%,55% 61%,67% 48%,82% 63%,96% 55%,91% 74%,70% 80%,51% 73%,31% 86%,11% 72%)}}
+@keyframes unitBurst{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(0)}18%{opacity:1}62%{opacity:.7;transform:translate(-50%,-50%) scale(1.25) rotate(24deg)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.7) rotate(38deg)}}
+.fighter.destroying{z-index:3;opacity:1;filter:none;animation:unitRupture .82s steps(9,end) forwards}
+.fighter.destroying::before{animation:unitBurst .72s steps(7,end) forwards}
+.fighter.destroying::after{content:"";position:absolute;z-index:5;left:50%;top:50%;width:120%;aspect-ratio:1;pointer-events:none;background:repeating-conic-gradient(from 8deg,transparent 0 9deg,var(--fighter-color) 10deg 12deg,transparent 13deg 24deg);clip-path:polygon(50% 0,57% 35%,79% 8%,68% 40%,100% 31%,72% 49%,97% 65%,65% 59%,74% 96%,55% 66%,39% 100%,43% 64%,8% 86%,34% 56%,0 47%,35% 47%,16% 13%,45% 37%);filter:drop-shadow(0 0 4px var(--fighter-color));animation:unitBurst .76s steps(8,end) forwards}
+@media(prefers-reduced-motion:reduce){.fighter.destroying{opacity:.2;filter:grayscale(1)}}
