@@ -15,6 +15,12 @@ const RULE_SYMBOLS = [
   [/Synapse/i,'⌁'], [/Waaagh/i,'!'], [/Chivalric/i,'♜'], [/Leader|Rites|Alpha Warrior|Da Boss/i,'♛']
 ];
 const ruleSymbol = rule => RULE_SYMBOLS.find(([pattern]) => pattern.test(rule))?.[1] || '◆';
+const BATTLE_ART = {
+  'space-marines': {src:new URL('../../gif/greyknight_A.gif', import.meta.url).href, facing:'right'},
+  'orks': {src:new URL('../../gif/WAAAAAgon.gif', import.meta.url).href, facing:'left'},
+  'tyranids': {src:new URL('../../gif/tyranids_A.gif', import.meta.url).href, facing:'right'},
+  'imperial-knights': {src:new URL('../../gif/imperial_knight.gif', import.meta.url).href, facing:'left'}
+};
 
 function weaponRules(weapon, halfRange = false) {
   const rules = { unsupported: [] };
@@ -108,6 +114,50 @@ export class Game {
   faction(id) { return this.factions.find(faction => faction.id === id); }
   unit(id) { return this.units.find(unit => unit.id === id); }
 
+  setupBattleStage(enemyFaction) {
+    if (!window.matchMedia('(min-width:1100px)').matches) return;
+    const assignments = [['player', this.run.faction, 'right'], ['enemy', enemyFaction, 'left']];
+    for (const [side, factionId, desiredFacing] of assignments) {
+      const art = BATTLE_ART[factionId] || BATTLE_ART['space-marines'];
+      const figure = $(`.battle-wing-${side}`);
+      const image = $(`#battle-art-${side}`);
+      image.src = art.src;
+      figure.className = `battle-wing battle-wing-${side}`;
+      figure.classList.toggle('flip', art.facing !== desiredFacing);
+    }
+    $('#desktop-battle-stage').className = 'desktop-battle-stage';
+  }
+
+  clearBattleStage() {
+    document.body.classList.remove('battle-active');
+    $('#app').classList.remove('combat-shake', 'combat-shake-heavy');
+  }
+
+  fireBattleBeam(side) {
+    const stage = $('#desktop-battle-stage');
+    if (!document.body.classList.contains('battle-active')) return;
+    stage.classList.remove('firing-player', 'firing-enemy');
+    void stage.offsetWidth;
+    stage.classList.add(`firing-${side}`);
+  }
+
+  triggerBattleImpact(plan) {
+    if (!plan.damageLost || !document.body.classList.contains('battle-active')) return;
+    const stage = $('#desktop-battle-stage');
+    const frame = $('#app');
+    const heavy = plan.targetRef.dead || plan.devastating > 0 || plan.lethal > 0;
+    stage.classList.remove('impact-player', 'impact-enemy', 'impact-heavy');
+    frame.classList.remove('combat-shake', 'combat-shake-heavy');
+    void stage.offsetWidth;
+    stage.classList.add(`impact-${plan.targetRef.side}`, ...(heavy ? ['impact-heavy'] : []));
+    frame.classList.add(heavy ? 'combat-shake-heavy' : 'combat-shake');
+    clearTimeout(this.impactTimer);
+    this.impactTimer = setTimeout(() => {
+      stage.classList.remove('impact-player', 'impact-enemy', 'impact-heavy');
+      frame.classList.remove('combat-shake', 'combat-shake-heavy');
+    }, heavy ? 760 : 430);
+  }
+
   renderHeader() {
     $('#meta-currency').textContent = this.meta.currency;
     $('#location-label').textContent = this.run ? `${this.faction(this.run.faction).name.toUpperCase()} // ${this.run.cap} PTS` : '40K CAMPAIGN';
@@ -115,6 +165,8 @@ export class Game {
 
   show(name) {
     for (const screen of $$('.screen')) screen.classList.toggle('active', screen.id === `${name}-screen`);
+    document.body.classList.toggle('battle-active', name === 'battle');
+    if (name !== 'battle') this.clearBattleStage();
     window.scrollTo(0, 0);
     this.renderHeader();
   }
@@ -501,6 +553,7 @@ export class Game {
     $('#battle-kicker').textContent = node.type === 'boss' ? '// ♜ BOSS · AUTO-D6' : '// ⚄ AUTO-BATTLE';
     $('#player-power').textContent = `${this.usedPoints()} PTS`;
     $('#enemy-power').textContent = `${this.faction(node.enemyFaction).name.toUpperCase()} · THREAT ${Math.round(node.difficulty*100)}`;
+    this.setupBattleStage(node.enemyFaction);
     this.show('battle');
     this.renderBattle();
     this.scheduleRound();
@@ -561,6 +614,7 @@ export class Game {
     this.battle.currentPlan = this.prepareDiceAttack(actor, target);
     this.battle.lastRoll = this.battle.currentPlan;
     this.battle.visibleStage = 0;
+    this.fireBattleBeam(actor.side);
     this.renderBattle();
     clearTimeout(this.battleTimer);
     this.battleTimer = setTimeout(() => this.advanceDiceStage(), this.stageDelay());
@@ -716,7 +770,7 @@ export class Game {
       if (remainingHp[0] <= 0) remainingHp.shift();
     }
     const ruleNotes = [halfRange && rules.rapidFire ? `Rapid Fire +${rules.rapidFire}` : '', rules.blast ? `Blast +${Math.floor(target.hp.length/5)*rules.blast}A/model` : '', rules.torrent ? 'Torrent: automatic hits' : '', rules.woundReroll ? 'Twin-linked wound re-rolls' : '', antiNeeded ? `Anti-${target.keywords.includes('Infantry') ? 'Infantry' : target.keywords.includes('Monster') ? 'Monster' : 'Vehicle'} ${antiNeeded}+` : '', devastating ? `${devastating} Devastating Wound${devastating === 1 ? '' : 's'}` : '', rules.melta ? `Melta +${rules.melta} damage` : '', sustainedHits ? `Sustained Hits ${sustainedHits}` : '', autoWounds ? `${autoWounds} Lethal Hit${autoWounds === 1 ? '' : 's'}` : ''].filter(Boolean);
-    return {actor:actor.name,target:target.name,actorRef:actor,targetRef:target,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded:effectiveWoundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost,remainingHp,devastating,ruleNotes,applied:false};
+    return {actor:actor.name,target:target.name,actorRef:actor,targetRef:target,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded:effectiveWoundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost,remainingHp,devastating,lethal:autoWounds,ruleNotes,applied:false};
   }
 
   commandReroll(unit, rolls, target, label) {
@@ -741,6 +795,7 @@ export class Game {
     plan.applied = true;
     this.battle.lastRoll = plan;
     if (target.dead) this.addLog(`✕ ${target.name}`);
+    this.triggerBattleImpact(plan);
   }
 
   restoreWounds(unit, amount) {
@@ -832,12 +887,15 @@ export class Game {
     clearTimeout(this.battleTimer);
     this.battle.resolving = true;
     const node = this.battle.node;
+    const defeatedSide = victory ? 'enemy' : 'player';
+    $(`.battle-wing-${defeatedSide}`).classList.add('defeated');
+    $('#desktop-battle-stage').classList.add('battle-concluded');
     this.renderBattle();
     setTimeout(() => {
       if (victory) this.openRewards(node);
       else this.handleDefeat(node);
       this.battle = null;
-    }, 500);
+    }, 1100);
   }
 
   openRewards(node) {
