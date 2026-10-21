@@ -65,6 +65,7 @@
     <section id="battle-screen" class="screen" aria-labelledby="battle-title">
       <div class="section-head battle-head"><div><p class="eyebrow" id="battle-kicker">AUTOMATED ENGAGEMENT</p><h2 id="battle-title">CONTACT</h2></div><div class="round-badge"><small>ROUND</small><b id="round-value">0</b></div></div>
       <div id="enemy-banner" class="army-banner enemy"><span>HOSTILE SIGNAL</span><b id="enemy-power">0 PTS</b></div><div id="enemy-field" class="battle-field enemy-field"></div>
+      <div class="battle-resources pixel-panel"><span>ENEMY CP <b id="enemy-cp">1</b></span><span id="range-band">LONG RANGE</span><span>YOUR CP <b id="player-cp">1</b></span></div>
       <div id="dice-tray" class="dice-tray pixel-panel"><span class="dice-empty">WAITING FOR FIRST DICE ROLL</span></div>
       <div class="battle-divider"><span>ATTACKS · HITS · WOUNDS · SAVES · DAMAGE</span><i></i></div>
       <div id="player-field" class="battle-field player-field"></div><div class="army-banner player"><span>YOUR ARMY</span><b id="player-power">0 PTS</b></div>
@@ -84,7 +85,7 @@
 
     <dialog id="help-dialog" class="modal pixel-panel">
       <p class="eyebrow">// HOW TO PLAY</p><h2>BUILD. DEPLOY. ROLL.</h2>
-      <ol><li><b>Choose a faction.</b><span>Each faction loads its unit points and profiles from the KS JSON data.</span></li><li><b>Build an army.</b><span>Stay under the point limit and place every unit inside the 6×5 deployment grid.</span></li><li><b>Choose a mission.</b><span>Your army fights automatically using visible D6 Hit, Wound, Save, and Damage rolls.</span></li><li><b>Improve the campaign.</b><span>Choose a temporary Battle Honour and equip recovered Wargear before the next mission.</span></li></ol>
+      <ol><li><b>Choose a faction.</b><span>Each faction loads points, Keywords, Leadership, Objective Control, weapons and abilities from the KS-derived roster.</span></li><li><b>Build and attach.</b><span>Stay under the point limit. To join a Leader, select it and tap an eligible deployed Bodyguard unit.</span></li><li><b>Watch the conditions.</b><span>Weapon rules activate only when their condition is shown. Round 1 is Long Range; round 2 onward is Half Range.</span></li><li><b>Follow command status.</b><span>CP powers automatic core Stratagems. Below-half-strength units test Battle-shock and cannot receive Stratagems when shocked.</span></li><li><b>Improve the campaign.</b><span>Choose a temporary Battle Honour and equip recovered Wargear before the next mission.</span></li></ol>
       <button id="close-help-button" class="primary large">UNDERSTOOD</button>
     </dialog>
 

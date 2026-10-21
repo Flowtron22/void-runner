@@ -72,9 +72,9 @@ Current factions:
 
 Current units include:
 
-- Intercessor Squad, Terminator Squad and Redemptor Dreadnought.
-- Boyz, Meganobz and Deff Dread.
-- Termagants, Tyranid Warriors and Screamer-killer.
+- Intercessor Squad, Terminator Squad, Redemptor Dreadnought and Captain.
+- Boyz, Meganobz, Deff Dread and Warboss.
+- Termagants, Tyranid Warriors, Screamer-killer and Winged Tyranid Prime.
 - Armiger Helverin, Armiger Warglaive, Knight Paladin and Acastus Knight Asterius.
 
 Each compact unit record retains:
@@ -85,6 +85,10 @@ Each compact unit record retains:
   "points": 375,
   "size": [3, 2],
   "models": 1,
+  "keywords": ["Vehicle", "Walker", "Titanic", "Character", "Imperium", "Imperial Knights"],
+  "leadership": 6,
+  "oc": 10,
+  "abilities": ["Code Chivalric", "Seasoned Noble"],
   "defense": {
     "toughness": 11,
     "save": 3,
@@ -93,11 +97,13 @@ Each compact unit record retains:
   },
   "weapon": {
     "name": "Rapid-fire Battle Cannon",
+    "range": 72,
     "attacks": "D6+3",
     "hit": 3,
     "strength": 10,
     "ap": -1,
-    "damage": "3"
+    "damage": "3",
+    "keywords": ["Blast", "Rapid Fire D6+3"]
   }
 }
 ```
@@ -167,6 +173,22 @@ Feel No Pain rolls, when active, are rolled per lost wound.
 - A safety limit ends stalled battles after 30 rounds.
 
 The battle UI reveals the most recent attack in five timed stages: Attacks, Hits, Wounds, Saves and Damage. At normal speed each stage remains visible for about 520 ms; fast speed uses about 190 ms. Dice tumble and settle with staggered timing. Completed stages stay visible, future stages remain obscured, and damage is not applied until the Damage stage appears. `Resolve now` bypasses presentation but uses the same prepared rolls and rules result.
+
+### 7.7 Tabletop rules fidelity
+
+The KS `wh40k-11e` snapshot is the source of truth. The campaign implements a rule only when its required condition exists in the automated battlefield. It never silently invents eligibility.
+
+- Unit profiles carry Keywords, Leadership, Objective Control, named abilities, weapon range, and numeric weapon keywords.
+- Supported weapon rules: Blast, Torrent, Devastating Wounds, Melta X, Rapid Fire X, Twin-linked, Sustained Hits X, Lethal Hits and Anti-Infantry/Monster/Vehicle X+.
+- Assault, Heavy, Pistol, Ignores Cover, Precision, Hazardous and movement-dependent rules remain descriptive until their required movement, visibility, cover, allocation, or hazard systems exist.
+- Round 1 is the explicit `LONG RANGE` band. Round 2 onward is `HALF RANGE`; this is the campaign's disclosed abstraction for range-dependent rules.
+- Leaders attach during deployment: select the Leader and tap an eligible deployed Bodyguard. The Leader cannot be targeted until its Bodyguard is destroyed. A Bodyguard receives only effects explicitly defined by its Leader profile.
+- Both armies gain 1 CP at the start of a battle round, to a campaign cap of 5. Automation may use one Command Re-roll per side per round. Battle-shocked units cannot receive it.
+- Below-half-strength units take Battle-shock tests against Leadership in the Command phase. Synapse units roll 3D6. Insane Bravery is automated once per battle when eligible; Shadow in the Warp triggers automatically in round 2 when present.
+- Objective Control is stored and shown in the roster but has no battle effect until objective markers and scoring are added.
+- Oath of Moment selects the highest-current-wounds enemy each Command phase and enables failed Hit re-rolls against it.
+
+This is not yet a complete tabletop simulator. Movement, line of sight, terrain, objective scoring, explicit shooting/fight phases, manual Stratagem timing, attached-unit wound allocation, and full faction/detachment libraries are required before a literal 1:1 claim is valid.
 
 ## 8. Target selection
 

@@ -9,6 +9,26 @@ const pick = list => list[Math.floor(Math.random() * list.length)];
 const shuffle = list => [...list].sort(() => Math.random() - .5);
 const d6 = () => 1 + Math.floor(Math.random() * 6);
 
+function weaponRules(weapon, halfRange = false) {
+  const rules = { unsupported: [] };
+  for (const raw of weapon.keywords || []) {
+    const token = String(raw).trim();
+    let match;
+    if (/^Torrent$/i.test(token)) rules.torrent = true;
+    else if (/^Lethal Hits$/i.test(token)) rules.lethalHits = true;
+    else if (/^Devastating Wounds$/i.test(token)) rules.devastatingWounds = true;
+    else if (/^Twin-?linked$/i.test(token)) rules.woundReroll = 'failed';
+    else if ((match = token.match(/^Sustained Hits (\d+)$/i))) rules.sustainedHits = Number(match[1]);
+    else if ((match = token.match(/^Blast(?: (\d+))?$/i))) rules.blast = Number(match[1] || 1);
+    else if ((match = token.match(/^Rapid Fire (.+)$/i))) rules.rapidFire = halfRange ? match[1] : null;
+    else if ((match = token.match(/^Melta (\d+)$/i))) rules.melta = halfRange ? Number(match[1]) : 0;
+    else if ((match = token.match(/^Anti-(Infantry|Monster|Vehicle) (\d)\+$/i))) rules[`anti${match[1]}`] = Number(match[2]);
+    else if (/^(Assault|Heavy|Ignores Cover|Pistol|Cleave(?: \d+)?)$/i.test(token)) rules[token.toLowerCase()] = true;
+    else rules.unsupported.push(token);
+  }
+  return rules;
+}
+
 function rollExpression(value) {
   const text = String(value).replace(/\s/g, '').toUpperCase();
   if (/^\d+$/.test(text)) return { total: Number(text), rolls: [], flat: Number(text) };
@@ -181,15 +201,20 @@ export class Game {
       const unit = this.unit(placed.unitId);
       const [w, h] = this.sizeFor(unit, placed.rotated);
       const el = document.createElement('button');
-      el.className = `grid-unit ${this.selectedPlaced === placed.id ? 'selected' : ''}`;
+      el.className = `grid-unit ${this.selectedPlaced === placed.id ? 'selected' : ''} ${placed.attachedTo ? 'attached' : ''}`;
       el.style.setProperty('--unit-color', unit.color);
       el.style.left = `calc(${placed.x} * ((100% - 10px) / 6 + 2px))`;
       el.style.top = `calc(${placed.y} * (var(--cell) + 2px))`;
       el.style.width = `calc(${w} * ((100% - 10px) / 6) + ${(w - 1) * 2}px)`;
       el.style.height = `calc(${h} * var(--cell) + ${(h - 1) * 2}px)`;
-      el.innerHTML = `${unit.mark}<small>${unit.points}</small>`;
+      el.innerHTML = `${placed.attachedTo ? 'LDR' : unit.mark}<small>${unit.points}</small>`;
       el.title = `${unit.name} · ${unit.role} · ${unit.points} points`;
-      el.onclick = event => { event.stopPropagation(); this.selectedPlaced = placed.id; this.selectedBlueprint = null; this.renderLoadout(); };
+      el.onclick = event => {
+        event.stopPropagation();
+        const leader = this.unit(this.selectedBlueprint);
+        if (leader?.leader && !placed.attachedTo) return this.attachLeader(leader, placed);
+        this.selectedPlaced = placed.id; this.selectedBlueprint = null; this.renderLoadout();
+      };
       grid.append(el);
     }
   }
@@ -206,8 +231,9 @@ export class Game {
       button.style.setProperty('--unit-color', unit.color);
       button.disabled = out || tooLarge;
       const weapon = unit.weapon;
-      const status = tooLarge ? `NEEDS ${unit.points} PT LIMIT` : `${unit.size[0]}×${unit.size[1]} · ${unit.models} MODEL${unit.models > 1 ? 'S' : ''} · ${unit.stock - deployedCount} LEFT`;
-      button.innerHTML = `<span class="unit-icon">${unit.mark}</span><span class="unit-copy"><b>${unit.name}</b><small>${status}<br>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · ${weapon.name}: ${weapon.attacks}A ${weapon.hit}+ S${weapon.strength} AP${weapon.ap} D${weapon.damage}</small></span><span class="unit-cost">${unit.points}</span>`;
+      const status = tooLarge ? `NEEDS ${unit.points} PT LIMIT` : unit.leader ? `LEADER · TAP AN ELIGIBLE DEPLOYED UNIT · ${unit.stock - deployedCount} LEFT` : `${unit.size[0]}×${unit.size[1]} · ${unit.models} MODEL${unit.models > 1 ? 'S' : ''} · ${unit.stock - deployedCount} LEFT`;
+      const ruleLine = [...(unit.weapon.keywords || []), ...(unit.abilities || [])].slice(0,4).join(' · ') || 'No special rules';
+      button.innerHTML = `<span class="unit-icon">${unit.mark}</span><span class="unit-copy"><b>${unit.name}</b><small>${status}<br>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · LD${unit.leadership}+ · OC${unit.oc}<br>${weapon.name}: ${weapon.attacks}A ${weapon.hit}+ S${weapon.strength} AP${weapon.ap} D${weapon.damage}<br><em>${ruleLine}</em></small></span><span class="unit-cost">${unit.points}</span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
       roster.append(button);
     }
@@ -266,6 +292,7 @@ export class Game {
   placeUnit(x, y) {
     const unit = this.unit(this.selectedBlueprint);
     if (!unit) return;
+    if (unit.leader) { $('#prep-status').textContent = 'TAP AN ELIGIBLE DEPLOYED BODYGUARD UNIT'; return; }
     const [w, h] = this.sizeFor(unit, this.rotated);
     const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
     if (deployedCount >= unit.stock) return;
@@ -278,9 +305,23 @@ export class Game {
     this.renderLoadout();
   }
 
+  attachLeader(leader, bodyguard) {
+    if (!leader.leader.targets.includes(bodyguard.unitId)) { $('#prep-status').textContent = `${leader.name.toUpperCase()} CANNOT LEAD THAT UNIT`; return; }
+    if (this.run.deployed.some(item => item.attachedTo === bodyguard.id)) { $('#prep-status').textContent = 'THAT UNIT ALREADY HAS A LEADER'; return; }
+    if (this.usedPoints() + leader.points > this.run.cap) { $('#prep-status').textContent = 'NOT ENOUGH POINTS FOR THAT LEADER'; return; }
+    const deployedCount = this.run.deployed.filter(item => item.unitId === leader.id).length;
+    if (deployedCount >= leader.stock) return;
+    this.run.deployed.push({id:`${leader.id}-${Date.now()}`,unitId:leader.id,x:bodyguard.x,y:bodyguard.y,rotated:false,attachedTo:bodyguard.id});
+    this.selectedBlueprint = null;
+    this.selectedPlaced = this.run.deployed.at(-1).id;
+    this.save();
+    this.renderLoadout();
+  }
+
   removeSelected() {
     if (!this.selectedPlaced) return;
-    this.run.deployed = this.run.deployed.filter(unit => unit.id !== this.selectedPlaced);
+    const removing = new Set([this.selectedPlaced, ...this.run.deployed.filter(unit => unit.attachedTo === this.selectedPlaced).map(unit => unit.id)]);
+    this.run.deployed = this.run.deployed.filter(unit => !removing.has(unit.id));
     for (const gear of this.run.gear) if (gear.equippedTo === this.selectedPlaced) gear.equippedTo = null;
     this.selectedPlaced = null;
     this.save();
@@ -374,7 +415,7 @@ export class Game {
   buildFighter(placed, side = 'player') {
     const unit = this.unit(placed.unitId);
     const fighter = {
-      ...unit, instanceId:placed.id, side, x:placed.x ?? 0, y:placed.y ?? 0,
+      ...unit, instanceId:placed.id, side, x:placed.x ?? 0, y:placed.y ?? 0, attachedTo:placed.attachedTo || null,
       toughness:unit.defense.toughness, save:unit.defense.save, invuln:unit.defense.invuln,
       hitBonus:0, woundBonus:0, saveBonus:0, attacksBonus:0, fnp:7,
       hp:Array(unit.models).fill(unit.defense.wounds), maxHp:unit.models * unit.defense.wounds,
@@ -399,11 +440,12 @@ export class Game {
       if (doctrine >= 2) fighter.woundBonus++;
       if (doctrine >= 3) fighter.fnp = Math.min(fighter.fnp, 6);
     }
+    fighter.baseInvuln = fighter.invuln;
     return fighter;
   }
 
   makeEnemyForce(node) {
-    const pool = this.units.filter(unit => unit.faction === node.enemyFaction && unit.points <= this.run.cap);
+    const pool = this.units.filter(unit => unit.faction === node.enemyFaction && unit.points <= this.run.cap && !unit.leader);
     const target = Math.max(150, Math.round(this.usedPoints() * node.difficulty));
     const force = [];
     let total = 0, safety = 0;
@@ -425,11 +467,20 @@ export class Game {
 
   startBattle(node) {
     const players = this.run.deployed.map(placed => this.buildFighter(placed));
+    for (const leader of players.filter(unit => unit.attachedTo)) {
+      const bodyguard = players.find(unit => unit.instanceId === leader.attachedTo);
+      if (bodyguard) {
+        leader.protectedBy = bodyguard;
+        bodyguard.leaderGrant = leader.leader?.grant || {};
+      }
+    }
     const enemies = this.makeEnemyForce(node);
     this.battle = {
       node, players, enemies, round:0,
       log:[`Mission started against <b>${this.faction(node.enemyFaction).name}</b>.`],
-      resolving:false, lastRoll:null, visibleStage:-1, actors:[], actorIndex:0, currentPlan:null
+      resolving:false, lastRoll:null, visibleStage:-1, actors:[], actorIndex:0, currentPlan:null,
+      cp:{player:1,enemy:1}, insaneBravery:{player:false,enemy:false}, stratagemUsed:{player:false,enemy:false}, oathTarget:{player:null,enemy:null},
+      shadowUsed:{player:false,enemy:false}, rangeBand:'LONG RANGE'
     };
     this.battleSpeed = 1;
     $('#speed-button').textContent = 'SPEED ×1';
@@ -452,6 +503,7 @@ export class Game {
   runRound(render = true) {
     if (!this.battle || this.battle.resolving) return;
     this.battle.round++;
+    this.commandPhase();
     const actors = shuffle([...this.alive(this.battle.players), ...this.alive(this.battle.enemies)]);
     for (const actor of actors) {
       if (actor.dead) continue;
@@ -474,6 +526,7 @@ export class Game {
     if (!this.alive(this.battle.enemies).length) return this.finishBattle(true);
     if (!this.alive(this.battle.players).length || this.battle.round >= 30) return this.finishBattle(false);
     this.battle.round++;
+    this.commandPhase();
     this.battle.actors = shuffle([...this.alive(this.battle.players), ...this.alive(this.battle.enemies)]);
     this.battle.actorIndex = 0;
     this.battle.currentPlan = null;
@@ -523,33 +576,112 @@ export class Game {
   }
 
   chooseTarget(foes, side) {
-    if (side === 'enemy') return [...foes].sort((a,b) => a.x - b.x || a.currentHp - b.currentHp)[0];
-    return [...foes].sort((a,b) => a.currentHp - b.currentHp)[0];
+    const legal = foes.filter(unit => !unit.protectedBy || unit.protectedBy.dead);
+    const pool = legal.length ? legal : foes;
+    if (side === 'enemy') return [...pool].sort((a,b) => a.x - b.x || a.currentHp - b.currentHp)[0];
+    return [...pool].sort((a,b) => a.currentHp - b.currentHp)[0];
+  }
+
+  commandPhase() {
+    const battle = this.battle;
+    battle.cp.player = Math.min(5, battle.cp.player + 1);
+    battle.cp.enemy = Math.min(5, battle.cp.enemy + 1);
+    battle.rangeBand = battle.round >= 2 ? 'HALF RANGE' : 'LONG RANGE';
+    battle.stratagemUsed = {player:false,enemy:false};
+    for (const unit of [...this.alive(battle.players), ...this.alive(battle.enemies)]) {
+      unit.battleShocked = false;
+      unit.invuln = unit.baseInvuln;
+    }
+    for (const side of ['player','enemy']) {
+      const force = side === 'player' ? battle.players : battle.enemies;
+      for (const unit of this.alive(force)) if (this.belowHalfStrength(unit)) this.testBattleShock(unit);
+    }
+    for (const side of ['player','enemy']) {
+      const force = side === 'player' ? battle.players : battle.enemies;
+      const foes = side === 'player' ? battle.enemies : battle.players;
+      if (this.alive(force).some(unit => unit.keywords?.includes('Adeptus Astartes'))) {
+        battle.oathTarget[side] = [...this.alive(foes)].sort((a,b) => b.currentHp - a.currentHp)[0]?.instanceId || null;
+        const oath = this.alive(foes).find(unit => unit.instanceId === battle.oathTarget[side]);
+        if (oath) this.addLog(`${side === 'player' ? 'Your' : 'Hostile'} Oath of Moment marked <b>${oath.name}</b>.`);
+      }
+      if (this.alive(force).some(unit => unit.abilities?.includes('Da Boss'))) battle.cp[side] = Math.min(5, battle.cp[side] + 1);
+      if (!battle.shadowUsed[side] && battle.round === 2 && this.alive(force).some(unit => unit.abilities?.includes('Shadow in the Warp'))) {
+        battle.shadowUsed[side] = true;
+        this.addLog(`<b>${side === 'player' ? 'Your' : 'Hostile'} Shadow in the Warp:</b> the opposing army tests Battle-shock.`);
+        for (const unit of this.alive(foes)) this.testBattleShock(unit, true);
+      }
+      if (battle.round === 2 && this.alive(force).some(unit => unit.abilities?.includes('Waaagh!'))) {
+        for (const unit of this.alive(force)) if (unit.keywords?.includes('Orks')) unit.invuln = Math.min(unit.invuln, 5);
+        this.addLog(`<b>${side === 'player' ? 'Your' : 'Hostile'} Waaagh!:</b> Orks are riled up this round.`);
+      }
+    }
+  }
+
+  belowHalfStrength(unit) {
+    if (unit.models === 1) return unit.currentHp < unit.maxHp / 2;
+    return unit.hp.length < Math.ceil(unit.models / 2);
+  }
+
+  testBattleShock(unit, forced = false) {
+    const synapse = unit.keywords?.includes('Synapse');
+    const dice = Array.from({length:synapse ? 3 : 2}, d6);
+    const total = dice.reduce((sum,value) => sum + value, 0);
+    const failed = total < (unit.leadership || 7);
+    if (!failed) return;
+    const side = unit.side;
+    if (!forced && !this.battle.insaneBravery[side] && this.battle.cp[side] > 0) {
+      this.battle.cp[side]--;
+      this.battle.insaneBravery[side] = true;
+      this.addLog(`${unit.name} used <b>Insane Bravery</b> (1 CP).`);
+      return;
+    }
+    unit.battleShocked = true;
+    this.addLog(`${unit.name} failed Battle-shock (${dice.join('+')} vs LD ${unit.leadership}+).`);
   }
 
   prepareDiceAttack(actor, target) {
     const models = actor.hp.length;
+    const halfRange = this.battle.round >= 2 && actor.weapon.range > 0;
+    const rules = weaponRules(actor.weapon, halfRange);
+    const leader = actor.leaderGrant || {};
     const attackDice = [];
     let attacks = 0;
     for (let model = 0; model < models; model++) {
       const roll = rollExpression(actor.weapon.attacks);
       attackDice.push(...roll.rolls);
       attacks += roll.total + actor.attacksBonus;
+      if (rules.rapidFire) {
+        const rapid = rollExpression(rules.rapidFire);
+        attackDice.push(...rapid.rolls);
+        attacks += rapid.total;
+      }
+      if (rules.blast) attacks += Math.floor(target.hp.length / 5) * rules.blast;
     }
     const effects = actor.side === 'player' ? this.protocolEffects() : {};
     const hitTarget = clamp(actor.weapon.hit - actor.hitBonus, 2, 6);
-    const hitRolls = Array.from({length:attacks}, () => d6());
-    let hits = hitRolls.filter(roll => roll !== 1 && roll >= hitTarget).length;
+    let hitRolls = rules.torrent ? [] : Array.from({length:attacks}, () => d6());
+    const oathReroll = target.instanceId === this.battle.oathTarget[actor.side];
+    if (!rules.torrent && (oathReroll || leader.hitReroll === 'failed')) hitRolls = hitRolls.map(roll => roll !== 1 && roll >= hitTarget ? roll : d6());
+    if (!rules.torrent && !oathReroll && leader.hitReroll !== 'failed') hitRolls = this.commandReroll(actor, hitRolls, hitTarget, 'Hit');
+    let hits = rules.torrent ? attacks : hitRolls.filter(roll => roll !== 1 && roll >= hitTarget).length;
     const criticalHits = hitRolls.filter(roll => roll === 6).length;
-    const autoWounds = effects.lethalHits ? criticalHits : 0;
-    if (effects.sustainedHits) hits += criticalHits * effects.sustainedHits;
+    const autoWounds = effects.lethalHits || rules.lethalHits ? criticalHits : 0;
+    const sustainedHits = Math.max(effects.sustainedHits || 0, rules.sustainedHits || 0, leader.sustainedHits || 0);
+    if (sustainedHits) hits += criticalHits * sustainedHits;
     const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness) - actor.woundBonus, 2, 6);
-    const woundRolls = Array.from({length:Math.max(0,hits-autoWounds)}, () => d6());
-    const rolledWounds = woundRolls.filter(roll => roll !== 1 && roll >= woundNeeded).length;
+    const antiNeeded = target.keywords?.includes('Infantry') ? rules.antiInfantry : target.keywords?.includes('Monster') ? rules.antiMonster : target.keywords?.includes('Vehicle') ? rules.antiVehicle : null;
+    const effectiveWoundNeeded = Math.min(woundNeeded, antiNeeded || 7);
+    let woundRolls = Array.from({length:Math.max(0,hits-autoWounds)}, () => d6());
+    if (rules.woundReroll === 'failed') woundRolls = woundRolls.map(roll => roll !== 1 && roll >= effectiveWoundNeeded ? roll : d6());
+    if (rules.woundReroll !== 'failed') woundRolls = this.commandReroll(actor, woundRolls, effectiveWoundNeeded, 'Wound');
+    const rolledWounds = woundRolls.filter(roll => roll !== 1 && roll >= effectiveWoundNeeded).length;
     const wounds = rolledWounds + autoWounds;
+    const criticalWoundNeeded = antiNeeded || 6;
+    const devastating = rules.devastatingWounds ? woundRolls.filter(roll => roll !== 1 && roll >= criticalWoundNeeded).length : 0;
     const armourTarget = clamp(target.save - actor.weapon.ap - target.saveBonus, 2, 7);
     const saveTarget = Math.min(armourTarget, target.invuln || 7);
-    const saveRolls = Array.from({length:wounds}, () => d6());
+    let saveRolls = Array.from({length:Math.max(0,wounds-devastating)}, () => d6());
+    saveRolls = this.commandReroll(target, saveRolls, saveTarget, 'Save');
     const saves = saveRolls.filter(roll => saveTarget <= 6 && roll >= saveTarget).length;
     const unsaved = wounds - saves;
     const damageRolls = [];
@@ -559,6 +691,7 @@ export class Game {
       const result = rollExpression(actor.weapon.damage);
       damageRolls.push(...(result.rolls.length ? result.rolls : [result.total]));
       let damage = result.total;
+      if (rules.melta) damage += rules.melta;
       if (target.fnp <= 6) {
         const ignored = Array.from({length:damage}, () => d6()).filter(roll => roll >= target.fnp).length;
         damage -= ignored;
@@ -568,7 +701,20 @@ export class Game {
       damageLost += lost;
       if (remainingHp[0] <= 0) remainingHp.shift();
     }
-    return {actor:actor.name,target:target.name,actorRef:actor,targetRef:target,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost,remainingHp,applied:false};
+    const ruleNotes = [halfRange && rules.rapidFire ? `Rapid Fire +${rules.rapidFire}` : '', rules.blast ? `Blast +${Math.floor(target.hp.length/5)*rules.blast}A/model` : '', rules.torrent ? 'Torrent: automatic hits' : '', rules.woundReroll ? 'Twin-linked wound re-rolls' : '', antiNeeded ? `Anti-${target.keywords.includes('Infantry') ? 'Infantry' : target.keywords.includes('Monster') ? 'Monster' : 'Vehicle'} ${antiNeeded}+` : '', devastating ? `${devastating} Devastating Wound${devastating === 1 ? '' : 's'}` : '', rules.melta ? `Melta +${rules.melta} damage` : '', sustainedHits ? `Sustained Hits ${sustainedHits}` : '', autoWounds ? `${autoWounds} Lethal Hit${autoWounds === 1 ? '' : 's'}` : ''].filter(Boolean);
+    return {actor:actor.name,target:target.name,actorRef:actor,targetRef:target,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded:effectiveWoundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost,remainingHp,devastating,ruleNotes,applied:false};
+  }
+
+  commandReroll(unit, rolls, target, label) {
+    if (!rolls.length || target > 6 || unit.battleShocked || this.battle.cp[unit.side] < 1 || this.battle.stratagemUsed[unit.side]) return rolls;
+    const index = rolls.findIndex(roll => roll === 1 || roll < target);
+    if (index < 0) return rolls;
+    const next = [...rolls];
+    next[index] = d6();
+    this.battle.cp[unit.side]--;
+    this.battle.stratagemUsed[unit.side] = true;
+    this.addLog(`${unit.name} used <b>Command Re-roll</b> on a ${label} roll (1 CP).`);
+    return next;
   }
 
   applyDiceAttack(plan) {
@@ -601,6 +747,9 @@ export class Game {
     this.renderForce($('#enemy-field'), this.battle.enemies);
     this.renderForce($('#player-field'), this.battle.players);
     $('#battle-log').innerHTML = this.battle.log.map(line => `<div>› ${line}</div>`).join('');
+    $('#player-cp').textContent = this.battle.cp.player;
+    $('#enemy-cp').textContent = this.battle.cp.enemy;
+    $('#range-band').textContent = this.battle.rangeBand;
     this.renderDice();
   }
 
@@ -610,7 +759,8 @@ export class Game {
       const el = document.createElement('div');
       el.className = `fighter ${fighter.dead ? 'dead' : ''} ${fighter.flash || ''}`;
       el.style.setProperty('--fighter-color', fighter.side === 'enemy' ? '#ff496c' : fighter.color);
-      el.innerHTML = `<b>${fighter.name}</b><small>${fighter.hp.length}/${fighter.models} models · T${fighter.toughness} · SV${fighter.save}+</small><div class="hp"><i style="width:${clamp(fighter.currentHp/fighter.maxHp*100,0,100)}%"></i></div>`;
+      const states = [fighter.battleShocked ? 'BATTLE-SHOCKED' : '', fighter.attachedTo ? 'LEADER' : '', fighter.protectedBy && !fighter.protectedBy.dead ? `ATTACHED TO ${fighter.protectedBy.name}` : ''].filter(Boolean).join(' · ');
+      el.innerHTML = `<b>${fighter.name}</b><small>${fighter.hp.length}/${fighter.models} models · T${fighter.toughness} · SV${fighter.save}+${states ? `<br>${states}` : ''}</small><div class="hp"><i style="width:${clamp(fighter.currentHp/fighter.maxHp*100,0,100)}%"></i></div>`;
       container.append(el);
       fighter.flash = '';
     }
@@ -636,7 +786,7 @@ export class Game {
       ${stage(2,`03 · WOUND · ${roll.woundNeeded}+`,this.diceHTML(roll.woundRolls,roll.woundNeeded,true),`${roll.wounds} WOUNDS`)}
       ${stage(3,`04 · SAVE · ${roll.saveTarget <= 6 ? `${roll.saveTarget}+` : 'NONE'}`,this.diceHTML(roll.saveRolls,roll.saveTarget),`${roll.saves} SAVED`)}
       ${stage(4,'05 · DAMAGE',this.diceHTML(roll.damageRolls,1,false,true),`${roll.damageLost} LOST`)}
-    </div><div class="dice-outcome ${visible === 4 ? 'revealed' : ''}">${visible === 4 ? `${roll.damageLost} WOUNDS INFLICTED${roll.remainingHp.length ? '' : ' · UNIT DESTROYED'}` : 'RESOLUTION IN PROGRESS'}</div>`;
+    </div>${roll.ruleNotes?.length ? `<div class="rule-notes">${roll.ruleNotes.join(' · ')}</div>` : ''}<div class="dice-outcome ${visible === 4 ? 'revealed' : ''}">${visible === 4 ? `${roll.damageLost} WOUNDS INFLICTED${roll.remainingHp.length ? '' : ' · UNIT DESTROYED'}` : 'RESOLUTION IN PROGRESS'}</div>`;
   }
 
   toggleSpeed() {
