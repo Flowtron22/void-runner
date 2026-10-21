@@ -21,6 +21,16 @@ const BATTLE_ART = {
   'tyranids': {src:new URL('../../gif/tyranids_A.gif', import.meta.url).href, facing:'right'},
   'imperial-knights': {src:new URL('../../gif/imperial_knight.gif', import.meta.url).href, facing:'left'}
 };
+const UNIT_SPRITES = {
+  'intercessor-squad':[0,0], 'terminator-squad':[1,0], 'redemptor-dreadnought':[2,0], 'captain':[3,0],
+  'boyz':[0,1], 'meganobz':[1,1], 'deff-dread':[2,1], 'warboss':[3,1],
+  'termagants':[0,2], 'tyranid-warriors':[1,2], 'screamer-killer':[2,2], 'winged-tyranid-prime':[3,2],
+  'armiger-helverin':[0,3], 'armiger-warglaive':[1,3], 'knight-paladin':[2,3], 'acastus-knight-asterius':[3,3]
+};
+const unitSpriteStyle = id => {
+  const [column, row] = UNIT_SPRITES[id] || [0,0];
+  return `--icon-x:${column * 100 / 3}%;--icon-y:${row * 100 / 3}%`;
+};
 
 function weaponRules(weapon, halfRange = false) {
   const rules = { unsupported: [] };
@@ -266,7 +276,7 @@ export class Game {
       el.style.top = `calc(${placed.y} * (var(--cell) + 2px))`;
       el.style.width = `calc(${w} * ((100% - 10px) / 6) + ${(w - 1) * 2}px)`;
       el.style.height = `calc(${h} * var(--cell) + ${(h - 1) * 2}px)`;
-      el.innerHTML = `${placed.attachedTo ? 'LDR' : unit.mark}<small>${unit.points}</small>`;
+      el.innerHTML = `<span class="grid-unit-icon" style="${unitSpriteStyle(unit.id)}" aria-hidden="true"></span><small>${unit.points}</small>`;
       el.title = `${unit.name} · ${unit.role} · ${unit.points} points`;
       el.onclick = event => {
         event.stopPropagation();
@@ -294,7 +304,7 @@ export class Game {
       const rules = [...(unit.weapon.keywords || []), ...(unit.abilities || [])].slice(0,5);
       const badges = rules.map(rule => `<span class="rule-badge" title="${rule}" aria-label="${rule}">${ruleSymbol(rule)}</span>`).join('');
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
-      button.innerHTML = `<span class="unit-icon">${unit.mark}</span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span><span class="rule-badges">${badges}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
+      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span><span class="rule-badges">${badges}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
       roster.append(button);
     }

@@ -84,6 +84,13 @@ Glow is not part of the base language. Depth comes from hard shadows, bevels, te
 - Damage application occurs when the Damage stage is revealed, so unit health and dice agree.
 - Background texture stays under 25% opacity and never crosses text contrast requirements.
 
+## Unit silhouette atlas
+
+- `assets/unit-silhouettes.png` is the locked 4×4 transparent portrait atlas used by both roster cards and deployed formation pieces.
+- Rows are Space Marines, Orks, Tyranids and Imperial Knights; columns follow each faction's unit order in `public/data/warhammer-roster.json`.
+- The silhouettes are original generated designs informed by official unit shape references, not copied illustrations or faction logos.
+- Preserve the atlas order, transparent padding, 400% CSS background sizing and 42–48 px display range when adding or replacing portraits.
+
 ## Avoid
 
 - Cyan-heavy neon or unrestricted rainbow accents.
