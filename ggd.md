@@ -1,258 +1,267 @@
-# VOID RUNNER: PROTOCOL FRONT — Game Design Document
+# VOID RUNNER — 40K Roguelike Campaign GDD
 
-This document is the authoritative handoff for the current game. Read it with `ART_BIBLE.md` before changing mechanics or presentation.
+This is the authoritative gameplay and implementation handoff. Read it with `ART_BIBLE.md` before editing the project.
 
-## 1. Product definition
+## 1. Clear design statement
 
-VOID RUNNER: PROTOCOL FRONT is a portrait-first, single-player roguelike army-builder and auto-battler for web and touch devices.
+The game is now a portrait-first Warhammer 40,000 army-building roguelike with automatic dice combat.
 
-The player manually prepares a force under two simultaneous constraints:
+- **40K supplies the army layer:** factions, units, points, models, Toughness, Saves, Wounds, Invulnerable Saves, weapon Attacks, Hit values, Strength, AP and Damage.
+- **The KS project supplies the data and dice model:** compact game data is derived from `D:/Projects/Minigames/KS/solo-lab/public/armies`, and attack resolution follows the KS sequence.
+- **The roguelike supplies the campaign wrapper:** choose missions, defeat a boss in each warzone, gain temporary Battle Honours and Wargear, then use permanent Requisition upgrades between campaigns.
 
-1. Every unit has a command-point cost.
-2. Every unit has a physical footprint that must fit inside a 6×5 deployment case.
+The previous original unit roster and flat-damage combat are no longer active.
 
-The player then selects a route through a four-region expedition. Combat is fully automatic. Strategy comes from force composition, spatial packing, front/back placement, equipment, route choice, and temporary run protocols.
+## 2. Mandatory presentation
 
-The design combines three broad ideas without copying any protected setting, units, UI, names, or art:
+- Portrait-first reference frame: 480×854.
+- Desktop keeps the game inside a centered portrait command board.
+- Luminous high-contrast pixel art remains the global visual direction.
+- No interaction depends on hover.
+- Minimum touch target is 40 CSS px.
 
-- Point-budget army construction.
-- Spatial inventory-style unit packing.
-- A multi-region route with encounters, rewards, bosses, and between-run research.
-
-## 2. Non-negotiable pillars
-
-- **Portrait is mandatory.** The reference frame is 480×854 and the desktop presentation remains a centered portrait command board.
-- **Preparation is manual.** The player chooses units, placement, orientation, and gear.
-- **Battle is automatic.** During combat the player may only change playback speed or resolve immediately.
-- **Every run changes.** Route choices, rewards, gear, and temporary protocols create the build.
-- **Points and space both matter.** A legal army can still be badly packed; an efficient shape can still exceed the point limit.
-- **Bosses test the full run build.** Each region ends in a boss. The fourth boss completes the expedition.
-- **Permanent power is bounded.** Research improves future starts but does not replace run decisions.
-
-## 3. Core loop
+## 3. Player flow
 
 ```text
-Command → Pack force → Choose route → Auto-battle → Choose protocol
-    ↑          ↓              ↓              ↓             ↓
- Research   Equip gear    Risk/reward     Observe why   Rebuild/continue
+Choose faction
+    ↓
+Build army under points limit
+    ↓
+Place units on 6×5 deployment grid
+    ↓
+Choose campaign mission
+    ↓
+Automatic D6 battle
+    ↓
+Choose Battle Honour + collect Wargear
+    ↓
+Boss → larger points limit → next warzone
 ```
 
-1. Start an expedition with a 500-point command limit.
-2. Choose units from the available roster.
-3. Place them inside the 6×5 case. Units occupy 1×1 through 3×2 footprints.
-4. Choose one available route contact.
-5. Make any final formation or equipment changes.
-6. Watch the battle resolve automatically.
-7. On victory, receive run data, War Chests, possible gear, and one of three protocols.
-8. Continue through three contacts and a boss.
-9. Enter the next region with a larger point limit and newly available heavy units.
-10. Finish the fourth boss or lose all campaign hull.
-11. Spend banked War Chests on permanent research.
+## 4. Campaign structure
 
-## 4. Expedition structure
+One complete campaign contains four warzones. Each warzone has three mission choices followed by a boss.
 
-There are four regions in one full run:
+| Warzone | Army Points limit | Boss |
+|---|---:|---|
+| Outer Warzone | 500 | Enemy Warlord |
+| Contested Sector | 1,000 | Armoured Spearhead |
+| Fortress Line | 1,500 | Titanic Assault |
+| Final Crusade | 2,000 | Supreme Command |
 
-| Region | Name | Base point limit | New scale |
-|---|---|---:|---|
-| 1 | Ashen Approach | 500 | Infantry, guard, medic, artillery |
-| 2 | Glass Trench | 900 | Breaker units |
-| 3 | Iron Pilgrimage | 1,400 | Heavy engines |
-| 4 | Null Citadel | 2,000 | Titan-class units |
+Mission types:
 
-Each region contains three route contacts followed by a boss. Current contact types:
+- **Battle:** standard threat and score reward.
+- **Supply:** battle with improved Wargear chance.
+- **Elite:** higher enemy points and guaranteed Wargear.
+- **Recovery:** no combat; restore one campaign attempt.
+- **Boss:** ends the current warzone and unlocks the next points limit.
 
-- **Skirmish:** safer battle and standard data.
-- **Salvage:** moderate battle with increased gear opportunity.
-- **Elite:** dangerous battle with guaranteed gear.
-- **Recovery:** no battle; restore one campaign hull and gain a small amount of data.
-- **Boss:** highest threat, larger rewards, and passage to the next region.
+Enemy faction is shown before the mission is selected. Choosing one mission closes the other choices at that depth.
 
-The current map presents two or three choices at the active depth. Selecting one closes the alternatives. Completed contacts remain visible behind the player.
+## 5. Factions and JSON data
 
-## 5. Resources
+The runtime fetches `public/data/warhammer-roster.json`. It is a compact, deployment-safe derivative of the KS army JSON rather than a second manually invented ruleset.
 
-### Command points
+Current factions:
 
-Command points cap the deployed force. A force must cost at least one point and may not exceed the region limit. Expanded Mandate research adds 50 starting points per rank to every regional limit.
+- Space Marines
+- Orks
+- Tyranids
+- Imperial Knights
 
-### Case space
+Current units include:
 
-The deployment case is six columns by five rows. Units cannot overlap or extend outside it. Rotation swaps width and height. The left two columns are treated as the front; the right side is the safer backline.
+- Intercessor Squad, Terminator Squad and Redemptor Dreadnought.
+- Boyz, Meganobz and Deff Dread.
+- Termagants, Tyranid Warriors and Screamer-killer.
+- Armiger Helverin, Armiger Warglaive, Knight Paladin and Acastus Knight Asterius.
 
-### Campaign hull
+Each compact unit record retains:
 
-A run begins with three hull. Losing a battle removes one. At zero hull the expedition ends. Recovery contacts restore one hull up to the maximum. Hull Insurance research adds one maximum hull per rank.
+```json
+{
+  "name": "Knight Paladin",
+  "points": 375,
+  "size": [3, 2],
+  "models": 1,
+  "defense": {
+    "toughness": 11,
+    "save": 3,
+    "wounds": 26,
+    "invuln": 5
+  },
+  "weapon": {
+    "name": "Rapid-fire Battle Cannon",
+    "attacks": "D6+3",
+    "hit": 3,
+    "strength": 10,
+    "ap": -1,
+    "damage": "3"
+  }
+}
+```
 
-### Run data
+The source metadata records the KS path and pinned BSData snapshot. This is a personal prototype and not tournament certification.
 
-Run data is a score and future content hook earned during the current expedition. It resets after the run.
+## 6. Army building
 
-### War Chests
+The selected faction determines the available roster. A deployed army must satisfy both constraints:
 
-War Chests are permanent research currency. Battles accumulate them inside the run; all accumulated chests are banked on victory or defeat. Salvage Rights research increases the amount earned.
+1. Total unit points cannot exceed the current warzone limit.
+2. Unit footprints cannot overlap or extend beyond the 6×5 deployment grid.
 
-## 6. Units and force construction
+Units may be rotated. Stock limits restrict duplicates. A unit whose point cost exceeds the current limit remains visible but locked, explaining which limit is required.
 
-| Unit | Role | Cost | Footprint | Region | Function |
-|---|---|---:|---:|---:|---|
-| Needle Team | Striker | 100 | 1×1 | 1 | Fast damage; front-line bonus |
-| Bastion Cohort | Guard | 160 | 1×2 | 1 | High health, armor, and threat |
-| Chirurgeon | Support | 140 | 1×1 | 1 | Repairs the most injured ally |
-| Hexgun Battery | Artillery | 210 | 2×1 | 1 | Strong but fragile ranged damage |
-| Rammer Lance | Breaker | 280 | 2×1 | 2 | Bonus damage against armored targets |
-| Bulwark Engine | Heavy | 420 | 2×2 | 3 | Large mobile fortress |
-| Null Colossus | Titan | 500 | 3×2 | 4 | Extremely durable high-damage centerpiece |
+Example: at 500 points, Imperial Knights can field one 375-point Knight Paladin, several 140-point Armigers, or another legal combination. The 785-point Acastus becomes available after the campaign reaches the 1,000-point warzone.
 
-Roster stock limits prevent unlimited copies. Unlock regions make the expanding point limit meaningful: later regions support both more small units and larger units.
+## 7. Automatic D6 combat
 
-## 7. Spatial formation rules
+The player does not issue orders during combat. Available controls are playback speed and immediate resolution.
 
-- Enemy targeting usually prioritizes Guards and Heavy units.
-- Otherwise, hostile AI tends to attack the leftmost/frontmost deployed unit.
-- Needle Teams in the front two columns deal bonus damage.
-- Cohesion Field grants armor to units placed near another unit.
-- Formation coordinates persist between contacts until the player changes them.
-- One piece of gear can be equipped to each deployed unit.
+Every unit attacks once per round while it has surviving models. An attack uses the following visible sequence:
 
-The desired future direction is to add more adjacency, row, shape, and facing synergies without making the grid unreadable.
+### 7.1 Attacks
 
-## 8. Automatic combat
+For every surviving weapon bearer, resolve the weapon’s Attacks characteristic. Flat values and expressions such as `D6`, `D3`, and `D6+3` are supported.
 
-Combat progresses in rounds. Units act in initiative order, with minor randomization among similar speeds.
+### 7.2 Hit rolls
 
-Per action:
+Roll one D6 per attack.
 
-1. A Support unit repairs the most injured ally if one needs help.
-2. Otherwise, the unit selects a target according to threat and front position.
-3. Damage varies slightly, then armor is subtracted.
-4. Role bonuses and protocols modify the result.
-5. A unit at zero health is destroyed unless Last-Light Vow prevents its first lethal hit.
+- A natural 1 always fails.
+- A result equal to or greater than the weapon’s Hit value succeeds.
+- Battle Honours and permanent training can improve the required value.
+- A natural 6 may trigger Lethal Hits or Sustained Hits.
 
-All enemies destroyed means victory. All player units destroyed, or reaching the safety round limit without victory, means defeat. The player cannot issue combat orders. Available controls are ×1/×2 speed and immediate resolution.
+### 7.3 Wound rolls
 
-## 9. Temporary run protocols
+Compare weapon Strength to target Toughness:
 
-After each battle victory, the player chooses one of three protocols. Protocols stack and last until the expedition ends.
+| Comparison | Required roll |
+|---|---:|
+| Strength at least double Toughness | 2+ |
+| Strength greater than Toughness | 3+ |
+| Strength equals Toughness | 4+ |
+| Strength lower than Toughness | 5+ |
+| Strength half Toughness or less | 6+ |
 
-Current protocol families:
+A natural 1 always fails.
 
-- Global damage and health.
-- Per-round regeneration.
-- Improved support healing.
-- Artillery specialization.
-- Adjacency armor.
-- Guard durability.
-- Opening artillery volley.
-- Once-per-battle lethal-hit protection.
+### 7.4 Saving throws
 
-Protocols are the main run-to-run build layer. Never make these permanent research purchases.
+The target rolls one D6 per wound. AP worsens the armour save. If an Invulnerable Save is better, it is used instead.
 
-## 10. Gear
+Example: a 3+ Save hit by AP -2 becomes a 5+ armour save. A 4+ Invulnerable Save would therefore be used.
 
-Gear drops from some normal contacts and is favored by salvage, elite, and boss contacts. Current effects include health, damage, armor, healing, and initiative.
+### 7.5 Damage
 
-Gear belongs to the current expedition and is erased when it ends. In preparation, select a packed unit and then tap a gear item to equip or unequip it. Each unit may carry one item.
+Every failed save resolves the weapon’s Damage expression. Damage is allocated to the already wounded model first. Excess normal damage does not spill from a destroyed model to another model.
 
-## 11. Permanent research
+Feel No Pain rolls, when active, are rolled per lost wound.
 
-War Chests buy persistent research in the R&D Array:
+### 7.6 Battle end
 
-- **Expanded Mandate:** +50 command points to each regional limit per rank.
-- **Veteran Doctrine:** +5% unit damage per rank.
-- **Salvage Rights:** +15% War Chests earned per rank.
-- **Hull Insurance:** +1 campaign hull per rank.
+- Destroy every opposing model to win.
+- Lose every deployed model to lose one campaign attempt.
+- A safety limit ends stalled battles after 30 rounds.
 
-Research and aggregate run statistics are stored in browser `localStorage`. The active run is also stored and can be resumed from the command screen.
+The battle UI always displays the most recent attack as five columns: Attacks, Hits, Wounds, Saves and Damage. Successful dice are green, critical sixes are amber, failures are dimmed, and damage dice are red.
 
-## 12. UX rules
+## 8. Target selection
 
-- At every screen, make the next meaningful decision visually dominant.
-- Show both used and maximum points during preparation.
-- Locked units state the region that unlocks them.
-- Every unit card states cost, footprint, role, stock, and tactical purpose.
-- Route nodes show contact type and expected reward before commitment.
-- Combat must explain important events through a compact live log.
-- Temporary and permanent upgrades must never use ambiguous language.
-- No gameplay interaction may depend on hover.
+Combat currently uses a simple automatic targeting rule:
 
-## 13. Visual direction
+- Player units attack the enemy unit with the lowest remaining wounds.
+- Enemies prioritize the player unit nearest the front line, then the most injured.
 
-The locked visual specification is in `ART_BIBLE.md`. The current implementation uses crisp HTML/CSS pixel forms rather than external artwork so it remains fast and consistent.
+Formation therefore affects which player unit is attacked first, while roster and dice determine the exchange.
 
-Functional color hierarchy:
+## 9. Battle Honours
 
-- Cyan: player action, selection, and navigation.
-- Amber: points, rewards, timers, and caution.
-- Red: hostile threats and damage.
-- Green: repair, health, and recovery.
-- Violet: protocols, rare systems, and elite content.
+After a victory, choose one of three Battle Honours. They last only for the active campaign.
 
-## 14. Code architecture
+Current effects include:
+
+- +1 to Hit rolls.
+- +1 to Wound rolls.
+- Improved Saves.
+- Recover wounds after every battle round.
+- Lethal Hits on natural sixes.
+- Sustained Hits on natural sixes.
+- 6+ Invulnerable Saves.
+- Feel No Pain 6+.
+- +100 Army Points for the current campaign.
+
+## 10. Wargear
+
+Supply, Elite and Boss missions can award Wargear. Select a deployed unit, then select a Wargear item to equip it. One item may be equipped per deployed unit.
+
+Current Wargear modifies Hit rolls, Saves, Toughness, Attacks or Invulnerable Saves. Wargear disappears when the campaign ends.
+
+## 11. Persistent progression
+
+Requisition is permanent currency earned from completed battles. It is banked when a campaign ends, whether by victory or defeat.
+
+Permanent upgrades:
+
+- **Expanded Supply:** +50 Army Points per rank.
+- **Veteran Training:** Rank 1 improves Hits, Rank 2 improves Wounds, Rank 3 grants Feel No Pain 6+.
+- **Requisition Rights:** increases earned Requisition.
+- **Campaign Reserve:** adds campaign attempts.
+
+Meta progression and the active campaign are stored in browser `localStorage` under versioned keys.
+
+## 12. Source architecture
 
 ```text
 FTL/
-├── index.html              # All game screens and dialogs
-├── css/main.css            # Portrait layout and luminous pixel art system
-├── js/main.js              # DOM-ready entry point
-├── js/core/Game.js         # Run state, grid packing, map, combat, rewards, saves
-├── js/data/units.js        # Units, gear, protocols, regions, research
-├── ART_BIBLE.md            # Locked visual rules
-├── ggd.md                  # This design and handoff document
-├── README.md               # Setup and short feature summary
-└── vercel.json             # Vercel configuration
+├── index.html
+├── css/main.css
+├── public/data/warhammer-roster.json  # Compact KS-derived data
+├── js/main.js                         # Loads JSON, starts game
+├── js/core/Game.js                    # Campaign, builder and D6 engine
+├── js/data/units.js                   # Honours, Wargear, warzones, upgrades
+├── ART_BIBLE.md
+├── ggd.md
+└── README.md
 ```
 
-Legacy Three.js ship files remain in the repository for reference but are no longer imported by the current game.
+Legacy Three.js spaceship files remain unimported reference material.
 
-## 15. Local development
+## 13. Development and validation
 
 ```powershell
 npm install
+npm run check
+npm run build
 npm run dev
 ```
 
-Open `http://127.0.0.1:4173`.
+Required checks:
 
-Validation:
+- Every faction loads from JSON.
+- Point totals match deployed units.
+- Locked units explain their required limit.
+- Grid collision, rotation and stock limits work.
+- Mission nodes show the enemy faction.
+- Attack, Hit, Wound, Save and Damage dice render correctly.
+- Strength/Toughness thresholds follow the table above.
+- AP and Invulnerable Saves choose the better valid save.
+- Damage does not spill between models.
+- Battle Honours change the specified roll or characteristic.
+- Wargear equips to one selected deployed unit.
+- Boss victories advance 500 → 1,000 → 1,500 → 2,000 points.
+- Requisition and permanent upgrades persist.
+- Active campaigns resume after reload.
+- The browser console reports no errors.
 
-```powershell
-npm run check
-npm run build
-npm run preview
-```
+## 14. Next expansion
 
-## 16. Validation checklist
-
-- The command screen explains the complete loop in under four steps.
-- New run opens the 500-point preparation screen.
-- Unit selection plus an empty grid cell places the correct footprint.
-- Rotation changes the footprint and collision test.
-- Units cannot overlap, exceed the case, exceed stock, or exceed points.
-- A legal force can return to the map and select a route.
-- All combat actions run without player commands.
-- Speed and resolve controls complete a battle safely.
-- Victory offers exactly three available protocols when possible.
-- Gear can be equipped to a selected deployed unit.
-- Boss victory advances the region and point limit.
-- Region 4 boss victory completes the run.
-- Defeat removes hull and eventually ends the run.
-- War Chests persist and research purchases apply correctly.
-- An active run survives page reload.
-- Layout remains fully usable at 360×640 and the 480×854 reference size.
-- Browser console has no errors.
-
-## 17. Next development priorities
-
-1. Add deterministic seeded route and reward generation.
-2. Add drag-and-drop placement with tap placement retained as the accessible fallback.
-3. Add formation-specific traits, faction keywords, and set bonuses.
-4. Add boss-specific combat rules and readable telegraphs.
-5. Add unit damage/recovery that persists between contacts.
-6. Add a post-battle breakdown explaining damage, healing, and protocol value.
-7. Add sound, reduced-motion settings, and optional haptics.
-8. Replace procedural CSS silhouettes with original sprite sheets only when a complete consistent batch is available.
-
-## 18. Content and IP constraint
-
-The game may draw on the general design language of tabletop point budgets, spatial inventory games, route-based roguelikes, and auto-battlers. Do not copy names, factions, characters, unit silhouettes, interface layouts, lore, text, icons, or artwork from Warhammer 40,000, Alchemortis, Mecharashi, or any other commercial game.
+1. Add more factions and units through a reproducible KS extraction script.
+2. Support multiple weapon choices per datasheet.
+3. Add phase/range logic for Shooting and Fight weapons.
+4. Add rerolls, cover, Devastating Wounds, Anti keywords, Blast, Melta and Twin-linked.
+5. Add battle breakdowns that show damage contribution per unit.
+6. Add faction-specific Battle Honours and boss rules.
+7. Add original pixel sprites for each unit silhouette while preserving the locked art bible.

@@ -1,22 +1,45 @@
-import { UNITS, PROTOCOLS, GEAR, REGIONS, RESEARCH } from '../data/units.js';
+import { BATTLE_HONOURS, WARGEAR, REGIONS, RESEARCH } from '../data/units.js';
 
-const SAVE_KEY = 'void-runner-protocol-front-v1';
-const RUN_KEY = 'void-runner-active-expedition-v1';
+const SAVE_KEY = 'void-runner-40k-campaign-v2';
+const RUN_KEY = 'void-runner-40k-active-v2';
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const pick = list => list[Math.floor(Math.random() * list.length)];
 const shuffle = list => [...list].sort(() => Math.random() - .5);
+const d6 = () => 1 + Math.floor(Math.random() * 6);
+
+function rollExpression(value) {
+  const text = String(value).replace(/\s/g, '').toUpperCase();
+  if (/^\d+$/.test(text)) return { total: Number(text), rolls: [], flat: Number(text) };
+  const match = text.match(/^(\d*)D(3|6)(?:\+(\d+))?$/);
+  if (!match) return { total: 1, rolls: [], flat: 1 };
+  const count = Number(match[1] || 1);
+  const sides = Number(match[2]);
+  const flat = Number(match[3] || 0);
+  const rolls = Array.from({length:count}, () => 1 + Math.floor(Math.random() * sides));
+  return { total: rolls.reduce((sum, roll) => sum + roll, flat), rolls, flat };
+}
+
+function woundTarget(strength, toughness) {
+  if (strength >= toughness * 2) return 2;
+  if (strength > toughness) return 3;
+  if (strength === toughness) return 4;
+  if (strength * 2 <= toughness) return 6;
+  return 5;
+}
 
 export class Game {
-  constructor() {
+  constructor(roster) {
+    this.roster = roster;
+    this.factions = roster.factions;
+    this.units = this.factions.flatMap(faction => faction.units.map(unit => ({...unit, faction:faction.id, color:faction.color, mark:faction.mark})));
     this.meta = this.load(SAVE_KEY, { currency: 0, research: { logistics: 0, doctrine: 0, salvage: 0, insurance: 0 }, runs: 0, wins: 0 });
     this.run = this.load(RUN_KEY, null);
-    this.screen = 'home';
+    this.selectedFaction = this.run?.faction || this.factions[0].id;
     this.selectedBlueprint = null;
     this.selectedPlaced = null;
     this.rotated = false;
-    this.prepReturn = 'map';
     this.battle = null;
     this.battleTimer = null;
     this.battleSpeed = 1;
@@ -44,7 +67,7 @@ export class Game {
     $('#home-button').onclick = () => { if (!this.battle) { this.save(); this.renderHome(); this.show('home'); } };
     $('#help-button').onclick = () => $('#help-dialog').showModal();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
-    $('#open-loadout-button').onclick = () => this.openLoadout('map');
+    $('#open-loadout-button').onclick = () => this.openLoadout();
     $('#rotate-button').onclick = () => { this.rotated = !this.rotated; this.renderLoadout(); };
     $('#remove-button').onclick = () => this.removeSelected();
     $('#clear-button').onclick = () => { if (!this.run) return; this.run.deployed = []; this.selectedPlaced = null; this.renderLoadout(); this.save(); };
@@ -55,51 +78,72 @@ export class Game {
     for (const button of $$('[data-prep-tab]')) button.onclick = () => this.setPrepTab(button.dataset.prepTab);
   }
 
+  faction(id) { return this.factions.find(faction => faction.id === id); }
+  unit(id) { return this.units.find(unit => unit.id === id); }
+
   renderHeader() {
     $('#meta-currency').textContent = this.meta.currency;
-    $('#location-label').textContent = this.run ? `${REGIONS[this.run.region].name} // ${this.run.cap} PTS` : 'PROTOCOL FRONT';
+    $('#location-label').textContent = this.run ? `${this.faction(this.run.faction).name.toUpperCase()} // ${this.run.cap} PTS` : '40K CAMPAIGN';
   }
 
   show(name) {
-    this.screen = name;
     for (const screen of $$('.screen')) screen.classList.toggle('active', screen.id === `${name}-screen`);
     window.scrollTo(0, 0);
     this.renderHeader();
   }
 
   renderHome() {
+    const options = $('#faction-options');
+    options.innerHTML = '';
+    for (const faction of this.factions) {
+      const button = document.createElement('button');
+      button.className = `faction-option ${this.selectedFaction === faction.id ? 'active' : ''}`;
+      button.style.setProperty('--faction-color', faction.color);
+      button.innerHTML = `<b>${faction.name}</b><small>${faction.units.length} UNIT PROFILES</small>`;
+      button.disabled = Boolean(this.run);
+      button.onclick = () => { this.selectedFaction = faction.id; this.renderHome(); };
+      options.append(button);
+    }
     $('#resume-button').hidden = !this.run;
-    $('#new-run-button').textContent = this.run ? 'ABANDON & BEGIN NEW RUN' : 'BEGIN 500 PT EXPEDITION';
+    $('#new-run-button').textContent = this.run ? 'ABANDON & BEGIN NEW CAMPAIGN' : 'BEGIN 500 PT CAMPAIGN';
     this.renderHeader();
   }
 
   startRun() {
-    const bonus = (this.meta.research.logistics || 0) * 50;
+    const factionUnits = this.units.filter(unit => unit.faction === this.selectedFaction);
     this.run = {
-      seed: Date.now(), region: 0, step: 0, cap: 500 + bonus,
+      seed: Date.now(), faction: this.selectedFaction, region: 0, step: 0, cap: 500,
       hull: 3 + (this.meta.research.insurance || 0), maxHull: 3 + (this.meta.research.insurance || 0),
       data: 0, chests: 0, protocols: [], gear: [], deployed: [], history: [], offers: null,
       battles: 0, bosses: 0, pendingNode: null
     };
+    this.run.cap = this.getBaseCap();
     this.meta.runs++;
-    this.selectedBlueprint = 'needle';
+    this.selectedBlueprint = factionUnits[0]?.id || null;
     this.selectedPlaced = null;
-    this.prepReturn = 'map';
     this.save();
-    this.openLoadout('map');
+    this.openLoadout();
+  }
+
+  protocolEffects() {
+    const effects = {};
+    for (const id of this.run.protocols) {
+      const next = BATTLE_HONOURS.find(item => item.id === id)?.effect || {};
+      for (const [key, value] of Object.entries(next)) effects[key] = typeof value === 'number' ? (effects[key] || 0) + value : value;
+    }
+    return effects;
   }
 
   getBaseCap() {
-    return REGIONS[this.run.region].cap + (this.meta.research.logistics || 0) * 50;
+    return REGIONS[this.run.region].cap + (this.meta.research.logistics || 0) * 50 + (this.protocolEffects().pointBonus || 0);
   }
 
   usedPoints() {
-    return this.run.deployed.reduce((sum, placed) => sum + UNITS.find(unit => unit.id === placed.unitId).cost, 0);
+    return this.run.deployed.reduce((sum, placed) => sum + this.unit(placed.unitId).points, 0);
   }
 
-  openLoadout(returnTo = 'map') {
+  openLoadout() {
     if (!this.run) return;
-    this.prepReturn = returnTo;
     this.renderLoadout();
     this.show('loadout');
   }
@@ -118,9 +162,9 @@ export class Game {
     this.renderProtocols();
     const legal = used > 0 && used <= this.run.cap;
     $('#deploy-button').disabled = !legal;
-    $('#deploy-button').textContent = this.run.pendingNode ? 'LAUNCH AUTO-BATTLE' : 'RETURN TO MAP';
-    const chosen = UNITS.find(unit => unit.id === this.selectedBlueprint);
-    $('#prep-status').textContent = legal ? `${this.run.deployed.length} UNITS · ${this.run.cap - used} PTS FREE` : chosen ? `${chosen.name.toUpperCase()} SELECTED` : 'SELECT A UNIT TO PACK';
+    $('#deploy-button').textContent = this.run.pendingNode ? 'START AUTO-BATTLE' : 'RETURN TO MAP';
+    const chosen = this.unit(this.selectedBlueprint);
+    $('#prep-status').textContent = legal ? `${this.run.deployed.length} UNITS · ${this.run.cap - used} PTS FREE` : chosen ? `${chosen.name.toUpperCase()} SELECTED` : 'SELECT A UNIT';
   }
 
   renderFormation() {
@@ -134,7 +178,7 @@ export class Game {
       grid.append(cell);
     }
     for (const placed of this.run.deployed) {
-      const unit = UNITS.find(item => item.id === placed.unitId);
+      const unit = this.unit(placed.unitId);
       const [w, h] = this.sizeFor(unit, placed.rotated);
       const el = document.createElement('button');
       el.className = `grid-unit ${this.selectedPlaced === placed.id ? 'selected' : ''}`;
@@ -143,8 +187,8 @@ export class Game {
       el.style.top = `calc(${placed.y} * (var(--cell) + 2px))`;
       el.style.width = `calc(${w} * ((100% - 10px) / 6) + ${(w - 1) * 2}px)`;
       el.style.height = `calc(${h} * var(--cell) + ${(h - 1) * 2}px)`;
-      el.innerHTML = `${unit.mark}<small>${unit.cost}</small>`;
-      el.title = `${unit.name} · ${unit.role} · ${unit.cost} points`;
+      el.innerHTML = `${unit.mark}<small>${unit.points}</small>`;
+      el.title = `${unit.name} · ${unit.role} · ${unit.points} points`;
       el.onclick = event => { event.stopPropagation(); this.selectedPlaced = placed.id; this.selectedBlueprint = null; this.renderLoadout(); };
       grid.append(el);
     }
@@ -153,16 +197,17 @@ export class Game {
   renderRoster() {
     const roster = $('#unit-roster');
     roster.innerHTML = '';
-    for (const unit of UNITS) {
+    for (const unit of this.units.filter(item => item.faction === this.run.faction)) {
       const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
-      const locked = this.run.region < unit.unlock;
       const out = deployedCount >= unit.stock;
+      const tooLarge = unit.points > this.run.cap;
       const button = document.createElement('button');
-      button.className = `unit-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${locked || out ? 'locked' : ''}`;
+      button.className = `unit-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${out || tooLarge ? 'locked' : ''}`;
       button.style.setProperty('--unit-color', unit.color);
-      button.disabled = locked || out;
-      const lockText = locked ? `UNLOCKS REGION ${unit.unlock + 1}` : `${unit.size[0]}×${unit.size[1]} CASE · ${unit.role.toUpperCase()} · ${unit.stock - deployedCount} LEFT`;
-      button.innerHTML = `<span class="unit-icon">${unit.mark}</span><span class="unit-copy"><b>${unit.name}</b><small>${lockText}<br>${unit.desc}</small></span><span class="unit-cost">${unit.cost}</span>`;
+      button.disabled = out || tooLarge;
+      const weapon = unit.weapon;
+      const status = tooLarge ? `NEEDS ${unit.points} PT LIMIT` : `${unit.size[0]}×${unit.size[1]} · ${unit.models} MODEL${unit.models > 1 ? 'S' : ''} · ${unit.stock - deployedCount} LEFT`;
+      button.innerHTML = `<span class="unit-icon">${unit.mark}</span><span class="unit-copy"><b>${unit.name}</b><small>${status}<br>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · ${weapon.name}: ${weapon.attacks}A ${weapon.hit}+ S${weapon.strength} AP${weapon.ap} D${weapon.damage}</small></span><span class="unit-cost">${unit.points}</span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
       roster.append(button);
     }
@@ -172,16 +217,15 @@ export class Game {
     const list = $('#gear-inventory');
     list.innerHTML = '';
     if (!this.run.gear.length) {
-      list.innerHTML = '<div class="protocol-card"><span>—</span><div><b>NO RECOVERED GEAR</b><small>Elite contacts and bosses are more likely to drop equipment.</small></div></div>';
+      list.innerHTML = '<div class="protocol-card"><span>—</span><div><b>NO WARGEAR</b><small>Elite missions and bosses are more likely to award Wargear.</small></div></div>';
       return;
     }
     this.run.gear.forEach((item, index) => {
-      const gear = GEAR.find(entry => entry.id === item.gearId);
+      const gear = WARGEAR.find(entry => entry.id === item.gearId);
       const owner = this.run.deployed.find(unit => unit.id === item.equippedTo);
-      const ownerData = owner && UNITS.find(unit => unit.id === owner.unitId);
       const button = document.createElement('button');
       button.className = `gear-card ${owner ? 'equipped' : ''}`;
-      button.innerHTML = `<span><b>${gear.name}</b><small>${gear.desc}</small></span><span>${owner ? ownerData.name : 'UNEQUIPPED'}</span>`;
+      button.innerHTML = `<span><b>${gear.name}</b><small>${gear.desc}</small></span><span>${owner ? this.unit(owner.unitId).name : 'UNEQUIPPED'}</span>`;
       button.onclick = () => this.equipGear(index);
       list.append(button);
     });
@@ -191,14 +235,14 @@ export class Game {
     const list = $('#protocol-list');
     list.innerHTML = '';
     if (!this.run.protocols.length) {
-      list.innerHTML = '<div class="protocol-card"><span>—</span><div><b>NO ACTIVE PROTOCOLS</b><small>Win a contact to choose a temporary expedition modifier.</small></div></div>';
+      list.innerHTML = '<div class="protocol-card"><span>—</span><div><b>NO BATTLE HONOURS</b><small>Win a battle to choose a temporary campaign bonus.</small></div></div>';
       return;
     }
     for (const id of this.run.protocols) {
-      const protocol = PROTOCOLS.find(item => item.id === id);
+      const honour = BATTLE_HONOURS.find(item => item.id === id);
       const el = document.createElement('div');
       el.className = 'protocol-card';
-      el.innerHTML = `<span>◆</span><div><b>${protocol.name}</b><small>${protocol.desc}</small></div>`;
+      el.innerHTML = `<span>◆</span><div><b>${honour.name}</b><small>${honour.desc}</small></div>`;
       list.append(el);
     }
   }
@@ -209,27 +253,24 @@ export class Game {
     $(`#${tab === 'units' ? 'unit-roster' : tab === 'gear' ? 'gear-inventory' : 'protocol-list'}`).classList.add('active');
   }
 
-  sizeFor(unit, rotated) {
-    return rotated ? [unit.size[1], unit.size[0]] : unit.size;
-  }
+  sizeFor(unit, rotated) { return rotated ? [unit.size[1], unit.size[0]] : unit.size; }
 
   canPlace(x, y, w, h) {
     if (x + w > 6 || y + h > 5) return false;
     return !this.run.deployed.some(placed => {
-      const unit = UNITS.find(item => item.id === placed.unitId);
-      const [pw, ph] = this.sizeFor(unit, placed.rotated);
+      const [pw, ph] = this.sizeFor(this.unit(placed.unitId), placed.rotated);
       return x < placed.x + pw && x + w > placed.x && y < placed.y + ph && y + h > placed.y;
     });
   }
 
   placeUnit(x, y) {
-    const unit = UNITS.find(item => item.id === this.selectedBlueprint);
+    const unit = this.unit(this.selectedBlueprint);
     if (!unit) return;
     const [w, h] = this.sizeFor(unit, this.rotated);
     const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
-    if (this.run.region < unit.unlock || deployedCount >= unit.stock) return;
-    if (this.usedPoints() + unit.cost > this.run.cap) { $('#prep-status').textContent = `NEED ${this.usedPoints() + unit.cost - this.run.cap} MORE POINTS`; return; }
-    if (!this.canPlace(x, y, w, h)) { $('#prep-status').textContent = 'THAT SHAPE DOES NOT FIT HERE'; return; }
+    if (deployedCount >= unit.stock) return;
+    if (this.usedPoints() + unit.points > this.run.cap) { $('#prep-status').textContent = `NEED ${this.usedPoints() + unit.points - this.run.cap} MORE POINTS`; return; }
+    if (!this.canPlace(x, y, w, h)) { $('#prep-status').textContent = 'THAT UNIT DOES NOT FIT HERE'; return; }
     this.run.deployed.push({ id: `${unit.id}-${Date.now()}-${Math.random()}`, unitId: unit.id, x, y, rotated: this.rotated });
     this.selectedPlaced = this.run.deployed.at(-1).id;
     this.selectedBlueprint = null;
@@ -247,7 +288,7 @@ export class Game {
   }
 
   equipGear(index) {
-    if (!this.selectedPlaced) { $('#prep-status').textContent = 'SELECT A PACKED UNIT FIRST'; return; }
+    if (!this.selectedPlaced) { $('#prep-status').textContent = 'SELECT A DEPLOYED UNIT FIRST'; return; }
     const item = this.run.gear[index];
     if (item.equippedTo === this.selectedPlaced) item.equippedTo = null;
     else {
@@ -265,22 +306,29 @@ export class Game {
     else { this.renderMap(); this.show('map'); }
   }
 
+  enemyFaction() {
+    return pick(this.factions.filter(faction => faction.id !== this.run.faction));
+  }
+
   makeOffers() {
     const r = this.run.region;
     const s = this.run.step;
-    if (s === 3) return [{ id: `r${r}-boss`, type: 'boss', name: REGIONS[r].boss, reward: 'BOSS CACHE', difficulty: 1.08 }];
+    if (s === 3) {
+      const enemy = this.enemyFaction();
+      return [{ id:`r${r}-boss`, type:'boss', name:REGIONS[r].boss, reward:'BOSS REWARD', difficulty:1.08, enemyFaction:enemy.id }];
+    }
     const pools = [
-      [{type:'skirmish',name:'BROKEN PATROL',reward:'+DATA',difficulty:.68},{type:'salvage',name:'WRECK FIELD',reward:'GEAR CHANCE',difficulty:.76}],
-      [{type:'skirmish',name:'SIGNAL HUNTERS',reward:'+DATA',difficulty:.75},{type:'elite',name:'VETERAN CELL',reward:'GUARANTEED GEAR',difficulty:.94},{type:'repair',name:'SILENT DOCK',reward:'+1 HULL',difficulty:0}],
-      [{type:'elite',name:'IRON CENSOR',reward:'RARE GEAR',difficulty:1},{type:'skirmish',name:'DUST COLUMN',reward:'+DATA',difficulty:.82}]
+      [{type:'skirmish',name:'PATROL CLASH',reward:'+SCORE',difficulty:.65},{type:'salvage',name:'SUPPLY RAID',reward:'WARGEAR CHANCE',difficulty:.74}],
+      [{type:'skirmish',name:'LINE ENGAGEMENT',reward:'+SCORE',difficulty:.72},{type:'elite',name:'ELITE DETACHMENT',reward:'GUARANTEED WARGEAR',difficulty:.92},{type:'repair',name:'FIELD HOSPITAL',reward:'+1 ATTEMPT',difficulty:0}],
+      [{type:'elite',name:'ARMOURED COLUMN',reward:'RARE WARGEAR',difficulty:.98},{type:'skirmish',name:'BREAKTHROUGH',reward:'+SCORE',difficulty:.8}]
     ];
-    return shuffle(pools[s]).slice(0, s === 1 ? 3 : 2).map((node, index) => ({ ...node, id: `r${r}s${s}n${index}` }));
+    return shuffle(pools[s]).slice(0, s === 1 ? 3 : 2).map((node, index) => ({...node,id:`r${r}s${s}n${index}`,enemyFaction:this.enemyFaction().id}));
   }
 
   renderMap() {
     if (!this.run.offers) this.run.offers = this.makeOffers();
     const region = REGIONS[this.run.region];
-    $('#region-kicker').textContent = `REGION ${this.run.region + 1} / 4 · CONTACT ${this.run.step + 1} / 4`;
+    $('#region-kicker').textContent = `WARZONE ${this.run.region + 1} / 4 · MISSION ${this.run.step + 1} / 4`;
     $('#map-title').textContent = region.name;
     $('#map-cap').textContent = this.run.cap;
     $('#run-hull').textContent = `${this.run.hull}/${this.run.maxHull}`;
@@ -288,19 +336,12 @@ export class Game {
     $('#run-protocol-count').textContent = this.run.protocols.length;
     const map = $('#route-map');
     map.innerHTML = '';
-    const regionHistory = this.run.history.filter(node => node.region === this.run.region);
+    const history = this.run.history.filter(node => node.region === this.run.region);
     for (let step = 3; step >= 0; step--) {
-      const row = document.createElement('div');
-      row.className = 'route-row';
-      if (step < this.run.step) {
-        const chosen = regionHistory.find(node => node.step === step);
-        row.append(this.makeNodeButton(chosen || {type:'closed',name:'CLEARED',reward:''}, 'completed', false));
-      } else if (step === this.run.step) {
-        for (const node of this.run.offers) row.append(this.makeNodeButton(node, `available ${node.type}`, true));
-      } else {
-        const future = step === 3 ? {type:'boss',name:region.boss,reward:'BOSS'} : {type:'closed',name:'UNKNOWN CONTACT',reward:'LOCKED'};
-        row.append(this.makeNodeButton(future, `closed ${future.type}`, false));
-      }
+      const row = document.createElement('div'); row.className = 'route-row';
+      if (step < this.run.step) row.append(this.makeNodeButton(history.find(node => node.step === step) || {type:'closed',name:'COMPLETED',reward:''}, 'completed', false));
+      else if (step === this.run.step) for (const node of this.run.offers) row.append(this.makeNodeButton(node, `available ${node.type}`, true));
+      else row.append(this.makeNodeButton(step === 3 ? {type:'boss',name:region.boss,reward:'BOSS'} : {type:'closed',name:'UNKNOWN MISSION',reward:'LOCKED'}, `closed ${step === 3 ? 'boss' : 'closed'}`, false));
       map.append(row);
     }
     this.save();
@@ -309,8 +350,9 @@ export class Game {
   makeNodeButton(node, classes, active) {
     const button = document.createElement('button');
     button.className = `route-node ${classes}`;
-    const labels = {skirmish:'SKIRMISH',elite:'ELITE',salvage:'SALVAGE',repair:'RECOVERY',boss:'REGION BOSS',closed:'UNKNOWN'};
-    button.innerHTML = `<b>${node.name}</b><small>${labels[node.type] || node.type}</small><span>${node.reward || ''}</span>`;
+    const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'WARZONE BOSS',closed:'UNKNOWN'};
+    const faction = node.enemyFaction ? this.faction(node.enemyFaction).name : labels[node.type];
+    button.innerHTML = `<b>${node.name}</b><small>${faction}</small><span>${node.reward || ''}</span>`;
     button.disabled = !active;
     if (active) button.onclick = () => this.chooseNode(node);
     return button;
@@ -322,63 +364,61 @@ export class Game {
       this.run.data += 10;
       this.run.history.push({...node, region:this.run.region, step:this.run.step});
       this.advanceRoute(false);
-      this.renderMap();
       return;
     }
     this.run.pendingNode = node;
     this.save();
-    this.openLoadout('battle');
+    this.openLoadout();
   }
 
   buildFighter(placed, side = 'player') {
-    const unit = UNITS.find(item => item.id === placed.unitId);
-    const fighter = { ...unit, instanceId: placed.id, side, x: placed.x ?? 0, y: placed.y ?? 0, maxHp: unit.hp, currentHp: unit.hp, dead: false, lastStandUsed: false };
+    const unit = this.unit(placed.unitId);
+    const fighter = {
+      ...unit, instanceId:placed.id, side, x:placed.x ?? 0, y:placed.y ?? 0,
+      toughness:unit.defense.toughness, save:unit.defense.save, invuln:unit.defense.invuln,
+      hitBonus:0, woundBonus:0, saveBonus:0, attacksBonus:0, fnp:7,
+      hp:Array(unit.models).fill(unit.defense.wounds), maxHp:unit.models * unit.defense.wounds,
+      currentHp:unit.models * unit.defense.wounds, dead:false
+    };
     if (side === 'player') {
-      fighter.damage *= 1 + (this.meta.research.doctrine || 0) * .05;
-      const equipped = this.run.gear.find(item => item.equippedTo === placed.id);
-      if (equipped) {
-        const gear = GEAR.find(item => item.id === equipped.gearId);
-        fighter[gear.stat] = (fighter[gear.stat] || 0) + gear.value;
+      const gearItem = this.run.gear.find(item => item.equippedTo === placed.id);
+      if (gearItem) {
+        const gear = WARGEAR.find(item => item.id === gearItem.gearId);
+        if (gear.stat === 'toughness') fighter.toughness += gear.value;
+        else if (gear.stat === 'invuln') fighter.invuln = Math.min(fighter.invuln, gear.value);
+        else fighter[gear.stat] += gear.value;
       }
       const effects = this.protocolEffects();
-      fighter.damage *= effects.damage || 1;
-      fighter.maxHp *= effects.health || 1;
-      if (unit.role === 'Guard') fighter.maxHp += effects.guardHp || 0;
-      if (unit.role === 'Artillery') fighter.damage *= effects.artillery || 1;
-      if (this.hasAdjacent(placed)) fighter.armor = (fighter.armor || 0) + (effects.adjacentArmor || 0);
-      fighter.heal = (fighter.heal || 0) * (effects.healing || 1);
-      fighter.currentHp = Math.round(fighter.maxHp);
+      fighter.hitBonus += effects.hitBonus || 0;
+      fighter.woundBonus += effects.woundBonus || 0;
+      fighter.saveBonus += effects.saveBonus || 0;
+      fighter.invuln = Math.min(fighter.invuln, effects.invuln || 7);
+      fighter.fnp = effects.fnp || 7;
+      const doctrine = this.meta.research.doctrine || 0;
+      if (doctrine >= 1) fighter.hitBonus++;
+      if (doctrine >= 2) fighter.woundBonus++;
+      if (doctrine >= 3) fighter.fnp = Math.min(fighter.fnp, 6);
     }
     return fighter;
   }
 
-  protocolEffects() {
-    return this.run.protocols.reduce((all, id) => Object.assign(all, PROTOCOLS.find(item => item.id === id)?.effect), {});
-  }
-
-  hasAdjacent(placed) {
-    return this.run.deployed.some(other => other.id !== placed.id && Math.abs(other.x - placed.x) + Math.abs(other.y - placed.y) <= 2);
-  }
-
   makeEnemyForce(node) {
-    const target = Math.max(220, Math.round(this.usedPoints() * node.difficulty));
-    const pool = UNITS.filter(unit => unit.unlock <= this.run.region && unit.id !== 'chirurgeon');
+    const pool = this.units.filter(unit => unit.faction === node.enemyFaction && unit.points <= this.run.cap);
+    const target = Math.max(150, Math.round(this.usedPoints() * node.difficulty));
     const force = [];
-    let total = 0;
-    let safety = 0;
-    while (total < target * .86 && safety++ < 20) {
-      const choices = pool.filter(unit => unit.cost <= target - total + 100);
-      const unit = pick(choices.length ? choices : pool.slice(0, 2));
-      force.push(this.buildFighter({id:`hostile-${force.length}`,unitId:unit.id,x:force.length % 3,y:Math.floor(force.length / 3)}, 'enemy'));
-      total += unit.cost;
+    let total = 0, safety = 0;
+    while (total < target * .85 && safety++ < 20) {
+      const choices = pool.filter(unit => unit.points <= target - total + 80);
+      const unit = pick(choices.length ? choices : pool);
+      force.push(this.buildFighter({id:`enemy-${force.length}`,unitId:unit.id,x:force.length%3,y:Math.floor(force.length/3)}, 'enemy'));
+      total += unit.points;
     }
-    if (node.type === 'boss') {
-      const boss = force[0];
-      boss.name = REGIONS[this.run.region].boss;
-      boss.maxHp = Math.round(boss.maxHp * 1.7);
-      boss.currentHp = boss.maxHp;
-      boss.damage = Math.round(boss.damage * 1.35);
-      boss.color = '#ff496c';
+    if (node.type === 'boss' && force[0]) {
+      force[0].name = REGIONS[this.run.region].boss;
+      force[0].hp = force[0].hp.map(value => Math.ceil(value * 1.5));
+      force[0].maxHp = force[0].hp.reduce((sum,value) => sum + value, 0);
+      force[0].currentHp = force[0].maxHp;
+      force[0].attacksBonus += 1;
     }
     return force;
   }
@@ -386,88 +426,102 @@ export class Game {
   startBattle(node) {
     const players = this.run.deployed.map(placed => this.buildFighter(placed));
     const enemies = this.makeEnemyForce(node);
-    this.battle = { node, players, enemies, round: 0, log: [`Contact locked: <b>${node.name}</b>.`], resolving: false, killchainTriggered: false, killchainRound: -1 };
-    this.run.pendingNode = node;
+    this.battle = { node, players, enemies, round:0, log:[`Mission started against <b>${this.faction(node.enemyFaction).name}</b>.`], resolving:false, lastRoll:null };
     this.battleSpeed = 1;
     $('#speed-button').textContent = 'SPEED ×1';
     $('#battle-title').textContent = node.name;
-    $('#battle-kicker').textContent = node.type === 'boss' ? '// BOSS SIGNAL · AUTOMATED' : '// AUTOMATED ENGAGEMENT';
+    $('#battle-kicker').textContent = node.type === 'boss' ? '// BOSS BATTLE · D6 AUTO-ROLL' : '// D6 AUTOMATIC BATTLE';
     $('#player-power').textContent = `${this.usedPoints()} PTS`;
-    $('#enemy-power').textContent = `THREAT ${Math.round(node.difficulty * 100)}`;
+    $('#enemy-power').textContent = `${this.faction(node.enemyFaction).name.toUpperCase()} · THREAT ${Math.round(node.difficulty*100)}`;
     this.show('battle');
     this.renderBattle();
-    const effects = this.protocolEffects();
-    if (effects.opening) {
-      for (const unit of players.filter(item => item.role === 'Artillery')) this.attack(unit, pick(enemies.filter(enemy => !enemy.dead)), true);
-    }
     this.scheduleRound();
   }
 
   scheduleRound() {
     clearTimeout(this.battleTimer);
-    this.battleTimer = setTimeout(() => this.runRound(), this.battleSpeed === 1 ? 850 : 330);
-  }
-
-  runRound(render = true) {
-    if (!this.battle || this.battle.resolving) return;
-    this.battle.round++;
-    const actors = shuffle([...this.alive(this.battle.players), ...this.alive(this.battle.enemies)]).sort((a,b) => b.speed - a.speed);
-    for (const actor of actors) {
-      if (actor.dead) continue;
-      const allies = actor.side === 'player' ? this.battle.players : this.battle.enemies;
-      const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
-      if (!this.alive(foes).length) break;
-      if (actor.heal && this.alive(allies).some(ally => ally.currentHp < ally.maxHp * .82)) this.heal(actor, allies);
-      else this.attack(actor, this.chooseTarget(this.alive(foes), actor.side));
-    }
-    const regen = this.protocolEffects().regen || 0;
-    if (regen) for (const fighter of this.alive(this.battle.players)) fighter.currentHp = Math.min(fighter.maxHp, fighter.currentHp + regen);
-    if (render) this.renderBattle();
-    if (!this.alive(this.battle.enemies).length) return this.finishBattle(true);
-    if (!this.alive(this.battle.players).length || this.battle.round >= 40) return this.finishBattle(false);
-    if (render) this.scheduleRound();
+    this.battleTimer = setTimeout(() => this.runRound(), this.battleSpeed === 1 ? 1050 : 360);
   }
 
   alive(force) { return force.filter(unit => !unit.dead); }
 
-  chooseTarget(foes, attackerSide) {
-    const guards = foes.filter(unit => unit.role === 'Guard' || unit.role === 'Heavy');
-    if (guards.length && Math.random() < .72) return pick(guards);
-    if (attackerSide === 'enemy') return [...foes].sort((a,b) => a.x - b.x || a.currentHp - b.currentHp)[0];
+  runRound(render = true) {
+    if (!this.battle || this.battle.resolving) return;
+    this.battle.round++;
+    const actors = shuffle([...this.alive(this.battle.players), ...this.alive(this.battle.enemies)]);
+    for (const actor of actors) {
+      if (actor.dead) continue;
+      const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
+      if (!this.alive(foes).length) break;
+      const target = this.chooseTarget(this.alive(foes), actor.side);
+      this.resolveDiceAttack(actor, target);
+    }
+    const regen = this.protocolEffects().regen || 0;
+    if (regen) for (const unit of this.alive(this.battle.players)) this.restoreWounds(unit, regen);
+    if (render) this.renderBattle();
+    if (!this.alive(this.battle.enemies).length) return this.finishBattle(true);
+    if (!this.alive(this.battle.players).length || this.battle.round >= 30) return this.finishBattle(false);
+    if (render) this.scheduleRound();
+  }
+
+  chooseTarget(foes, side) {
+    if (side === 'enemy') return [...foes].sort((a,b) => a.x - b.x || a.currentHp - b.currentHp)[0];
     return [...foes].sort((a,b) => a.currentHp - b.currentHp)[0];
   }
 
-  heal(actor, allies) {
-    const target = [...this.alive(allies)].sort((a,b) => a.currentHp / a.maxHp - b.currentHp / b.maxHp)[0];
-    const amount = Math.max(1, Math.round(actor.heal));
-    target.currentHp = Math.min(target.maxHp, target.currentHp + amount);
-    target.flash = 'heal';
-    this.addLog(`${actor.name} repairs ${target.name} for ${amount}.`);
+  resolveDiceAttack(actor, target) {
+    const models = actor.hp.length;
+    const attackDice = [];
+    let attacks = 0;
+    for (let model = 0; model < models; model++) {
+      const roll = rollExpression(actor.weapon.attacks);
+      attackDice.push(...roll.rolls);
+      attacks += roll.total + actor.attacksBonus;
+    }
+    const effects = actor.side === 'player' ? this.protocolEffects() : {};
+    const hitTarget = clamp(actor.weapon.hit - actor.hitBonus, 2, 6);
+    const hitRolls = Array.from({length:attacks}, () => d6());
+    let hits = hitRolls.filter(roll => roll !== 1 && roll >= hitTarget).length;
+    const criticalHits = hitRolls.filter(roll => roll === 6).length;
+    const autoWounds = effects.lethalHits ? criticalHits : 0;
+    if (effects.sustainedHits) hits += criticalHits * effects.sustainedHits;
+    const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness) - actor.woundBonus, 2, 6);
+    const woundRolls = Array.from({length:Math.max(0,hits-autoWounds)}, () => d6());
+    const rolledWounds = woundRolls.filter(roll => roll !== 1 && roll >= woundNeeded).length;
+    const wounds = rolledWounds + autoWounds;
+    const armourTarget = clamp(target.save - actor.weapon.ap - target.saveBonus, 2, 7);
+    const saveTarget = Math.min(armourTarget, target.invuln || 7);
+    const saveRolls = Array.from({length:wounds}, () => d6());
+    const saves = saveRolls.filter(roll => saveTarget <= 6 && roll >= saveTarget).length;
+    const unsaved = wounds - saves;
+    const damageRolls = [];
+    let damageLost = 0;
+    for (let i = 0; i < unsaved && target.hp.length; i++) {
+      const result = rollExpression(actor.weapon.damage);
+      damageRolls.push(...(result.rolls.length ? result.rolls : [result.total]));
+      let damage = result.total;
+      if (target.fnp <= 6) {
+        const ignored = Array.from({length:damage}, () => d6()).filter(roll => roll >= target.fnp).length;
+        damage -= ignored;
+      }
+      const lost = Math.min(target.hp[0], damage);
+      target.hp[0] -= lost;
+      damageLost += lost;
+      if (target.hp[0] <= 0) target.hp.shift();
+    }
+    target.currentHp = target.hp.reduce((sum,value) => sum + value, 0);
+    target.dead = target.hp.length === 0;
+    target.flash = 'hit';
+    this.battle.lastRoll = {actor:actor.name,target:target.name,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost};
+    this.addLog(`${actor.name}: ${attacks} attacks → ${hits} hits → ${wounds} wounds → ${damageLost} damage${target.dead ? ' · DESTROYED' : ''}.`);
   }
 
-  attack(actor, target, opening = false) {
-    if (!target || target.dead) return;
-    const armor = target.armor || 0;
-    const chainBonus = actor.side === 'player' && this.battle.killchainRound === this.battle.round ? 1.35 : 1;
-    let damage = Math.max(1, Math.round(actor.damage * chainBonus * (.86 + Math.random() * .28) - armor));
-    if (actor.role === 'Striker' && actor.x <= 1) damage = Math.round(damage * 1.2);
-    if (actor.role === 'Breaker' && armor >= 3) damage = Math.round(damage * 1.35);
-    target.currentHp -= damage;
-    target.flash = 'hit';
-    if (target.currentHp <= 0) {
-      const lastStand = target.side === 'player' && this.protocolEffects().lastStand && !target.lastStandUsed;
-      if (lastStand) { target.currentHp = 1; target.lastStandUsed = true; this.addLog(`${target.name} survives by Last-Light.`); }
-      else {
-        target.currentHp = 0;
-        target.dead = true;
-        this.addLog(`${target.name} is destroyed.`);
-        if (actor.side === 'player' && this.protocolEffects().killchain && !this.battle.killchainTriggered) {
-          this.battle.killchainTriggered = true;
-          this.battle.killchainRound = this.battle.round + 1;
-          this.addLog('Kill-Chain armed: +35% damage next round.');
-        }
-      }
-    } else this.addLog(`${actor.name}${opening ? ' opens on' : ' hits'} ${target.name} for ${damage}.`);
+  restoreWounds(unit, amount) {
+    if (!unit.hp.length) return;
+    const max = unit.defense.wounds;
+    unit.hp[0] = Math.min(max, unit.hp[0] + amount);
+    unit.currentHp = unit.hp.reduce((sum,value) => sum + value, 0);
+    unit.flash = 'heal';
   }
 
   addLog(message) {
@@ -480,6 +534,7 @@ export class Game {
     this.renderForce($('#enemy-field'), this.battle.enemies);
     this.renderForce($('#player-field'), this.battle.players);
     $('#battle-log').innerHTML = this.battle.log.map(line => `<div>› ${line}</div>`).join('');
+    this.renderDice();
   }
 
   renderForce(container, force) {
@@ -488,10 +543,31 @@ export class Game {
       const el = document.createElement('div');
       el.className = `fighter ${fighter.dead ? 'dead' : ''} ${fighter.flash || ''}`;
       el.style.setProperty('--fighter-color', fighter.side === 'enemy' ? '#ff496c' : fighter.color);
-      el.innerHTML = `<b>${fighter.name}</b><small>${fighter.role}</small><div class="hp"><i style="width:${clamp(fighter.currentHp / fighter.maxHp * 100,0,100)}%"></i></div>`;
+      el.innerHTML = `<b>${fighter.name}</b><small>${fighter.hp.length}/${fighter.models} models · T${fighter.toughness} · SV${fighter.save}+</small><div class="hp"><i style="width:${clamp(fighter.currentHp/fighter.maxHp*100,0,100)}%"></i></div>`;
       container.append(el);
       fighter.flash = '';
     }
+  }
+
+  diceHTML(rolls, target, critical = false, damage = false) {
+    if (!rolls.length) return '<span class="die pass">—</span>';
+    return rolls.slice(0,18).map(roll => {
+      const pass = damage || (roll !== 1 && roll >= target);
+      return `<span class="die ${pass ? 'pass' : 'fail'} ${critical && roll === 6 ? 'critical' : ''} ${damage ? 'damage-die' : ''}">${roll}</span>`;
+    }).join('');
+  }
+
+  renderDice() {
+    const tray = $('#dice-tray');
+    const roll = this.battle.lastRoll;
+    if (!roll) { tray.innerHTML = '<span class="dice-empty">WAITING FOR FIRST DICE ROLL</span>'; return; }
+    tray.innerHTML = `<div class="dice-caption"><span>${roll.actor}</span><span>VS ${roll.target}</span></div><div class="dice-sequence">
+      <div class="dice-stage"><small>ATTACKS</small><div class="dice-pool">${this.diceHTML(roll.attackDice,1,false,true)}</div><b class="dice-result">${roll.attacks} TOTAL</b></div>
+      <div class="dice-stage"><small>HIT ${roll.hitTarget}+</small><div class="dice-pool">${this.diceHTML(roll.hitRolls,roll.hitTarget,true)}</div><b class="dice-result">${roll.hits} HITS</b></div>
+      <div class="dice-stage"><small>WOUND ${roll.woundNeeded}+</small><div class="dice-pool">${this.diceHTML(roll.woundRolls,roll.woundNeeded,true)}</div><b class="dice-result">${roll.wounds} WOUNDS</b></div>
+      <div class="dice-stage"><small>SAVE ${roll.saveTarget <= 6 ? `${roll.saveTarget}+` : '—'}</small><div class="dice-pool">${this.diceHTML(roll.saveRolls,roll.saveTarget)}</div><b class="dice-result">${roll.saves} SAVED</b></div>
+      <div class="dice-stage"><small>DAMAGE</small><div class="dice-pool">${this.diceHTML(roll.damageRolls,1,false,true)}</div><b class="dice-result">${roll.damageLost} LOST</b></div>
+    </div>`;
   }
 
   toggleSpeed() {
@@ -504,7 +580,7 @@ export class Game {
   resolveBattleNow() {
     if (!this.battle || this.battle.resolving) return;
     clearTimeout(this.battleTimer);
-    let safety = 60;
+    let safety = 40;
     while (this.battle && this.alive(this.battle.players).length && this.alive(this.battle.enemies).length && safety-- > 0) this.runRound(false);
     if (this.battle) this.renderBattle();
   }
@@ -519,42 +595,40 @@ export class Game {
       if (victory) this.openRewards(node);
       else this.handleDefeat(node);
       this.battle = null;
-    }, 450);
+    }, 500);
   }
 
   openRewards(node) {
-    const baseData = node.type === 'boss' ? 90 : node.type === 'elite' ? 45 : 28;
-    const chestGain = Math.round((node.type === 'boss' ? 45 : node.type === 'elite' ? 18 : 9) * (1 + (this.meta.research.salvage || 0) * .15));
-    this.run.data += baseData;
-    this.run.chests += chestGain;
+    const score = node.type === 'boss' ? 90 : node.type === 'elite' ? 45 : 28;
+    const requisition = Math.round((node.type === 'boss' ? 45 : node.type === 'elite' ? 18 : 9) * (1 + (this.meta.research.salvage || 0) * .15));
+    this.run.data += score;
+    this.run.chests += requisition;
     this.run.battles++;
     if (node.type === 'boss') this.run.bosses++;
     let gear = null;
     if (node.type === 'boss' || node.type === 'elite' || node.type === 'salvage' || Math.random() < .3) {
-      gear = pick(GEAR);
-      this.run.gear.push({ gearId: gear.id, equippedTo: null, id: `${gear.id}-${Date.now()}` });
+      gear = pick(WARGEAR);
+      this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`});
     }
     const owned = new Set(this.run.protocols);
-    const options = shuffle(PROTOCOLS.filter(protocol => !owned.has(protocol.id))).slice(0, 3);
-    if (!options.length) options.push(...shuffle(PROTOCOLS).slice(0, 3));
-    const list = $('#reward-options');
-    list.innerHTML = '';
-    for (const protocol of options) {
+    const options = shuffle(BATTLE_HONOURS.filter(honour => !owned.has(honour.id))).slice(0,3);
+    const list = $('#reward-options'); list.innerHTML = '';
+    for (const honour of options) {
       const button = document.createElement('button');
       button.className = 'reward-option pixel-panel';
-      button.innerHTML = `<b>${protocol.name}</b><small>${protocol.desc}</small><span>${protocol.tag} · RUN ONLY</span>`;
-      button.onclick = () => this.chooseReward(protocol.id, node);
+      button.innerHTML = `<b>${honour.name}</b><small>${honour.desc}</small><span>${honour.tag} · THIS CAMPAIGN</span>`;
+      button.onclick = () => this.chooseReward(honour.id, node);
       list.append(button);
     }
-    $('#reward-data').textContent = `+${baseData}`;
-    $('#reward-gear-line').textContent = gear ? `GEAR: ${gear.name.toUpperCase()}` : 'NO GEAR CACHE';
+    $('#reward-data').textContent = `+${score}`;
+    $('#reward-gear-line').textContent = gear ? `WARGEAR: ${gear.name.toUpperCase()}` : 'NO WARGEAR FOUND';
     this.save();
     this.show('reward');
   }
 
-  chooseReward(protocolId, node) {
-    this.run.protocols.push(protocolId);
-    this.run.history.push({...node, region:this.run.region, step:this.run.step});
+  chooseReward(honourId, node) {
+    this.run.protocols.push(honourId);
+    this.run.history.push({...node,region:this.run.region,step:this.run.step});
     this.run.pendingNode = null;
     this.advanceRoute(node.type === 'boss');
   }
@@ -577,11 +651,11 @@ export class Game {
     this.run.pendingNode = null;
     this.save();
     if (this.run.hull <= 0) return this.endRun(false);
-    $('#run-end-kicker').textContent = '// FORCE SHATTERED';
-    $('#run-end-title').textContent = 'REBUILD THE CASE.';
-    $('#run-end-copy').textContent = `${node.name} held the line. You have ${this.run.hull} campaign hull remaining. Repack the force and choose another route.`;
-    $('#run-end-stats').innerHTML = `<span>HULL LEFT<b>${this.run.hull}</b></span><span>POINT LIMIT<b>${this.run.cap}</b></span>`;
-    $('#run-end-button').textContent = 'REBUILD FORCE';
+    $('#run-end-kicker').textContent = '// BATTLE LOST';
+    $('#run-end-title').textContent = 'REBUILD THE ARMY.';
+    $('#run-end-copy').textContent = `${node.name} was lost. You have ${this.run.hull} campaign attempts remaining.`;
+    $('#run-end-stats').innerHTML = `<span>ATTEMPTS LEFT<b>${this.run.hull}</b></span><span>POINTS LIMIT<b>${this.run.cap}</b></span>`;
+    $('#run-end-button').textContent = 'EDIT ARMY';
     $('#run-end-button').dataset.action = 'retry';
     $('#run-end-dialog').showModal();
   }
@@ -590,13 +664,13 @@ export class Game {
     const earned = this.run.chests;
     this.meta.currency += earned;
     if (victory) this.meta.wins++;
-    const snapshot = { battles:this.run.battles, bosses:this.run.bosses, data:this.run.data, chests:earned };
+    const snapshot = {battles:this.run.battles,bosses:this.run.bosses,data:this.run.data,chests:earned};
     this.run = null;
     this.save();
-    $('#run-end-kicker').textContent = victory ? '// EXPEDITION COMPLETE' : '// EXPEDITION LOST';
-    $('#run-end-title').textContent = victory ? 'THE FRONT BREAKS.' : 'THE SIGNAL GOES DARK.';
-    $('#run-end-copy').textContent = victory ? 'The Null Citadel falls. Temporary protocols are purged; recovered War Chests remain for permanent research.' : 'The strike case is gone, but recovered War Chests have reached command.';
-    $('#run-end-stats').innerHTML = `<span>BATTLES WON<b>${snapshot.battles}</b></span><span>BOSSES BROKEN<b>${snapshot.bosses}</b></span><span>RUN DATA<b>${snapshot.data}</b></span><span>WAR CHESTS<b>+${snapshot.chests}</b></span>`;
+    $('#run-end-kicker').textContent = victory ? '// CAMPAIGN COMPLETE' : '// CAMPAIGN LOST';
+    $('#run-end-title').textContent = victory ? 'VICTORY.' : 'THE OFFENSIVE ENDS.';
+    $('#run-end-copy').textContent = victory ? 'The final warzone is secured. Battle Honours and Wargear are cleared; Requisition remains.' : 'The army is lost, but recovered Requisition has reached command.';
+    $('#run-end-stats').innerHTML = `<span>BATTLES WON<b>${snapshot.battles}</b></span><span>BOSSES DEFEATED<b>${snapshot.bosses}</b></span><span>SCORE<b>${snapshot.data}</b></span><span>REQUISITION<b>+${snapshot.chests}</b></span>`;
     $('#run-end-button').textContent = 'RETURN TO COMMAND';
     $('#run-end-button').dataset.action = 'home';
     $('#run-end-dialog').showModal();
@@ -605,26 +679,23 @@ export class Game {
   handleEndButton() {
     const action = $('#run-end-button').dataset.action;
     $('#run-end-dialog').close();
-    if (action === 'retry' && this.run) this.openLoadout('map');
+    if (action === 'retry' && this.run) this.openLoadout();
     else { this.renderHome(); this.show('home'); }
   }
 
   renderResearch() {
     $('#research-currency').textContent = this.meta.currency;
-    const grid = $('#research-grid');
-    grid.innerHTML = '';
+    const grid = $('#research-grid'); grid.innerHTML = '';
     for (const research of RESEARCH) {
       const level = this.meta.research[research.id] || 0;
       const cost = research.costs[level];
-      const card = document.createElement('article');
-      card.className = 'research-card';
+      const card = document.createElement('article'); card.className = 'research-card';
       card.innerHTML = `<span class="research-icon">${research.icon}</span><div><h3>${research.name} <span class="research-level">LV ${level}/${research.max}</span></h3><p>${research.desc}</p></div>`;
       const button = document.createElement('button');
       button.textContent = level >= research.max ? 'MAX' : `${cost} BUY`;
       button.disabled = level >= research.max || this.meta.currency < cost;
       button.onclick = () => this.buyResearch(research.id);
-      card.append(button);
-      grid.append(card);
+      card.append(button); grid.append(card);
     }
   }
 
@@ -635,7 +706,6 @@ export class Game {
     if (level >= research.max || this.meta.currency < cost) return;
     this.meta.currency -= cost;
     this.meta.research[id] = level + 1;
-    this.save();
-    this.renderResearch();
+    this.save(); this.renderResearch();
   }
 }

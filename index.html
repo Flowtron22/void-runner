@@ -13,24 +13,25 @@
     <header class="topbar pixel-panel">
       <button id="home-button" class="brand-button" aria-label="Return to command">VR</button>
       <div class="brand-copy"><b>VOID RUNNER</b><small id="location-label">PROTOCOL FRONT</small></div>
-      <div class="top-stat"><small>WAR CHESTS</small><b id="meta-currency">0</b></div>
+      <div class="top-stat"><small>REQUISITION</small><b id="meta-currency">0</b></div>
       <button id="help-button" class="icon-button" aria-label="How to play">?</button>
     </header>
 
     <section id="home-screen" class="screen active" aria-labelledby="home-title">
       <div class="hero-art" aria-hidden="true"><div class="pixel-moon"></div><div class="carrier-sprite"><i></i><i></i><i></i><i></i><i></i></div><div class="scan-line"></div></div>
       <div class="hero-copy">
-        <p class="eyebrow">// ROGUELIKE AUTO-CAMPAIGN</p>
-        <h1 id="home-title">BUILD THE BOX.<br><span>BREAK THE FRONT.</span></h1>
-        <p>Pack a legal strike force by <b>points</b> and <b>physical grid space</b>. Choose a route. Battles resolve automatically from your formation, units, gear, and run protocols.</p>
+        <p class="eyebrow">// 40K ROGUELIKE CAMPAIGN</p>
+        <h1 id="home-title">MUSTER AN ARMY.<br><span>ROLL THE BATTLE.</span></h1>
+        <p>Choose a faction, build an army under the <b>points limit</b>, and arrange it on the deployment grid. Every attack automatically rolls Attacks, Hits, Wounds, Saves, and Damage.</p>
       </div>
       <div class="rule-strip pixel-panel">
-        <div><b>01</b><span>PACK<br>UNITS</span></div><i></i><div><b>02</b><span>CHOOSE<br>PATH</span></div><i></i><div><b>03</b><span>AUTO<br>BATTLE</span></div><i></i><div><b>04</b><span>TAKE<br>POWER</span></div>
+        <div><b>01</b><span>BUILD<br>ARMY</span></div><i></i><div><b>02</b><span>CHOOSE<br>MISSION</span></div><i></i><div><b>03</b><span>ROLL<br>DICE</span></div><i></i><div><b>04</b><span>GAIN<br>HONOUR</span></div>
       </div>
+      <div class="faction-picker pixel-panel"><small>YOUR FACTION</small><div id="faction-options"></div></div>
       <div class="home-actions">
-        <button id="new-run-button" class="primary large">BEGIN 500 PT EXPEDITION</button>
-        <button id="resume-button" class="large" hidden>RESUME ACTIVE RUN</button>
-        <button id="research-button" class="large">R&amp;D / PERMANENT UPGRADES</button>
+        <button id="new-run-button" class="primary large">BEGIN 500 PT CAMPAIGN</button>
+        <button id="resume-button" class="large" hidden>RESUME CAMPAIGN</button>
+        <button id="research-button" class="large">PERMANENT UPGRADES</button>
       </div>
       <p class="portrait-note">DESIGNED FOR PORTRAIT · PROGRESS SAVES ON THIS DEVICE</p>
     </section>
@@ -38,51 +39,52 @@
     <section id="map-screen" class="screen" aria-labelledby="map-title">
       <div class="section-head">
         <div><p class="eyebrow" id="region-kicker">REGION 1 / 4</p><h2 id="map-title">ASHEN APPROACH</h2></div>
-        <div class="cap-badge"><small>ARMY LIMIT</small><b id="map-cap">500</b><span>PTS</span></div>
+        <div class="cap-badge"><small>POINTS LIMIT</small><b id="map-cap">500</b><span>PTS</span></div>
       </div>
       <div class="run-stats pixel-panel">
-        <span><small>HULL</small><b id="run-hull">3/3</b></span><span><small>RUN DATA</small><b id="run-data">0</b></span><span><small>PROTOCOLS</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button">EDIT FORCE</button>
+        <span><small>ATTEMPTS</small><b id="run-hull">3/3</b></span><span><small>CAMPAIGN SCORE</small><b id="run-data">0</b></span><span><small>HONOURS</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button">EDIT ARMY</button>
       </div>
       <div id="route-map" class="route-map" aria-label="Expedition route"></div>
-      <div id="route-detail" class="route-detail pixel-panel"><small>COMMAND</small><b>Choose one illuminated route.</b><p>Rewards shown on each contact are guaranteed. The other paths close when you deploy.</p></div>
+      <div id="route-detail" class="route-detail pixel-panel"><small>CAMPAIGN MAP</small><b>Choose one available mission.</b><p>The displayed enemy faction and reward are known before deployment.</p></div>
     </section>
 
     <section id="loadout-screen" class="screen" aria-labelledby="loadout-title">
       <div class="section-head compact-head">
-        <div><p class="eyebrow">// MANUAL PREPARATION</p><h2 id="loadout-title">STRIKE CASE</h2></div>
+        <div><p class="eyebrow">// ARMY BUILDER</p><h2 id="loadout-title">DEPLOYMENT</h2></div>
         <div class="cap-badge"><small>DEPLOYED</small><b id="used-points">0</b><span id="loadout-cap">/ 500</span></div>
       </div>
       <div class="capacity-meter"><i id="capacity-fill"></i></div>
-      <div class="loadout-tip pixel-panel"><b>PACKING RULE</b><span>Tap a unit, then tap a cyan grid cell. Every silhouette occupies real case space and costs command points.</span></div>
-      <div class="case-wrap"><div class="case-axis"><span>FRONT / +THREAT</span><span>BACK / +SAFETY</span></div><div id="formation-grid" class="formation-grid" aria-label="Six by five deployment case"></div></div>
+      <div class="loadout-tip pixel-panel"><b>DEPLOYMENT RULE</b><span>Tap a unit, then an empty grid cell. Units cost Army Points and occupy different amounts of space.</span></div>
+      <div class="case-wrap"><div class="case-axis"><span>FRONT LINE</span><span>REAR LINE</span></div><div id="formation-grid" class="formation-grid" aria-label="Six by five deployment grid"></div></div>
       <div class="prep-actions"><button id="rotate-button">ROTATE UNIT</button><button id="remove-button" class="danger">REMOVE SELECTED</button><button id="clear-button">CLEAR</button></div>
-      <nav class="subtabs" aria-label="Preparation inventory"><button data-prep-tab="units" class="active">UNITS</button><button data-prep-tab="gear">GEAR <span id="gear-count">0</span></button><button data-prep-tab="protocols">PROTOCOLS</button></nav>
+      <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">UNITS</button><button data-prep-tab="gear">WARGEAR <span id="gear-count">0</span></button><button data-prep-tab="protocols">HONOURS</button></nav>
       <div id="unit-roster" class="prep-list active"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
-      <div class="sticky-action pixel-panel"><div><small id="prep-status-label">FORCE STATUS</small><b id="prep-status">SELECT A UNIT TO PACK</b></div><button id="deploy-button" class="primary" disabled>RETURN TO MAP</button></div>
+      <div class="sticky-action pixel-panel"><div><small id="prep-status-label">ARMY STATUS</small><b id="prep-status">SELECT A UNIT</b></div><button id="deploy-button" class="primary" disabled>RETURN TO MAP</button></div>
     </section>
 
     <section id="battle-screen" class="screen" aria-labelledby="battle-title">
       <div class="section-head battle-head"><div><p class="eyebrow" id="battle-kicker">AUTOMATED ENGAGEMENT</p><h2 id="battle-title">CONTACT</h2></div><div class="round-badge"><small>ROUND</small><b id="round-value">0</b></div></div>
       <div id="enemy-banner" class="army-banner enemy"><span>HOSTILE SIGNAL</span><b id="enemy-power">0 PTS</b></div><div id="enemy-field" class="battle-field enemy-field"></div>
-      <div class="battle-divider"><span>AUTO RESOLUTION</span><i></i></div>
-      <div id="player-field" class="battle-field player-field"></div><div class="army-banner player"><span>STRIKE CASE</span><b id="player-power">0 PTS</b></div>
+      <div id="dice-tray" class="dice-tray pixel-panel"><span class="dice-empty">WAITING FOR FIRST DICE ROLL</span></div>
+      <div class="battle-divider"><span>AUTOMATIC DICE RESOLUTION</span><i></i></div>
+      <div id="player-field" class="battle-field player-field"></div><div class="army-banner player"><span>YOUR ARMY</span><b id="player-power">0 PTS</b></div>
       <div id="battle-log" class="battle-log pixel-panel" aria-live="polite"></div>
       <div class="battle-controls"><button id="speed-button">SPEED ×1</button><button id="skip-button">RESOLVE NOW</button></div>
     </section>
 
     <section id="reward-screen" class="screen" aria-labelledby="reward-title">
-      <div class="reward-sigil">◆</div><p class="eyebrow">// VICTORY SALVAGE</p><h2 id="reward-title">CHOOSE ONE PROTOCOL</h2><p class="reward-copy">It modifies this expedition only. It is erased when the run ends.</p>
-      <div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>DATA RECOVERED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO GEAR CACHE</span></div>
+      <div class="reward-sigil">◆</div><p class="eyebrow">// VICTORY</p><h2 id="reward-title">CHOOSE ONE BATTLE HONOUR</h2><p class="reward-copy">This bonus lasts for the current campaign only.</p>
+      <div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>SCORE GAINED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO WARGEAR FOUND</span></div>
     </section>
 
     <section id="research-screen" class="screen" aria-labelledby="research-title">
-      <div class="section-head"><div><p class="eyebrow">// PERSISTENT COMMAND</p><h2 id="research-title">R&amp;D ARRAY</h2></div><div class="cap-badge"><small>WAR CHESTS</small><b id="research-currency">0</b></div></div>
-      <p class="screen-copy">Research survives every expedition. It improves your starting options without replacing the temporary build decisions inside a run.</p><div id="research-grid" class="research-grid"></div><button id="research-back-button" class="large">BACK TO COMMAND</button>
+      <div class="section-head"><div><p class="eyebrow">// PERMANENT PROGRESSION</p><h2 id="research-title">UPGRADES</h2></div><div class="cap-badge"><small>REQUISITION</small><b id="research-currency">0</b></div></div>
+      <p class="screen-copy">Permanent upgrades apply to future campaigns. Battle Honours and Wargear are temporary and disappear when a campaign ends.</p><div id="research-grid" class="research-grid"></div><button id="research-back-button" class="large">BACK TO COMMAND</button>
     </section>
 
     <dialog id="help-dialog" class="modal pixel-panel">
-      <p class="eyebrow">// FIELD MANUAL</p><h2>FOUR DECISIONS. ONE RUN.</h2>
-      <ol><li><b>Pack a legal force.</b><span>Stay under the point limit and fit units inside the 6×5 case.</span></li><li><b>Build a formation.</b><span>Armor belongs forward. Medics and artillery survive longer in back.</span></li><li><b>Choose your route.</b><span>Normal fights are safer; elites give stronger rewards; repair nodes restore hull.</span></li><li><b>Adapt after victory.</b><span>Pick one temporary protocol and equip recovered gear before the next battle.</span></li></ol>
+      <p class="eyebrow">// HOW TO PLAY</p><h2>BUILD. DEPLOY. ROLL.</h2>
+      <ol><li><b>Choose a faction.</b><span>Each faction loads its unit points and profiles from the KS JSON data.</span></li><li><b>Build an army.</b><span>Stay under the point limit and place every unit inside the 6×5 deployment grid.</span></li><li><b>Choose a mission.</b><span>Your army fights automatically using visible D6 Hit, Wound, Save, and Damage rolls.</span></li><li><b>Improve the campaign.</b><span>Choose a temporary Battle Honour and equip recovered Wargear before the next mission.</span></li></ol>
       <button id="close-help-button" class="primary large">UNDERSTOOD</button>
     </dialog>
 

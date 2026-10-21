@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "source": {
+    "project": "KS — 40K Army Builder and Combat Lab",
+    "path": "D:/Projects/Minigames/KS/solo-lab/public/armies",
+    "dataset": "BSData/wh40k-11e",
+    "commit": "cc58ee3b2c23f90af9d00e7bf234cd703b762299",
+    "snapshotDate": "2026-10-09",
+    "notice": "Community data snapshot. Numeric profiles are used for a personal game prototype and are not tournament certification."
+  },
+  "factions": [
+    {
+      "id": "space-marines",
+      "name": "Space Marines",
+      "mark": "SM",
+      "color": "#42f5d7",
+      "units": [
+        {"id":"intercessor-squad","name":"Intercessor Squad","points":80,"stock":3,"size":[2,1],"models":5,"role":"Battleline","defense":{"toughness":4,"save":3,"wounds":2,"invuln":7},"weapon":{"name":"Bolt Rifle","attacks":"2","hit":3,"strength":4,"ap":-1,"damage":"1","keywords":["Assault","Heavy"]}},
+        {"id":"terminator-squad","name":"Terminator Squad","points":160,"stock":2,"size":[2,2],"models":5,"role":"Elite","defense":{"toughness":5,"save":2,"wounds":3,"invuln":4},"weapon":{"name":"Storm Bolter","attacks":"2","hit":3,"strength":4,"ap":0,"damage":"1","keywords":["Rapid Fire"]}},
+        {"id":"redemptor-dreadnought","name":"Redemptor Dreadnought","points":195,"stock":2,"size":[2,2],"models":1,"role":"Vehicle","defense":{"toughness":10,"save":2,"wounds":12,"invuln":7},"weapon":{"name":"Macro Plasma Incinerator","attacks":"D6+1","hit":3,"strength":8,"ap":-3,"damage":"2","keywords":["Blast"]}}
+      ]
+    },
+    {
+      "id": "orks",
+      "name": "Orks",
+      "mark": "ORK",
+      "color": "#78f08b",
+      "units": [
+        {"id":"boyz","name":"Boyz","points":85,"stock":3,"size":[2,1],"models":10,"role":"Battleline","defense":{"toughness":5,"save":5,"wounds":1,"invuln":7},"weapon":{"name":"Choppa","attacks":"3","hit":3,"strength":5,"ap":-1,"damage":"1","keywords":[]}},
+        {"id":"meganobz","name":"Meganobz","points":70,"stock":3,"size":[2,1],"models":2,"role":"Elite","defense":{"toughness":6,"save":2,"wounds":3,"invuln":7},"weapon":{"name":"Power Klaw","attacks":"3","hit":3,"strength":10,"ap":-2,"damage":"2","keywords":[]}},
+        {"id":"deff-dread","name":"Deff Dread","points":130,"stock":2,"size":[2,2],"models":1,"role":"Vehicle","defense":{"toughness":9,"save":2,"wounds":8,"invuln":6},"weapon":{"name":"Dread Klaws","attacks":"5","hit":3,"strength":12,"ap":-2,"damage":"3","keywords":["Cleave"]}}
+      ]
+    },
+    {
+      "id": "tyranids",
+      "name": "Tyranids",
+      "mark": "TYR",
+      "color": "#9b6dff",
+      "units": [
+        {"id":"termagants","name":"Termagants","points":55,"stock":3,"size":[2,1],"models":10,"role":"Battleline","defense":{"toughness":3,"save":5,"wounds":1,"invuln":7},"weapon":{"name":"Fleshborer","attacks":"1","hit":4,"strength":5,"ap":0,"damage":"1","keywords":["Assault"]}},
+        {"id":"tyranid-warriors","name":"Tyranid Warriors","points":60,"stock":3,"size":[2,2],"models":3,"role":"Synapse","defense":{"toughness":5,"save":4,"wounds":3,"invuln":7},"weapon":{"name":"Deathspitter","attacks":"3","hit":4,"strength":5,"ap":-1,"damage":"1","keywords":[]}},
+        {"id":"screamer-killer","name":"Screamer-killer","points":125,"stock":2,"size":[2,2],"models":1,"role":"Monster","defense":{"toughness":9,"save":2,"wounds":10,"invuln":7},"weapon":{"name":"Screamer-killer Talons","attacks":"10","hit":3,"strength":10,"ap":-2,"damage":"3","keywords":[]}}
+      ]
+    },
+    {
+      "id": "imperial-knights",
+      "name": "Imperial Knights",
+      "mark": "IK",
+      "color": "#ffd166",
+      "units": [
+        {"id":"armiger-helverin","name":"Armiger Helverin","points":140,"stock":3,"size":[2,2],"models":1,"role":"Walker","defense":{"toughness":9,"save":3,"wounds":14,"invuln":5},"weapon":{"name":"Armiger Autocannons","attacks":"8","hit":3,"strength":9,"ap":-1,"damage":"3","keywords":[]}},
+        {"id":"armiger-warglaive","name":"Armiger Warglaive","points":140,"stock":3,"size":[2,2],"models":1,"role":"Walker","defense":{"toughness":9,"save":3,"wounds":14,"invuln":5},"weapon":{"name":"Thermal Spear","attacks":"2","hit":3,"strength":12,"ap":-4,"damage":"D6","keywords":["Melta"]}},
+        {"id":"knight-paladin","name":"Knight Paladin","points":375,"stock":1,"size":[3,2],"models":1,"role":"Titanic","defense":{"toughness":11,"save":3,"wounds":26,"invuln":5},"weapon":{"name":"Rapid-fire Battle Cannon","attacks":"D6+3","hit":3,"strength":10,"ap":-1,"damage":"3","keywords":["Blast","Rapid Fire"]}},
+        {"id":"acastus-knight-asterius","name":"Acastus Knight Asterius","points":785,"stock":1,"size":[3,3],"models":1,"role":"Titanic","defense":{"toughness":13,"save":2,"wounds":30,"invuln":5},"weapon":{"name":"Twin Conversion Beam Cannon","attacks":"6","hit":3,"strength":16,"ap":-2,"damage":"6","keywords":["Twin-linked","Sustained Hits"]}}
+      ]
+    }
+  ]
+}
