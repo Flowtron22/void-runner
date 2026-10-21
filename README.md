@@ -4,7 +4,7 @@ A portrait-first Warhammer 40,000 army-building roguelike with automatic, visibl
 
 ## Current game
 
-- Choose Space Marines, Orks, Tyranids, Imperial Knights or Grey Knights.
+- Choose from 19 playable forces, including Space Marines, Grey Knights, Custodes, Astra Militarum, Chaos, Aeldari, T'au and xenos patrol variants.
 - Build a legal army at 500, 1,000, 1,500 and finally 2,000 points.
 - Arrange units on a 6×5 deployment grid.
 - Choose missions across four warzones and defeat a boss in each.

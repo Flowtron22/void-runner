@@ -72,6 +72,20 @@ Current factions:
 - Tyranids
 - Imperial Knights
 - Grey Knights
+- Adeptus Custodes
+- Astra Militarum
+- Death Guard
+- Eldar
+- Harlequins
+- Imperial Fists
+- Kroot Ravagers
+- Adeptus Mechanicus
+- Necrons
+- Adepta Sororitas
+- Space Wolves
+- T'au Ground Patrol
+- T'au Drone Patrol
+- Thousand Sons
 
 Current units include:
 

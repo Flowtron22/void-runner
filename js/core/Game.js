@@ -12,12 +12,26 @@ const RULE_SYMBOLS = [
   [/Blast/i,'✹'], [/Rapid Fire/i,'»'], [/Melta/i,'◈'], [/Torrent/i,'≋'],
   [/Devastating/i,'☠'], [/Twin-?linked/i,'⟳'], [/Sustained/i,'✦'], [/Lethal/i,'†'],
   [/Anti-/i,'⌖'], [/Assault/i,'➜'], [/Heavy/i,'▰'], [/Oath/i,'◎'], [/Deep Strike/i,'⇣'],
-  [/Synapse/i,'⌁'], [/Waaagh/i,'!'], [/Chivalric/i,'♜'], [/Leader|Rites|Alpha Warrior|Da Boss/i,'♛']
+  [/Synapse/i,'⌁'], [/Waaagh/i,'!'], [/Chivalric/i,'♜'], [/Psychic|Sorcery/i,'✧'], [/Leader|Rites|Alpha Warrior|Da Boss/i,'♛']
 ];
 const ruleSymbol = rule => RULE_SYMBOLS.find(([pattern]) => pattern.test(rule))?.[1] || '◆';
 const BATTLE_ART = {
   'space-marines': {src:new URL('../../gif/spacemarine_A.gif', import.meta.url).href, facing:'right'},
   'grey-knights': {src:new URL('../../gif/greyknight_A.gif', import.meta.url).href, facing:'right'},
+  'custodes': {src:new URL('../../gif/custodes.gif', import.meta.url).href, facing:'right'},
+  'astra-militarum': {src:new URL('../../gif/cadian_A.gif', import.meta.url).href, facing:'right'},
+  'death-guard': {src:new URL('../../gif/deathguard_A.gif', import.meta.url).href, facing:'right'},
+  'eldar': {src:new URL('../../gif/eldar_A.gif', import.meta.url).href, facing:'right'},
+  'harlequins': {src:new URL('../../gif/eldar_HarlequinnStorm.gif', import.meta.url).href, facing:'right'},
+  'imperial-fists': {src:new URL('../../gif/imperialfist.gif', import.meta.url).href, facing:'left'},
+  'kroot-ravagers': {src:new URL('../../gif/kroot_ravager.gif', import.meta.url).href, facing:'left'},
+  'adeptus-mechanicus': {src:new URL('../../gif/mechanicus_A.gif', import.meta.url).href, facing:'right'},
+  'necrons': {src:new URL('../../gif/necro_A.gif', import.meta.url).href, facing:'left'},
+  'adepta-sororitas': {src:new URL('../../gif/sorista_A.gif', import.meta.url).href, facing:'right'},
+  'space-wolves': {src:new URL('../../gif/spacewolve.gif', import.meta.url).href, facing:'right'},
+  'tau-ground-patrol': {src:new URL('../../gif/tau_GroundPatrol.gif', import.meta.url).href, facing:'right'},
+  'tau-drone-patrol': {src:new URL('../../gif/Tau_DronePatrol.gif', import.meta.url).href, facing:'left'},
+  'thousand-sons': {src:new URL('../../gif/thousandsons.gif', import.meta.url).href, facing:'left'},
   'orks': {src:new URL('../../gif/WAAAAAgon.gif', import.meta.url).href, facing:'left'},
   'tyranids': {src:new URL('../../gif/tyranids_A.gif', import.meta.url).href, facing:'right'},
   'imperial-knights': {src:new URL('../../gif/imperial_knight.gif', import.meta.url).href, facing:'left'}
@@ -30,7 +44,8 @@ const UNIT_SPRITES = {
   'grey-knight-strike-squad':[0,0], 'grey-knight-terminators':[1,0], 'nemesis-dreadknight':[2,0], 'brotherhood-librarian':[3,0]
 };
 const unitSpriteStyle = id => {
-  const [column, row] = UNIT_SPRITES[id] || [0,0];
+  const hash = [...id].reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  const [column, row] = UNIT_SPRITES[id] || [hash % 4, Math.floor(hash / 4) % 4];
   return `--icon-x:${column * 100 / 3}%;--icon-y:${row * 100 / 3}%`;
 };
 

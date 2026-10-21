@@ -87,7 +87,7 @@ Glow is not part of the base language. Depth comes from hard shadows, bevels, te
 ## Unit silhouette atlas
 
 - `assets/unit-silhouettes.png` is the locked 4×4 transparent portrait atlas used by both roster cards and deployed formation pieces.
-- Rows are Space Marines, Orks, Tyranids and Imperial Knights; columns follow each faction's unit order in `public/data/warhammer-roster.json`. Grey Knights temporarily share the matching Space Marine silhouette archetypes, distinguished by their ice-blue faction treatment and dedicated battle animation.
+- Rows are Space Marines, Orks, Tyranids and Imperial Knights; columns follow each faction's unit order in `public/data/warhammer-roster.json`. Additional factions reuse the nearest readable silhouette archetypes through a deterministic unit mapping, distinguished by faction color and dedicated battle animation until the atlas is expanded.
 - The silhouettes are original generated designs informed by official unit shape references, not copied illustrations or faction logos.
 - Preserve the atlas order, transparent padding, 400% CSS background sizing and 42–48 px display range when adding or replacing portraits.
 
