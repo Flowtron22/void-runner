@@ -21,4 +21,4 @@ createServer(async (req, res) => {
     res.writeHead(404);
     res.end('Not found');
   }
-}).listen(port, '127.0.0.1', () => console.log(`INTERSTELLAR ready at http://127.0.0.1:${port}`));
+}).listen(port, '127.0.0.1', () => console.log(`COMBAT PATROL ready at http://127.0.0.1:${port}`));

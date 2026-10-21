@@ -1,4 +1,4 @@
-# INTERSTELLAR — 40K Roguelike Campaign
+# COMBAT PATROL — 40K Roguelike Campaign
 
 A portrait-first Warhammer 40,000 army-building roguelike with automatic, visible D6 combat.
 
