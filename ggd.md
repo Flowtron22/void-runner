@@ -36,6 +36,10 @@ Campaign scales are locked at 500, 1000, 1500, 2000 and 3000 points. They contai
 
 Each normal area presents exactly three connected choices rated one, two and three stars. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
 
+Both navigation views are literal galaxy charts, not vertical skill trees. The sector view places named planets across a star field and joins them with charted travel lanes. The area view is a local constellation: the entry beacon, previously secured planets, three currently reachable systems and the distant boss signal occupy spatial coordinates connected by luminous routes.
+
+Post-War Affairs is a two-stage interaction. First, the player chooses an event segment: Requisition, Battle Honours, Stratagems and—when generated for that area—Reinforcements or Field Store. Requisition resolves immediately. Honour and Stratagem segments then open three concrete choices; the player takes one. Reinforcement and Store segments open their own unit/item selections. The player completes one segment per battle.
+
 Post-War rewards are run-only unless explicitly labeled permanent:
 
 - **Requisition:** currency spent in an occasional field store.

@@ -496,10 +496,19 @@ export class Game {
     const tier = CAMPAIGN_TIERS[this.run.tierIndex];
     $('#campaign-stars').textContent = this.run.stars;
     $('#sector-kicker').textContent = `${tier.points} PTS · ${tier.name} · ${this.run.sectors.length} SECTORS`;
-    const map = $('#sector-map'); map.innerHTML = '';
+    const map = $('#sector-map'); map.innerHTML = '<div class="galaxy-nebula"></div>';
+    const positions = [[16,72],[39,54],[70,70],[82,39],[57,24],[27,31],[39,10],[77,12]];
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 100 100'); svg.classList.add('galaxy-routes');
+    for (let i=1;i<this.run.sectors.length;i++) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',positions[i-1][0]); line.setAttribute('y1',positions[i-1][1]); line.setAttribute('x2',positions[i][0]); line.setAttribute('y2',positions[i][1]);
+      line.classList.toggle('charted',this.run.sectors[i-1].status === 'complete'); svg.append(line);
+    }
+    map.append(svg);
     this.run.sectors.forEach((sector,index) => {
       const button = document.createElement('button');
       button.className = `sector-card ${sector.status}`;
+      button.style.setProperty('--gx',`${positions[index][0]}%`); button.style.setProperty('--gy',`${positions[index][1]}%`);
       button.disabled = sector.status === 'locked';
       const status = sector.status === 'complete' ? `${sector.stars} ★ SECURED` : sector.status === 'available' ? 'ROUTE AVAILABLE' : 'SIGNAL LOCKED';
       button.innerHTML = `<span>0${index + 1}</span><i></i><b>${sector.name}</b><small>${status}</small>`;
@@ -523,12 +532,12 @@ export class Game {
     if (s === tier.depth) {
       const enemy = this.enemyFaction();
       const thresholds = [0,tier.depth + 1,tier.depth * 2];
-      return [1,2,3].map(bossTier => ({
+      return [1,2,3].map((bossTier,lane) => ({
         id:`r${r}-boss-${bossTier}`,type:'boss',bossTier,
         name:['WARLORD','CHAMPION','APEX COMMANDER'][bossTier-1],
         reward:`${bossTier}★ · +${tier.permanentReward * bossTier} PERMANENT REQ`,
         difficulty:(1 + bossTier * .22) * tier.enemyScale, enemyFaction:enemy.id,
-        locked:this.run.sectorStars < thresholds[bossTier-1], threshold:thresholds[bossTier-1], stars:bossTier
+        locked:this.run.sectorStars < thresholds[bossTier-1], threshold:thresholds[bossTier-1], stars:bossTier,lane
       }));
     }
     const names = ['PATROL CLASH','SUPPLY RAID','LINE ENGAGEMENT','ARMOURED COLUMN','BREAKTHROUGH','VOID AMBUSH','RELIC DEFENCE'];
@@ -536,7 +545,7 @@ export class Game {
       const eventRoll = (r * 7 + s * 3 + index) % 7;
       const event = eventRoll === 2 ? 'recruit' : eventRoll === 5 ? 'store' : null;
       const type = stars === 3 ? 'elite' : event === 'store' ? 'salvage' : 'skirmish';
-      return {id:`r${r}s${s}n${index}`,type,name:names[(r+s+index)%names.length],stars,event,
+      return {id:`r${r}s${s}n${index}`,type,name:names[(r+s+index)%names.length],stars,event,lane:index,
         reward:event === 'recruit' ? 'RECRUIT SIGNAL' : event === 'store' ? 'FIELD STORE' : 'POST-WAR CHOICE',
         difficulty:(.62 + stars * .14 + s * .035) * tier.enemyScale,enemyFaction:this.enemyFaction().id};
     });
@@ -553,16 +562,27 @@ export class Game {
     $('#run-data').textContent = this.run.sectorStars;
     $('#run-currency').textContent = this.run.currency;
     $('#run-protocol-count').textContent = this.run.protocols.length;
-    const map = $('#route-map');
-    map.innerHTML = '';
-    const history = this.run.history.filter(node => node.region === this.run.region);
-    for (let step = tier.depth; step >= 0; step--) {
-      const row = document.createElement('div'); row.className = 'route-row';
-      if (step < this.run.step) row.append(this.makeNodeButton(history.find(node => node.step === step) || {type:'closed',name:'COMPLETED',reward:''}, 'completed', false));
-      else if (step === this.run.step) for (const node of this.run.offers) row.append(this.makeNodeButton(node, `available ${node.type}`, true));
-      else row.append(this.makeNodeButton(step === tier.depth ? {type:'boss',name:'BOSS TIERS',reward:'EARN STARS TO UNLOCK'} : {type:'closed',name:'UNKNOWN AREA',reward:'LOCKED'}, `closed ${step === tier.depth ? 'boss' : 'closed'}`, false));
-      map.append(row);
+    const map = $('#route-map'); map.innerHTML = '<div class="galaxy-nebula"></div><div class="galaxy-start"><i></i><span>ENTRY</span></div>';
+    map.classList.add('area-galaxy');
+    const history = this.run.history.filter(node => node.region === this.run.region).sort((a,b)=>a.step-b.step);
+    const lanes = [20,50,80]; const yFor = step => 84 - (step + 1) * (70 / (tier.depth + 1));
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 100 100'); svg.classList.add('galaxy-routes');
+    let previous = [50,91];
+    history.forEach(node => {
+      const point = [lanes[node.lane ?? 1],yFor(node.step)];
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line'); line.setAttribute('x1',previous[0]); line.setAttribute('y1',previous[1]); line.setAttribute('x2',point[0]); line.setAttribute('y2',point[1]); line.classList.add('charted'); svg.append(line); previous=point;
+      const completed = this.makeNodeButton(node,`completed ${node.type}`,false); completed.style.setProperty('--gx',`${point[0]}%`); completed.style.setProperty('--gy',`${point[1]}%`); map.append(completed);
+    });
+    const currentY = yFor(this.run.step);
+    this.run.offers.forEach((node,offerIndex) => {
+      const point = [lanes[node.lane ?? offerIndex],currentY]; const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',previous[0]); line.setAttribute('y1',previous[1]); line.setAttribute('x2',point[0]); line.setAttribute('y2',point[1]); svg.append(line);
+      const choice = this.makeNodeButton(node,`available ${node.type}`,true); choice.style.setProperty('--gx',`${point[0]}%`); choice.style.setProperty('--gy',`${point[1]}%`); map.append(choice);
+    });
+    if (this.run.step < tier.depth) {
+      const destination = document.createElement('div'); destination.className='galaxy-destination'; destination.innerHTML='<i></i><span>BOSS SIGNAL</span>'; map.append(destination);
     }
+    map.prepend(svg);
     this.save();
   }
 
@@ -1024,14 +1044,28 @@ export class Game {
     this.run.sectorStars += node.stars || 0;
     this.run.battles++;
     if (node.type === 'boss') this.run.bosses++;
-    const honour = pick(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))) || pick(BATTLE_HONOURS);
-    const stratagem = pick(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))) || pick(STRATAGEMS);
     const req = Math.round((18 + (node.stars || 1) * 8) * (1 + (this.meta.research.salvage || 0) * .15));
+    this.run.rewardContext = {
+      node, req,
+      honours:shuffle(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))).slice(0,3).map(item => item.id),
+      stratagems:shuffle(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))).slice(0,3).map(item => item.id)
+    };
     const options = [
-      {kind:'currency',icon:'◆',name:`${req} REQUISITION`,tag:'CAMPAIGN CURRENCY',desc:'Spend at field stores during this run.'},
-      {kind:'honour',id:honour.id,icon:ruleSymbol(`${honour.name} ${honour.tag}`),name:honour.name,tag:'BATTLE HONOUR',desc:honour.desc},
-      {kind:'stratagem',id:stratagem.id,icon:'⌖',name:stratagem.name,tag:'STRATAGEM',desc:stratagem.desc}
+      {kind:'currency',icon:'◆',name:'REQUISITION',tag:`CLAIM ${req}`,desc:'Take campaign currency for a future field store.'},
+      {kind:'honour',icon:'✦',name:'BATTLE HONOURS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of passive army rules.'},
+      {kind:'stratagem',icon:'⌖',name:'STRATAGEMS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of automatic command tactics.'}
     ];
+    if (node.event === 'recruit') options.push({kind:'recruit',icon:'▦',name:'REINFORCEMENTS',tag:'CHOOSE A UNIT',desc:'Answer a recovered command signal.'});
+    if (node.event === 'store') options.push({kind:'store',icon:'⚙',name:'FIELD STORE',tag:`◆ ${this.run.currency}`,desc:'Spend campaign Requisition on Wargear.'});
+    this.renderRewardSegments(options);
+    $('#reward-data').textContent = `+${node.stars || 0} ★`;
+    $('#reward-gear-line').textContent = `${score} CAMPAIGN SCORE`;
+    this.save();
+    this.show('reward');
+  }
+
+  renderRewardSegments(options) {
+    $('#reward-title').textContent = 'POST-WAR AFFAIRS';
     const list = $('#reward-options'); list.innerHTML = '';
     for (const option of options) {
       const button = document.createElement('button');
@@ -1039,28 +1073,45 @@ export class Game {
       button.title = option.desc;
       button.setAttribute('aria-label', `${option.name}: ${option.desc}`);
       button.innerHTML = `<b>${option.icon} ${option.name}</b><span>${option.tag}</span>`;
-      button.onclick = () => this.chooseReward(option, node, req);
+      button.onclick = () => this.selectPostWarSegment(option.kind);
       list.append(button);
     }
-    $('#reward-data').textContent = `+${node.stars || 0} ★`;
-    $('#reward-gear-line').textContent = node.event === 'recruit' ? 'SIGNAL: REINFORCEMENTS' : node.event === 'store' ? 'SIGNAL: FIELD STORE' : `${score} CAMPAIGN SCORE`;
-    this.save();
-    this.show('reward');
   }
 
-  chooseReward(option, node, req) {
-    if (option.kind === 'currency') this.run.currency += req;
-    if (option.kind === 'honour' && !this.run.protocols.includes(option.id)) this.run.protocols.push(option.id);
-    if (option.kind === 'stratagem' && !this.run.stratagems.includes(option.id)) {
-      this.run.stratagems.push(option.id);
-      this.run.currency += STRATAGEMS.find(item => item.id === option.id)?.effect.currency || 0;
+  selectPostWarSegment(kind) {
+    const context = this.run.rewardContext; if (!context) return;
+    if (kind === 'currency') { this.run.currency += context.req; return this.completePostWarSegment(); }
+    if (kind === 'recruit') return this.openRecruitEvent();
+    if (kind === 'store') return this.openStoreEvent();
+    const source = kind === 'honour' ? BATTLE_HONOURS : STRATAGEMS;
+    let ids = context[kind === 'honour' ? 'honours' : 'stratagems'];
+    if (!ids.length) ids = shuffle(source).slice(0,3).map(item => item.id);
+    $('#reward-title').textContent = kind === 'honour' ? 'CHOOSE 1 HONOUR' : 'CHOOSE 1 STRATAGEM';
+    const list = $('#reward-options'); list.innerHTML = '';
+    ids.forEach(id => {
+      const item = source.find(entry => entry.id === id); const button = document.createElement('button');
+      button.className = 'reward-option pixel-panel'; button.title = item.desc;
+      button.innerHTML = `<b>${kind === 'honour' ? ruleSymbol(`${item.name} ${item.tag}`) : '⌖'} ${item.name}</b><small>${item.desc}</small><span>${item.tag}</span>`;
+      button.onclick = () => this.claimPostWarChoice(kind,id); list.append(button);
+    });
+  }
+
+  claimPostWarChoice(kind,id) {
+    if (kind === 'honour' && !this.run.protocols.includes(id)) this.run.protocols.push(id);
+    if (kind === 'stratagem' && !this.run.stratagems.includes(id)) {
+      this.run.stratagems.push(id);
+      this.run.currency += STRATAGEMS.find(item => item.id === id)?.effect.currency || 0;
     }
+    this.completePostWarSegment();
+  }
+
+  completePostWarSegment() {
+    const node = this.run.rewardContext?.node; if (!node) return;
     this.run.history.push({...node,region:this.run.region,step:this.run.step});
     this.run.pendingNode = null;
     this.run.pendingPostWar = {node,wasBoss:node.type === 'boss'};
+    this.run.rewardContext = null;
     this.save();
-    if (node.event === 'recruit') return this.openRecruitEvent();
-    if (node.event === 'store') return this.openStoreEvent();
     this.finishPostWarEvent();
   }
 
@@ -1073,7 +1124,7 @@ export class Game {
     locked.forEach(unit => {
       const button = document.createElement('button'); button.className = 'event-card';
       button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id)}"></span><b>${unit.name}</b><small>${unit.points} PTS · ${unit.role}</small>`;
-      button.onclick = () => { this.run.unlockedUnits.push(unit.id); this.save(); $('#event-dialog').close(); this.finishPostWarEvent(); }; list.append(button);
+      button.onclick = () => { this.run.unlockedUnits.push(unit.id); this.save(); $('#event-dialog').close(); this.completePostWarSegment(); }; list.append(button);
     });
     $('#event-continue-button').hidden = true; $('#event-dialog').showModal();
   }
@@ -1085,13 +1136,14 @@ export class Game {
     shuffle(WARGEAR).slice(0,3).forEach((gear,index) => {
       const price = 20 + index * 10; const button = document.createElement('button'); button.className = 'event-card'; button.disabled = this.run.currency < price;
       button.innerHTML = `<span>⚙</span><b>${gear.name}</b><small>◆ ${price} · ${gear.desc}</small>`;
-      button.onclick = () => { this.run.currency -= price; this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`}); this.save(); $('#event-dialog').close(); this.finishPostWarEvent(); }; list.append(button);
+      button.onclick = () => { this.run.currency -= price; this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`}); this.save(); $('#event-dialog').close(); this.completePostWarSegment(); }; list.append(button);
     });
     $('#event-continue-button').hidden = false; $('#event-dialog').showModal();
   }
 
   finishPostWarEvent() {
     if ($('#event-dialog').open) $('#event-dialog').close();
+    if (this.run?.rewardContext) return this.completePostWarSegment();
     const pending = this.run?.pendingPostWar; if (!pending) return;
     this.run.pendingPostWar = null; this.advanceRoute(pending.wasBoss, pending.node);
   }
