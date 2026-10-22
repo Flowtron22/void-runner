@@ -312,7 +312,7 @@ export class Game {
     this.renderProtocols();
     const legal = used > 0 && used <= this.run.cap;
     $('#deploy-button').disabled = !legal;
-    $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : '⌖ MAP';
+    $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : this.run.region === null ? '⌖ SECTORS' : '⌖ MAP';
     const chosen = this.unit(this.selectedBlueprint);
     $('#prep-status').textContent = legal ? `▦ ${this.run.deployed.length} · ${this.run.cap - used} FREE` : chosen ? `▸ ${chosen.name.toUpperCase()}` : '▦ SELECT';
   }
@@ -486,6 +486,7 @@ export class Game {
     if (!this.run || this.usedPoints() <= 0 || this.usedPoints() > this.run.cap) return;
     this.save();
     if (this.run.pendingNode) this.startBattle(this.run.pendingNode);
+    else if (this.run.region === null) { this.renderSectors(); this.show('sector'); }
     else { this.renderMap(); this.show('map'); }
   }
 
