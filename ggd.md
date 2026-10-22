@@ -22,9 +22,9 @@ Choose launch faction: Ultramarines / Imperial Fists / Grey Knights
 Choose one opening Battle Honour
     ↓
 Patrol vessel VIGILANT — recurring command hub
-    ├── Muster Deck: edit and deploy the army
-    ├── Requisition Vault: buy permanent upgrades
-    └── Strategium: select or resume a contract
+    ├── Ordeal: edit and deploy the army
+    ├── Research: buy permanent upgrades
+    └── Operation: select or resume a contract
               ↓
           Galaxy sector map
               ↓
@@ -86,14 +86,14 @@ NEW GAME
   → opening transmission
   → choose scale, faction and first Honour
   → command deck
-      01 Muster Deck → edit army → command deck
-      02 Requisition Vault → permanent upgrades → command deck
-      03 Strategium → select contract → mission briefing → area chart
+      Ordeal → edit army → command deck
+      Research → permanent upgrades → command deck
+      Operation → select contract → mission briefing → area chart
   → choose battle → deployment → automatic battle → Post-War Affairs → area chart
   → sector boss → command deck → next contract
 ```
 
-The command deck is the player's stable home between contracts. It always presents the same three decisions in a numbered order so the player understands preparation before deployment. An active contract changes the Strategium action from **Select Contract** to **Resume Contract**. Back from the sector chart, active area chart, Muster Deck, or Requisition Vault returns to the command deck. Mandatory battle rewards remain blocking until claimed.
+The command deck is the player's stable home between contracts. It presents three direct actions: **Ordeal**, **Research**, and **Operation**. Operation opens either the contract chart or the active operation. Back from the sector chart, active area chart, Ordeal, or Research returns to the command deck. Mandatory battle rewards remain blocking until claimed.
 
 ## 4. Campaign structure
 

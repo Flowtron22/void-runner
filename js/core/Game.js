@@ -407,8 +407,7 @@ export class Game {
     $('#hub-army-status').textContent = `${this.usedPoints()} / ${this.getBaseCap()} PTS`;
     $('#hub-req-status').textContent = `◆ ${this.meta.currency}`;
     $('#hub-contract-status').textContent = `${completed} / ${this.run.sectors.length}`;
-    const active = this.run.region !== null;
-    $('#hub-mission-label').textContent = active ? 'RESUME CONTRACT' : 'SELECT CONTRACT';
+    $('#hub-mission-label').textContent = 'OPERATION';
   }
 
   openStrategium() {
