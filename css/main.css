@@ -112,7 +112,7 @@ button:active{transform:translateY(2px);box-shadow:inset 0 1px #ffffff0d,0 1px 0
 .unit-icon,.grid-unit-icon{background-color:#111619;background-image:var(--unit-art,url("../assets/unit-silhouettes.png"));background-repeat:no-repeat;background-size:var(--unit-art-size,400% 400%);background-position:var(--unit-art-position,var(--icon-x) var(--icon-y));image-rendering:pixelated}
 .unit-icon{width:48px;height:48px;border-color:color-mix(in srgb,var(--unit-color) 60%,#c4ae77);box-shadow:inset 0 0 8px #000,0 0 8px color-mix(in srgb,var(--unit-color) 22%,transparent)}
 .grid-unit{container-type:size}
-.grid-unit-icon{position:absolute;left:50%;top:50%;width:min(86cqw,86cqh);height:min(86cqw,86cqh);transform:translate(-50%,-50%);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--unit-color) 50%,transparent))}
+.grid-unit-icon{position:absolute;left:50%;top:50%;width:min(96cqw,96cqh);height:min(96cqw,96cqh);transform:translate(-50%,-50%);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--unit-color) 50%,transparent))}
 @media(max-width:390px){.unit-card{grid-template-columns:44px 1fr 38px}.unit-icon{width:42px;height:42px}}
 
 /* Combat stays visual: dead cards rupture instead of explaining the event with more copy. */
