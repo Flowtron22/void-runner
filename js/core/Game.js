@@ -64,6 +64,23 @@ const CHAPTERS = [
   {id:'space-marines',label:'ULTRAMARINE',art:new URL('../../assets/chapter-ultramarines.webp',import.meta.url).href,locked:true},
   {id:'imperial-fists',label:'IMPERIAL FIST',art:new URL('../../assets/chapter-imperial-fist.webp',import.meta.url).href,locked:true}
 ];
+const GREY_KNIGHT_UNIT_ART = {
+  'grey-knight-strike-squad':[
+    new URL('../../assets/units/grey-knights/strike-squad.png',import.meta.url).href,
+    new URL('../../assets/units/grey-knights/strike-brother.png',import.meta.url).href
+  ],
+  'grey-knight-terminators':[
+    new URL('../../assets/units/grey-knights/terminator-hammer.png',import.meta.url).href,
+    new URL('../../assets/units/grey-knights/terminator-staff.png',import.meta.url).href
+  ],
+  'nemesis-dreadknight':[
+    new URL('../../assets/units/grey-knights/nemesis-dreadknight.png',import.meta.url).href,
+    new URL('../../assets/units/grey-knights/dreadnought.png',import.meta.url).href
+  ],
+  'brotherhood-librarian':[
+    new URL('../../assets/units/grey-knights/brotherhood-librarian.png',import.meta.url).href
+  ]
+};
 const UNIT_SPRITES = {
   'intercessor-squad':[0,0], 'terminator-squad':[1,0], 'redemptor-dreadnought':[2,0], 'captain':[3,0],
   'boyz':[0,1], 'meganobz':[1,1], 'deff-dread':[2,1], 'warboss':[3,1],
@@ -71,7 +88,12 @@ const UNIT_SPRITES = {
   'armiger-helverin':[0,3], 'armiger-warglaive':[1,3], 'knight-paladin':[2,3], 'acastus-knight-asterius':[3,3],
   'grey-knight-strike-squad':[0,0], 'grey-knight-terminators':[1,0], 'nemesis-dreadknight':[2,0], 'brotherhood-librarian':[3,0]
 };
-const unitSpriteStyle = id => {
+const unitSpriteStyle = (id, variant = 0) => {
+  const unitArt = GREY_KNIGHT_UNIT_ART[id];
+  if (unitArt) {
+    const src = unitArt[variant % unitArt.length];
+    return `--unit-art:url(${src});--unit-art-size:contain;--unit-art-position:center`;
+  }
   const hash = [...id].reduce((sum, character) => sum + character.charCodeAt(0), 0);
   const [column, row] = UNIT_SPRITES[id] || [hash % 4, Math.floor(hash / 4) % 4];
   return `--icon-x:${column * 100 / 3}%;--icon-y:${row * 100 / 3}%`;
@@ -487,6 +509,7 @@ export class Game {
     }
     for (const placed of this.run.deployed) {
       const unit = this.unit(placed.unitId);
+      const artVariant = this.run.deployed.filter(item => item.unitId === placed.unitId).findIndex(item => item.id === placed.id);
       const [w, h] = this.sizeFor(unit, placed.rotated);
       const el = document.createElement('button');
       el.className = `grid-unit ${this.selectedPlaced === placed.id ? 'selected' : ''} ${placed.attachedTo ? 'attached' : ''}`;
@@ -495,7 +518,7 @@ export class Game {
       el.style.top = `calc(${placed.y} * (var(--cell) + 2px))`;
       el.style.width = `calc(${w} * ((100% - 10px) / 6) + ${(w - 1) * 2}px)`;
       el.style.height = `calc(${h} * var(--cell) + ${(h - 1) * 2}px)`;
-      el.innerHTML = `<span class="grid-unit-icon" style="${unitSpriteStyle(unit.id)}" aria-hidden="true"></span><small>${unit.points}</small>`;
+      el.innerHTML = `<span class="grid-unit-icon" style="${unitSpriteStyle(unit.id,artVariant)}" aria-hidden="true"></span><small>${unit.points}</small>`;
       el.title = `${unit.name} · ${unit.role} · ${unit.points} points`;
       el.onclick = event => {
         event.stopPropagation();
@@ -524,7 +547,7 @@ export class Game {
       const rules = [...(unit.weapon.keywords || []), ...(unit.abilities || [])].slice(0,5);
       const badges = rules.map(rule => `<span class="rule-badge" title="${rule}" aria-label="${rule}">${ruleSymbol(rule)}</span>`).join('');
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
-      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span><span class="rule-badges">${badges}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
+      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id,deployedCount)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span><span class="rule-badges">${badges}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
       roster.append(button);
     }
