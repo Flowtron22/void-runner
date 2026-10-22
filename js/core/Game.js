@@ -650,9 +650,6 @@ export class Game {
   }
 
   renderSectors() {
-    const tier = CAMPAIGN_TIERS[this.run.tierIndex];
-    $('#campaign-stars').textContent = this.run.stars;
-    $('#sector-kicker').textContent = `${tier.points} PTS · ${tier.name} · ${this.run.sectors.length} SECTORS`;
     const map = $('#sector-map'); map.innerHTML = '<div class="galaxy-nebula"></div>';
     const positions = [[16,72],[39,54],[70,70],[82,39],[57,24],[27,31],[39,10],[77,12]];
     const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 100 100'); svg.classList.add('galaxy-routes');

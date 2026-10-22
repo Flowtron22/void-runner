@@ -175,7 +175,7 @@ body.main-menu-open .topbar{display:none}
 .intro-transmission h2{margin:5px 0 14px;color:#e6dcc7;font:700 24px/1.08 Georgia,"Times New Roman",serif;letter-spacing:.04em}
 .intro-copy{min-height:300px}.intro-copy p{margin:0 0 12px;color:#c4bcae;font:500 11px/1.52 Georgia,"Times New Roman",serif}.intro-copy strong{color:#ead7a2}.intro-copy .intro-oath{color:#eee5d2;font-weight:800;letter-spacing:.035em}.intro-copy p:last-child::after{content:"▮";margin-left:3px;color:#c6a866;animation:introCursor .7s steps(1,end) infinite}
 .intro-transmission .primary{color:#17140d;border-color:#ead7a2;background:linear-gradient(#e2cc92,#a98c4d);box-shadow:inset 0 1px #fff8,0 4px 13px #000b}
-#hub-screen{display:none;flex-direction:column;padding:82px 14px max(18px,env(safe-area-inset-bottom))}
+#hub-screen{display:none;flex-direction:column;padding:54px 14px max(18px,env(safe-area-inset-bottom))}
 #hub-screen.active{display:flex}
 .hub-heading,.hub-status,.hub-stations{position:relative;z-index:2}
 .hub-ambient{position:absolute;z-index:1;inset:0;overflow:hidden;pointer-events:none}
@@ -193,7 +193,7 @@ body.main-menu-open .topbar{display:none}
 @keyframes hubSignal{0%,100%{opacity:.35;transform:none}4%{opacity:.8;transform:translateY(3px)}6%{opacity:.1}8%,61%{opacity:.45}63%{opacity:0}65%{opacity:.7;transform:translateY(-2px)}67%{transform:none}}
 @keyframes hubCurrent{to{background-position:-220% 0}}
 @keyframes hubLamp{0%,46%,52%,100%{opacity:.25}47%,49%{opacity:1}50%{opacity:.08}51%,76%{opacity:.75}77%{opacity:.16}}
-@media(max-height:720px){#hub-screen{padding-top:70px}.hub-station{min-height:56px}.intro-copy{min-height:160px}.intro-copy p{font-size:10px;margin-bottom:9px}}
+@media(max-height:720px){#hub-screen{padding-top:46px}.hub-station{min-height:56px}.intro-copy{min-height:160px}.intro-copy p{font-size:10px;margin-bottom:9px}}
 @media(prefers-reduced-motion:reduce){.intro-copy p:last-child::after{animation:none}}
 .reduced-motion .hub-ambient *{animation:none!important}.reduced-motion .hub-hologram{opacity:.18}.reduced-motion .hub-wire{opacity:.25}
 .run-stats{grid-template-columns:repeat(4,1fr)}
