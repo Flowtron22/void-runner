@@ -137,7 +137,7 @@ button:active{transform:translateY(2px);box-shadow:inset 0 1px #ffffff0d,0 1px 0
 body.main-menu-open{overflow:hidden}
 body.main-menu-open .app-shell{min-height:100dvh;padding:0;background:#050606}
 body.main-menu-open .topbar{display:none}
-#home-screen.active{position:absolute;z-index:45;inset:0;isolation:isolate;display:flex;align-items:center;justify-content:flex-end;flex-direction:column;min-height:100dvh;padding:max(32px,env(safe-area-inset-top)) 24px max(30px,env(safe-area-inset-bottom));overflow:hidden;background:#050606 url("../assets/combat-patrol-menu.jpg") 33% top/140% auto no-repeat}
+#home-screen.active{position:absolute;z-index:45;inset:0;isolation:isolate;display:flex;align-items:center;justify-content:flex-end;flex-direction:column;min-height:100dvh;padding:max(32px,env(safe-area-inset-top)) 24px max(30px,env(safe-area-inset-bottom));overflow:hidden;background:#050606 url("../assets/combat-patrol-menu-portrait.png") center top/cover no-repeat}
 #home-screen::before{content:"";position:absolute;z-index:-2;inset:0;background:linear-gradient(180deg,#0204051f 0%,#02030408 30%,#03040457 58%,#020303f7 88%,#020303 100%)}
 #home-screen::after{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 36%,transparent 18%,#0003 64%);box-shadow:inset 0 0 110px 28px #0009}
 .menu-shade{position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,#0003,transparent 24%,transparent 76%,#0003)}
