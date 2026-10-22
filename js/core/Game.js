@@ -653,22 +653,16 @@ export class Game {
     const map = $('#sector-map');
     map.innerHTML = '<div class="galaxy-nebula"></div><div class="chart-grid"></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
     const count = this.run.sectors.length;
-    const positions = Array.from({length:count},(_,index) => [index === 0 || index === count - 1 ? 50 : index % 2 ? 27 : 73, 12 + index * (76 / Math.max(1,count - 1))]);
-    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 100 100'); svg.classList.add('galaxy-routes');
-    for (let i=1;i<this.run.sectors.length;i++) {
-      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('x1',positions[i-1][0]); line.setAttribute('y1',positions[i-1][1]); line.setAttribute('x2',positions[i][0]); line.setAttribute('y2',positions[i][1]);
-      line.classList.toggle('charted',this.run.sectors[i-1].status === 'complete'); svg.append(line);
-    }
-    map.append(svg);
+    const regionHeight = 84 / count;
     this.run.sectors.forEach((sector,index) => {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
-      button.className = `sector-card ${sector.status}`;
-      button.style.setProperty('--gx',`${positions[index][0]}%`); button.style.setProperty('--gy',`${positions[index][1]}%`);
+      button.className = `sector-card sector-${index % 2 ? 'east' : 'west'} ${sector.status}`;
+      button.style.setProperty('--sector-y',`${7 + index * regionHeight}%`);
+      button.style.setProperty('--sector-h',`${regionHeight + 1.5}%`);
       button.disabled = sector.status === 'locked';
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'AVAILABLE' : 'LOCKED';
-      button.innerHTML = `<span>0${index + 1}</span><i></i><b>${sector.name}</b><small>${status}</small>`;
+      button.innerHTML = `<b><em>0${index + 1}</em>${sector.name}</b><small>${status}</small>`;
       button.onclick = () => this.enterSector(index); map.append(button);
     });
     this.save();
