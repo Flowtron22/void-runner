@@ -64,19 +64,13 @@ const CHAPTERS = [
   {id:'space-marines',label:'ULTRAMARINE',art:new URL('../../assets/chapter-ultramarines.webp',import.meta.url).href,locked:true},
   {id:'imperial-fists',label:'IMPERIAL FIST',art:new URL('../../assets/chapter-imperial-fist.webp',import.meta.url).href,locked:true}
 ];
-const TERRITORY_ART = Array.from({length:10},(_,index) =>
-  new URL(`../../assets/maps/territories/territory-${String(index + 1).padStart(2,'0')}.png`,import.meta.url).href
-);
-const SECTOR_TERRITORIES = [2,5,7,9,1,3,0,4];
-const SECTOR_TERRITORY_LAYOUT = [
-  {x:2,y:2,w:58,h:25},{x:43,y:14,w:50,h:22},{x:37,y:29,w:58,h:20},{x:3,y:39,w:61,h:22},
-  {x:1,y:55,w:47,h:26},{x:36,y:56,w:59,h:25},{x:7,y:79,w:64,h:16},{x:53,y:76,w:43,h:22}
+const GALAXY_SYSTEM_LAYOUT = [
+  {x:17,y:68,size:1.22,tone:'gold'},{x:34,y:28,size:.88,tone:'blue'},{x:52,y:53,size:1.05,tone:'white'},
+  {x:71,y:22,size:.78,tone:'red'},{x:82,y:62,size:.94,tone:'blue'},{x:63,y:81,size:.7,tone:'white'},
+  {x:23,y:43,size:.68,tone:'red'},{x:88,y:39,size:.62,tone:'gold'}
 ];
-const AREA_TERRITORY_LAYOUT = [
-  {art:0,x:54.6,y:.7,w:33.4,h:14.8},{art:1,x:32.8,y:4.5,w:21.6,h:29.7},{art:2,x:5.3,y:14.5,w:30.6,h:36.7},
-  {art:3,x:44,y:15.3,w:25.3,h:28.4},{art:4,x:63.2,y:9.6,w:30.3,h:33.5},{art:5,x:25.4,y:31.2,w:20.7,h:21.9},
-  {art:6,x:76.8,y:19.2,w:22,h:33},{art:7,x:37,y:37.4,w:22.9,h:20.8},{art:8,x:54.8,y:39,w:25.5,h:16.7},
-  {art:9,x:8.8,y:49.3,w:29.6,h:19}
+const SYSTEM_DESTINATION_LAYOUT = [
+  {x:27,y:31,size:1.05,tone:'amber'},{x:73,y:34,size:.86,tone:'ice'},{x:59,y:74,size:1.16,tone:'crimson'}
 ];
 const GREY_KNIGHT_UNIT_ART = {
   'grey-knight-strike-squad':[
@@ -291,6 +285,7 @@ export class Game {
     document.body.classList.toggle('intro-open', name === 'intro');
     document.body.classList.toggle('hub-open', name === 'hub');
     document.body.classList.toggle('battle-active', name === 'battle');
+    document.body.classList.toggle('star-chart-open', name === 'sector' || name === 'map');
     if (name !== 'battle') this.clearBattleStage();
     this.currentScreen = name;
     if (this.run && name !== 'battle') { this.run.lastScreen = name; this.save({silent:true}); }
@@ -665,22 +660,25 @@ export class Game {
 
   renderSectors() {
     const map = $('#sector-map');
-    map.innerHTML = '<div class="galaxy-nebula"></div><div class="chart-grid"></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
-    const count = this.run.sectors.length;
+    map.innerHTML = '<div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div><div class="rift-label" aria-hidden="true">CICATRIX MALEDICTUM</div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
+    for (let index = 0; index < 72; index++) {
+      const star = document.createElement('i');
+      star.className = 'distant-star';
+      star.style.cssText = `--sx:${(index * 47) % 97}%;--sy:${(index * 71) % 93}%;--sd:${(index % 9) * -.23}s;--ss:${index % 7 === 0 ? 2 : 1}px`;
+      map.append(star);
+    }
     this.run.sectors.forEach((sector,index) => {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
-      const layout = SECTOR_TERRITORY_LAYOUT[index] || SECTOR_TERRITORY_LAYOUT.at(-1);
-      button.className = `sector-card territory-piece ${sector.status}`;
-      button.style.setProperty('--territory-x',`${layout.x}%`);
-      button.style.setProperty('--territory-y',`${layout.y}%`);
-      button.style.setProperty('--territory-w',`${layout.w}%`);
-      button.style.setProperty('--territory-h',`${layout.h}%`);
+      const layout = GALAXY_SYSTEM_LAYOUT[index] || GALAXY_SYSTEM_LAYOUT.at(-1);
+      button.className = `sector-card galaxy-system ${sector.status}`;
+      button.style.setProperty('--system-x',`${layout.x}%`);
+      button.style.setProperty('--system-y',`${layout.y}%`);
+      button.style.setProperty('--system-size',layout.size);
       button.style.setProperty('--sector-delay',`${index * 90}ms`);
       button.disabled = sector.status === 'locked';
-      const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'AVAILABLE' : 'LOCKED';
-      const art = TERRITORY_ART[SECTOR_TERRITORIES[index] ?? index % TERRITORY_ART.length];
-      button.innerHTML = `<img class="territory-art" src="${art}" alt=""><span class="territory-copy"><b><em><i>0${index + 1}</i></em>${sector.name}</b><small>${status}</small></span>`;
+      const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'TRAVEL AVAILABLE' : 'UNCHARTED';
+      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i></i></span><span class="system-copy"><b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
       button.onclick = () => this.engageSector(button,index); map.append(button);
     });
     this.save();
@@ -784,30 +782,16 @@ export class Game {
     $('#mission-strip-title').textContent = mission.title;
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
-    map.innerHTML = `<div class="galaxy-nebula"></div><div class="chart-grid"></div>`;
-    map.classList.add('area-galaxy','territory-area-map');
-    const entryLayout = AREA_TERRITORY_LAYOUT[9];
-    const entry = document.createElement('div');
-    entry.className = 'area-entry territory-piece';
-    entry.style.cssText = `--territory-x:${entryLayout.x}%;--territory-y:${entryLayout.y}%;--territory-w:${entryLayout.w}%;--territory-h:${entryLayout.h}%`;
-    entry.innerHTML = `<img class="territory-art" src="${TERRITORY_ART[entryLayout.art]}" alt=""><span class="territory-copy"><b>START</b><small>AREA ${Math.min(this.run.step + 1,tier.depth + 1)}</small></span>`;
-    map.append(entry);
-    const offerLayouts = [AREA_TERRITORY_LAYOUT[2],AREA_TERRITORY_LAYOUT[5],AREA_TERRITORY_LAYOUT[7]];
+    map.className = 'route-map area-galaxy star-system-map';
+    map.innerHTML = `<div class="galaxy-nebula"></div><div class="system-dust" aria-hidden="true"></div><div class="chart-grid"></div><div class="orbit-ring orbit-one" aria-hidden="true"></div><div class="orbit-ring orbit-two" aria-hidden="true"></div><div class="orbit-ring orbit-three" aria-hidden="true"></div><div class="primary-star" aria-hidden="true"><i></i><span>${sector.name.replace(' SECTOR','')}</span></div><div class="system-ship" aria-label="Grey Knights strike cruiser"><i></i><b>STRIKE CRUISER</b><small>IN SYSTEM</small></div><div class="system-planet decorative-planet planet-one" aria-hidden="true"></div><div class="system-planet decorative-planet planet-two" aria-hidden="true"></div>`;
     this.run.offers.forEach((node,offerIndex) => {
-      const layout = offerLayouts[offerIndex];
-      const choice = this.makeNodeButton(node,`available territory-piece ${node.type}`,true);
-      choice.style.setProperty('--territory-x',`${layout.x}%`); choice.style.setProperty('--territory-y',`${layout.y}%`);
-      choice.style.setProperty('--territory-w',`${layout.w}%`); choice.style.setProperty('--territory-h',`${layout.h}%`);
+      const layout = SYSTEM_DESTINATION_LAYOUT[offerIndex];
+      const choice = this.makeNodeButton(node,`available system-destination ${node.type}`,true);
+      choice.style.setProperty('--system-x',`${layout.x}%`); choice.style.setProperty('--system-y',`${layout.y}%`);
+      choice.style.setProperty('--planet-size',layout.size);
       choice.style.setProperty('--zone-delay',`${offerIndex * 110}ms`);
-      choice.insertAdjacentHTML('afterbegin',`<img class="territory-art" src="${TERRITORY_ART[layout.art]}" alt=""><span class="territory-signal" aria-hidden="true"></span>`);
+      choice.insertAdjacentHTML('afterbegin',`<span class="destination-planet tone-${layout.tone}" aria-hidden="true"><i></i></span>`);
       map.append(choice);
-    });
-    AREA_TERRITORY_LAYOUT.filter(layout => ![2,5,7,9].includes(layout.art)).forEach((layout,index) => {
-      const locked = document.createElement('div');
-      locked.className = 'territory-locked territory-piece';
-      locked.style.cssText = `--territory-x:${layout.x}%;--territory-y:${layout.y}%;--territory-w:${layout.w}%;--territory-h:${layout.h}%;--zone-delay:${(index + 3) * 70}ms`;
-      locked.innerHTML = `<img class="territory-art" src="${TERRITORY_ART[layout.art]}" alt=""><span>NO SIGNAL</span>`;
-      map.append(locked);
     });
     this.save();
   }
