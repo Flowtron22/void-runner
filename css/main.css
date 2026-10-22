@@ -211,23 +211,23 @@ body.intro-open .topbar{display:none}
 
 /* Imperial galactic chart */
 #sector-screen .section-head{margin-bottom:9px}
-#sector-screen .sector-map{height:calc(100dvh - 134px);min-height:560px;margin:0 0 72px;border-color:#8b754d;background:#05070a url("../assets/imperial-galaxy-chart.webp") center/auto 100% no-repeat;box-shadow:inset 0 0 0 1px #d4b66c26,inset 0 0 75px #000,0 8px 22px #000b}
+#sector-screen .sector-map{height:calc(100dvh - 134px);min-height:600px;margin:0 0 72px;border-color:#8b754d;background:#05070a url("../assets/imperial-sector-cartograph.png") 49% center/auto 100% no-repeat;box-shadow:inset 0 0 0 1px #d4b66c26,inset 0 0 75px #000,0 8px 22px #000b}
 #sector-screen .sector-map::before{z-index:1;opacity:.38;background-image:linear-gradient(#88a3b30d 1px,transparent 1px),linear-gradient(90deg,#88a3b30d 1px,transparent 1px),radial-gradient(circle,#e7d6a8 0 1px,transparent 1.5px);background-size:24px 24px,24px 24px,61px 67px}
 #sector-screen .sector-map::after{content:"";position:absolute;z-index:6;inset:7px;border:1px solid #c4a66b55;clip-path:polygon(0 0,23% 0,23% 2px,77% 2px,77% 0,100% 0,100% 25%,calc(100% - 2px) 25%,calc(100% - 2px) 75%,100% 75%,100% 100%,77% 100%,77% calc(100% - 2px),23% calc(100% - 2px),23% 100%,0 100%,0 75%,2px 75%,2px 25%,0 25%);pointer-events:none}
-#sector-screen .galaxy-nebula{z-index:1;background:linear-gradient(180deg,#02050952,#03070b25 52%,#0203069c),radial-gradient(ellipse at 50% 51%,transparent 15%,#02040778 72%,#000 100%);filter:none}
-.chart-grid{position:absolute;z-index:2;inset:0;background:repeating-radial-gradient(ellipse at 50% 50%,transparent 0 62px,#c9b17416 63px 64px,transparent 65px 104px);opacity:.65;pointer-events:none}
-.great-rift{position:absolute;z-index:2;left:13%;top:43%;width:77%;height:8%;transform:rotate(-25deg);border-top:1px solid #ef5cb57a;border-bottom:1px solid #793f9d66;background:linear-gradient(180deg,transparent,#c43c8e30,#6c3e9738,transparent);box-shadow:0 0 18px #ba3c9566;filter:blur(.35px);pointer-events:none}
+#sector-screen .galaxy-nebula{z-index:1;background:linear-gradient(180deg,#02050924,#03070b18 52%,#02030678),radial-gradient(ellipse at 50% 51%,transparent 10%,#02040752 75%,#000b 100%);filter:none}
+.chart-grid{position:absolute;z-index:2;inset:0;background:linear-gradient(90deg,transparent 49.8%,#d1b87922 50%,transparent 50.2%),repeating-linear-gradient(0deg,transparent 0 39px,#8ca5af0d 40px),repeating-linear-gradient(90deg,transparent 0 39px,#8ca5af0d 40px);opacity:.7;pointer-events:none}
 .chart-compass{position:absolute;z-index:5;right:16px;top:16px;width:36px;height:36px;border:1px solid #bca36d99;border-radius:50%;color:#d8bf87;font-size:7px;text-align:center;box-shadow:0 0 0 4px #05080b99}.chart-compass::before,.chart-compass::after{content:"";position:absolute;background:#bca36d66}.chart-compass::before{left:50%;top:-7px;width:1px;height:48px}.chart-compass::after{left:-7px;top:50%;width:48px;height:1px}.chart-compass i{position:absolute;left:13px;top:7px;border:5px solid transparent;border-bottom:13px solid #d5b56f}.chart-compass b{position:absolute;left:15px;top:-12px}
-.chart-legend{position:absolute;z-index:5;left:14px;bottom:13px;display:flex;gap:8px;padding:5px 7px;border:1px solid #7a694877;background:#05080bc9;color:#a89e8c;font-size:5px;letter-spacing:.08em}.chart-legend span:first-child{color:#f19a80}.chart-legend span:last-child{color:#adc78d}
 #sector-screen .galaxy-routes{z-index:3}
-#sector-screen .galaxy-routes line{stroke:#d6bc7d;stroke-width:.62;stroke-dasharray:1.8 1.3;opacity:.7;filter:drop-shadow(0 0 2px #d2ae63)}
+#sector-screen .galaxy-routes line{stroke:#e0c98b;stroke-width:.72;stroke-dasharray:1.4 1.1;opacity:.82;filter:drop-shadow(0 0 2px #d2ae63)}
 #sector-screen .galaxy-routes line.charted{stroke:#a9c884;stroke-width:1;opacity:1}
-#sector-screen .sector-card{z-index:4;width:128px;min-height:94px;grid-template-rows:54px auto auto;gap:3px}
-#sector-screen .sector-card>span{width:50px;height:50px;border-width:2px;background:radial-gradient(circle at 36% 31%,#e0c983,#65573b 24%,#171b22 66%);box-shadow:0 0 0 4px #0b0d12cc,0 0 0 6px #a58a5138,0 0 16px #c3a55b70;color:#f3dfaa;font-size:9px;text-shadow:0 1px #000}
-#sector-screen .sector-card>b{justify-self:center;padding:3px 6px 2px;border:1px solid #8f7b546e;background:#070a0dd9;color:#eee3c9;font-size:8px;line-height:1.15;letter-spacing:.05em;white-space:nowrap;text-shadow:0 1px 2px #000}
-#sector-screen .sector-card>small{justify-self:center;padding:2px 5px;background:#05070ac9;color:#b8ae9c;font-size:5.5px;letter-spacing:.08em;white-space:nowrap}
-#sector-screen .sector-card.locked{opacity:.58}
-#sector-screen .sector-card.available>span{border-color:#ff9a7e;background:radial-gradient(circle at 35% 30%,#ffd0a3,#d66b52 25%,#772a2b 57%,#1b1118 76%);box-shadow:0 0 0 4px #10090dcc,0 0 0 7px #d65e4947,0 0 25px #e6543f}
+#sector-screen .sector-card{z-index:4;width:178px;min-height:58px;padding:5px 8px;grid-template-columns:45px 1fr;grid-template-rows:1fr 1fr;gap:0 8px;border:1px solid #9c8558;background:linear-gradient(90deg,#070a0df2,#15191ce8);box-shadow:inset 3px 0 #806b45,0 5px 14px #000b;text-align:left}
+#sector-screen .sector-card:hover,#sector-screen .sector-card:focus-visible{border:1px solid #d0b474;background:linear-gradient(90deg,#121519f5,#202426ed)}
+#sector-screen .sector-card>span{grid-row:1/3;align-self:center;width:42px;height:42px;border-width:2px;background:radial-gradient(circle at 36% 31%,#e0c983,#65573b 24%,#171b22 66%);box-shadow:0 0 0 3px #0b0d12cc,0 0 12px #c3a55b70;color:#f3dfaa;font-size:8px;text-shadow:0 1px #000}
+#sector-screen .sector-card>b{align-self:end;padding:0;border:0;background:transparent;color:#eee3c9;font-size:8px;line-height:1.15;letter-spacing:.05em;white-space:nowrap;text-shadow:0 1px 2px #000}
+#sector-screen .sector-card>small{align-self:start;padding:3px 0 0;background:transparent;color:#b8ae9c;font-size:5.5px;letter-spacing:.08em;white-space:nowrap}
+#sector-screen .sector-card.locked{opacity:.72}
+#sector-screen .sector-card.available{border:1px solid #d76650;background:linear-gradient(90deg,#291313f5,#17191de8);box-shadow:inset 3px 0 #d4513d,0 0 18px #c5483355,0 5px 14px #000b}
+#sector-screen .sector-card.available>span{border-color:#ff9a7e;background:radial-gradient(circle at 35% 30%,#ffd0a3,#d66b52 25%,#772a2b 57%,#1b1118 76%);box-shadow:0 0 0 3px #10090dcc,0 0 19px #e6543f}
 #sector-screen .sector-card.complete>span{border-color:#b3cc8a;color:#e7f2cf}
 
 /* Galaxy charts use spatial star systems, not menu trees. */

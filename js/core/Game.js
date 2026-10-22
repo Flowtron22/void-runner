@@ -651,8 +651,9 @@ export class Game {
 
   renderSectors() {
     const map = $('#sector-map');
-    map.innerHTML = '<div class="galaxy-nebula"></div><div class="chart-grid"></div><i class="great-rift" aria-hidden="true"></i><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div><div class="chart-legend" aria-hidden="true"><span>● AVAILABLE</span><span>◇ LOCKED</span><span>✦ CLEARED</span></div>';
-    const positions = [[48,55],[27,35],[74,43],[34,76],[17,17],[18,86],[83,18],[67,76]];
+    map.innerHTML = '<div class="galaxy-nebula"></div><div class="chart-grid"></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
+    const count = this.run.sectors.length;
+    const positions = Array.from({length:count},(_,index) => [index === 0 || index === count - 1 ? 50 : index % 2 ? 27 : 73, 12 + index * (76 / Math.max(1,count - 1))]);
     const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 100 100'); svg.classList.add('galaxy-routes');
     for (let i=1;i<this.run.sectors.length;i++) {
       const line = document.createElementNS('http://www.w3.org/2000/svg','line');
