@@ -14,9 +14,11 @@ const MISSION_SCRIPTS = [
   {title:'THE LAST DEBT',quote:'This is the final line in my ledger. Cross it out in fire, and the void will remember who collected.',objective:'Complete the final sector contract.',reward:'FINAL CONTRACT · CAMPAIGN VICTORY'}
 ];
 const INTRO_SCRIPT = [
-  'The frontier does not ask who is innocent. It records only who survived.',
-  'You command the patrol vessel VIGILANT: a warship too small for conquest, carrying a force too valuable to waste.',
-  'Bounty Marshal Severine Voss holds the sector warrants. Muster your army. Strengthen the ship. Choose which debt the void will pay first.'
+  'Across the Imperium, worlds fall silent. Heresy spreads. The veil between reality and the Warp grows thin.',
+  "You command a strike force of the Grey Knights, the Emperor's secret warriors, dispatched where entire armies would fail.",
+  'Your brothers are few. Your duty is eternal.',
+  'By the authority of the Holy Ordo Malleus, seek the corruption. Banish the daemon. Suffer not the unclean to endure.',
+  'No witness. No glory. Only duty.'
 ];
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -300,7 +302,7 @@ export class Game {
     this.stopIntro();
     this.introComplete = false;
     $('#intro-copy').innerHTML = '';
-    $('#intro-continue-button').textContent = 'SKIP TRANSMISSION';
+    $('#intro-continue-button').textContent = 'ASSUME COMMAND';
     this.show('intro');
     const full = INTRO_SCRIPT.join('\n');
     if (this.meta.settings?.reducedMotion) return this.finishIntroText();
@@ -315,7 +317,15 @@ export class Game {
   renderIntroText(text) {
     const lines = text.split('\n');
     $('#intro-copy').replaceChildren(...lines.map(line => {
-      const paragraph = document.createElement('p'); paragraph.textContent = line; return paragraph;
+      const paragraph = document.createElement('p');
+      const knightName = 'Grey Knights';
+      if (line.includes(knightName)) {
+        const [before, after] = line.split(knightName);
+        paragraph.append(before);
+        const strong = document.createElement('strong'); strong.textContent = knightName; paragraph.append(strong, after);
+      } else paragraph.textContent = line;
+      if (line === INTRO_SCRIPT.at(-1)) paragraph.classList.add('intro-oath');
+      return paragraph;
     }));
   }
 
