@@ -653,16 +653,16 @@ export class Game {
     const map = $('#sector-map');
     map.innerHTML = '<div class="galaxy-nebula"></div><div class="chart-grid"></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
     const count = this.run.sectors.length;
-    const regionHeight = 84 / count;
+    const regionStride = 86 / count;
     this.run.sectors.forEach((sector,index) => {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
       button.className = `sector-card sector-${index % 2 ? 'east' : 'west'} ${sector.status}`;
-      button.style.setProperty('--sector-y',`${7 + index * regionHeight}%`);
-      button.style.setProperty('--sector-h',`${regionHeight + 1.5}%`);
+      button.style.setProperty('--sector-y',`${6 + index * regionStride}%`);
+      button.style.setProperty('--sector-h',`${regionStride - 2}%`);
       button.disabled = sector.status === 'locked';
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'AVAILABLE' : 'LOCKED';
-      button.innerHTML = `<b><em>0${index + 1}</em>${sector.name}</b><small>${status}</small>`;
+      button.innerHTML = `<b><em><span>0${index + 1}</span></em>${sector.name}</b><small>${status}</small>`;
       button.onclick = () => this.enterSector(index); map.append(button);
     });
     this.save();
@@ -756,27 +756,21 @@ export class Game {
     const mission = this.missionFor(this.run.region);
     $('#mission-strip-title').textContent = mission.title;
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
-    const map = $('#route-map'); map.innerHTML = '<div class="galaxy-nebula"></div><div class="galaxy-start"><i></i><span>ENTRY</span></div>';
-    map.classList.add('area-galaxy');
-    const history = this.run.history.filter(node => node.region === this.run.region).sort((a,b)=>a.step-b.step);
-    const lanes = [20,50,80]; const yFor = step => 84 - (step + 1) * (70 / (tier.depth + 1));
-    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 100 100'); svg.classList.add('galaxy-routes');
-    let previous = [50,91];
-    history.forEach(node => {
-      const point = [lanes[node.lane ?? 1],yFor(node.step)];
-      const line = document.createElementNS('http://www.w3.org/2000/svg','line'); line.setAttribute('x1',previous[0]); line.setAttribute('y1',previous[1]); line.setAttribute('x2',point[0]); line.setAttribute('y2',point[1]); line.classList.add('charted'); svg.append(line); previous=point;
-      const completed = this.makeNodeButton(node,`completed ${node.type}`,false); completed.style.setProperty('--gx',`${point[0]}%`); completed.style.setProperty('--gy',`${point[1]}%`); map.append(completed);
-    });
-    const currentY = yFor(this.run.step);
+    const map = $('#route-map');
+    map.innerHTML = `<div class="galaxy-nebula"></div><div class="chart-grid"></div><div class="area-entry"><b>START</b><small>AREA ${Math.min(this.run.step + 1,tier.depth + 1)}</small></div>`;
+    map.classList.add('area-galaxy','territory-area-map');
+    const layouts = [
+      {x:4,y:20,w:43,h:35,shape:'west'},
+      {x:41,y:10,w:55,h:38,shape:'north'},
+      {x:47,y:46,w:49,h:39,shape:'east'}
+    ];
     this.run.offers.forEach((node,offerIndex) => {
-      const point = [lanes[node.lane ?? offerIndex],currentY]; const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('x1',previous[0]); line.setAttribute('y1',previous[1]); line.setAttribute('x2',point[0]); line.setAttribute('y2',point[1]); svg.append(line);
-      const choice = this.makeNodeButton(node,`available ${node.type}`,true); choice.style.setProperty('--gx',`${point[0]}%`); choice.style.setProperty('--gy',`${point[1]}%`); map.append(choice);
+      const layout = layouts[offerIndex];
+      const choice = this.makeNodeButton(node,`available zone-${layout.shape} ${node.type}`,true);
+      choice.style.setProperty('--zone-x',`${layout.x}%`); choice.style.setProperty('--zone-y',`${layout.y}%`);
+      choice.style.setProperty('--zone-w',`${layout.w}%`); choice.style.setProperty('--zone-h',`${layout.h}%`);
+      map.append(choice);
     });
-    if (this.run.step < tier.depth) {
-      const destination = document.createElement('div'); destination.className='galaxy-destination'; destination.innerHTML='<i></i><span>BOSS SIGNAL</span>'; map.append(destination);
-    }
-    map.prepend(svg);
     this.save();
   }
 
