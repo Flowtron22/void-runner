@@ -403,15 +403,12 @@ export class Game {
 
   renderHub() {
     if (!this.run) return;
-    const faction = this.faction(this.run.faction);
     const completed = this.run.sectors.filter(sector => sector.status === 'complete').length;
     $('#hub-army-status').textContent = `${this.usedPoints()} / ${this.getBaseCap()} PTS`;
     $('#hub-req-status').textContent = `◆ ${this.meta.currency}`;
     $('#hub-contract-status').textContent = `${completed} / ${this.run.sectors.length}`;
-    $('#hub-order').textContent = `${faction.name} patrol · Prepare the army, invest permanent Requisition, then accept a contract.`;
     const active = this.run.region !== null;
     $('#hub-mission-label').textContent = active ? 'RESUME CONTRACT' : 'SELECT CONTRACT';
-    $('#hub-mission-copy').textContent = active ? `${MISSION_SCRIPTS[this.run.region % MISSION_SCRIPTS.length].title} · ${this.run.step} areas secured.` : 'Hear the briefing and chart a mission.';
   }
 
   openStrategium() {
