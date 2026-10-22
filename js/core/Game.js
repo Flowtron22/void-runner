@@ -660,6 +660,12 @@ export class Game {
 
   renderSectors() {
     const map = $('#sector-map');
+    const activeIndex = Number.isInteger(this.run.region) ? this.run.region : null;
+    if (activeIndex !== null && this.run.sectors[activeIndex]) this.run.sectors[activeIndex].status = 'available';
+    if (!this.run.sectors.some(sector => sector.status === 'available')) {
+      const nextSector = this.run.sectors.find(sector => sector.status !== 'complete');
+      if (nextSector) nextSector.status = 'available';
+    }
     map.innerHTML = '<div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div><div class="rift-label" aria-hidden="true">CICATRIX MALEDICTUM</div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
     for (let index = 0; index < 72; index++) {
       const star = document.createElement('i');
@@ -671,12 +677,12 @@ export class Game {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
       const layout = GALAXY_SYSTEM_LAYOUT[index] || GALAXY_SYSTEM_LAYOUT.at(-1);
-      button.className = `sector-card galaxy-system ${sector.status}`;
+      button.className = `sector-card galaxy-system ${sector.status} ${activeIndex === index ? 'active-system' : ''}`;
       button.style.setProperty('--system-x',`${layout.x}%`);
       button.style.setProperty('--system-y',`${layout.y}%`);
       button.style.setProperty('--system-size',layout.size);
       button.style.setProperty('--sector-delay',`${index * 90}ms`);
-      button.disabled = sector.status === 'locked';
+      button.disabled = sector.status === 'locked' && activeIndex !== index;
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'TRAVEL AVAILABLE' : 'UNCHARTED';
       button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i></i></span><span class="system-copy"><b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
       button.onclick = () => this.engageSector(button,index); map.append(button);
@@ -695,8 +701,9 @@ export class Game {
 
   enterSector(index) {
     const sector = this.run.sectors[index];
-    if (!sector || sector.status === 'locked' || sector.status === 'complete') return;
+    if (!sector) return;
     if (this.run.region === index) { this.renderMap(); return this.show('map'); }
+    if (sector.status === 'locked' || sector.status === 'complete') return;
     this.run.story ||= {briefed:[],completed:[],pendingBriefing:null};
     this.run.story.pendingBriefing = index;
     this.save();
