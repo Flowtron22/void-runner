@@ -40,6 +40,40 @@
       </nav>
     </section>
 
+    <section id="intro-screen" class="screen" aria-labelledby="intro-title">
+      <div class="intro-vignette" aria-hidden="true"></div>
+      <article class="intro-transmission">
+        <p class="eyebrow">// COMMAND AUTHORITY TRANSFER</p>
+        <h2 id="intro-title">THE VOID KEEPS ITS DEBTS.</h2>
+        <div id="intro-copy" class="intro-copy" aria-live="polite"></div>
+        <button id="intro-continue-button" class="primary large">SKIP TRANSMISSION</button>
+      </article>
+    </section>
+
+    <section id="hub-screen" class="screen" aria-labelledby="hub-title">
+      <div class="hub-heading">
+        <p class="eyebrow">PATROL VESSEL // VIGILANT</p>
+        <h2 id="hub-title">COMMAND DECK</h2>
+        <p id="hub-order">Prepare the patrol, strengthen the warship, then accept a contract.</p>
+      </div>
+      <div class="hub-status pixel-panel">
+        <span><small>ARMY</small><b id="hub-army-status">0 / 500 PTS</b></span>
+        <span><small>PERMANENT REQ.</small><b id="hub-req-status">◆ 0</b></span>
+        <span><small>CONTRACTS</small><b id="hub-contract-status">0 / 4</b></span>
+      </div>
+      <nav class="hub-stations" aria-label="Command deck stations">
+        <button id="hub-army-button" class="hub-station hub-station-army">
+          <span>01</span><div><small>MUSTER DECK</small><b>EDIT ARMY</b><i>Choose units and arrange deployment.</i></div><strong>›</strong>
+        </button>
+        <button id="hub-upgrades-button" class="hub-station hub-station-upgrades">
+          <span>02</span><div><small>REQUISITION VAULT</small><b>PERMANENT UPGRADES</b><i>Invest rewards that survive every campaign.</i></div><strong>›</strong>
+        </button>
+        <button id="hub-missions-button" class="hub-station hub-station-missions">
+          <span>03</span><div><small>STRATEGIUM</small><b id="hub-mission-label">SELECT CONTRACT</b><i id="hub-mission-copy">Hear the briefing and chart a mission.</i></div><strong>›</strong>
+        </button>
+      </nav>
+    </section>
+
     <section id="setup-screen" class="screen" aria-labelledby="setup-title">
       <div class="section-head"><div><p class="eyebrow" id="setup-step">01 / 03 · CRUSADE SCALE</p><h2 id="setup-title">CHOOSE POINTS</h2></div></div>
       <div id="setup-options" class="setup-options"></div>
@@ -49,7 +83,6 @@
     <section id="sector-screen" class="screen" aria-labelledby="sector-title">
       <div class="section-head"><div><p class="eyebrow" id="sector-kicker">GALAXY MAP</p><h2 id="sector-title">CHOOSE A SECTOR</h2></div><div class="cap-badge"><small>STARS</small><b id="campaign-stars">0</b><span>★</span></div></div>
       <div id="sector-map" class="sector-map"></div>
-      <button id="sector-loadout-button" class="large">▦ EDIT ARMY</button>
     </section>
 
     <section id="map-screen" class="screen" aria-labelledby="map-title">
@@ -58,7 +91,7 @@
         <div class="cap-badge"><small>POINTS LIMIT</small><b id="map-cap">500</b><span>PTS</span></div>
       </div>
       <div class="run-stats pixel-panel">
-        <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Sector stars"><small>★</small><b id="run-data">0</b></span><span title="Campaign Requisition"><small>◆</small><b id="run-currency">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button" aria-label="Edit army">▦ EDIT</button>
+        <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Sector stars"><small>★</small><b id="run-data">0</b></span><span title="Campaign Requisition"><small>◆</small><b id="run-currency">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span>
       </div>
       <button id="mission-log-button" class="mission-strip" aria-label="Review current contract">
         <img src="assets/bounty-marshal-severine-voss.png" alt="Bounty Marshal Severine Voss" />

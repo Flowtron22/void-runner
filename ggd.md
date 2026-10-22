@@ -6,12 +6,14 @@ This is the authoritative gameplay and implementation handoff. Read it with `ART
 
 The game is now a portrait-first 40K-inspired army-building roguelike with automatic dice combat and a star-driven sector campaign.
 
-Last handoff update: 21 October 2026. Campaign and map implementation baseline: `6dc3304`.
+Last handoff update: 22 October 2026. The patrol-vessel hub is the campaign's navigation baseline.
 
 This file describes the current code and records unfinished work explicitly. Start with section 15 when continuing on another PC. Do not restore the superseded spaceship game or the old campaign that increased points after each warzone.
 
 ```text
-Main Menu: Play / Settings / Credits
+Main Menu: Start / Resume / Settings / Credits
+    ↓
+Opening command transmission: who the commander is and why the patrol exists
     ↓
 Choose campaign scale: 500 / 1000 / 1500 / 2000 / 3000 points
     ↓
@@ -19,7 +21,14 @@ Choose launch faction: Ultramarines / Imperial Fists / Grey Knights
     ↓
 Choose one opening Battle Honour
     ↓
-Galaxy sector map
+Patrol vessel VIGILANT — recurring command hub
+    ├── Muster Deck: edit and deploy the army
+    ├── Requisition Vault: buy permanent upgrades
+    └── Strategium: select or resume a contract
+              ↓
+          Galaxy sector map
+              ↓
+          Bounty Marshal briefing
     ↓
 Connected area map: choose one of three star-rated battles
     ↓
@@ -30,6 +39,8 @@ Post-War Affairs: choose a segment
 Requisition / three Honours / three Stratagems / recruit / store
     ↓
 Collected stars unlock stronger sector boss tiers
+    ↓
+Sector boss secured → return to the VIGILANT hub
     ↓
 Secure every sector; bank permanent Requisition
 ```
@@ -71,8 +82,18 @@ The previous original unit roster and flat-damage combat are no longer active.
 ## 3. Player flow
 
 ```text
-Choose scale → faction → first Honour → sector → area → deploy → auto-battle → Post-War Affairs → boss tier
+NEW GAME
+  → opening transmission
+  → choose scale, faction and first Honour
+  → command deck
+      01 Muster Deck → edit army → command deck
+      02 Requisition Vault → permanent upgrades → command deck
+      03 Strategium → select contract → mission briefing → area chart
+  → choose battle → deployment → automatic battle → Post-War Affairs → area chart
+  → sector boss → command deck → next contract
 ```
+
+The command deck is the player's stable home between contracts. It always presents the same three decisions in a numbered order so the player understands preparation before deployment. An active contract changes the Strategium action from **Select Contract** to **Resume Contract**. Back from the sector chart, active area chart, Muster Deck, or Requisition Vault returns to the command deck. Mandatory battle rewards remain blocking until claimed.
 
 ## 4. Campaign structure
 

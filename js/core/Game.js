@@ -13,6 +13,11 @@ const MISSION_SCRIPTS = [
   {title:'BLACK SUN WARRANT',quote:'The charts end at a black sun. The bounty does not. Take your patrol beyond the sanctioned routes.',objective:'Chart the sector and silence its apex commander.',reward:'CONTRACT REWARD · PERMANENT REQUISITION'},
   {title:'THE LAST DEBT',quote:'This is the final line in my ledger. Cross it out in fire, and the void will remember who collected.',objective:'Complete the final sector contract.',reward:'FINAL CONTRACT · CAMPAIGN VICTORY'}
 ];
+const INTRO_SCRIPT = [
+  'The frontier does not ask who is innocent. It records only who survived.',
+  'You command the patrol vessel VIGILANT: a warship too small for conquest, carrying a force too valuable to waste.',
+  'Bounty Marshal Severine Voss holds the sector warrants. Muster your army. Strengthen the ship. Choose which debt the void will pay first.'
+];
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -123,6 +128,9 @@ export class Game {
     this.battleSpeed = 1;
     this.currentScreen = 'home';
     this.setupStage = 'tier';
+    this.loadoutReturn = 'hub';
+    this.introTimer = null;
+    this.introComplete = false;
     this.saveNoticeTimer = null;
     this.setupChoice = {tier:0,faction:null,honours:[]};
     this.bindUI();
@@ -160,8 +168,12 @@ export class Game {
   }
 
   bindUI() {
-    $('#new-run-button').onclick = () => this.beginSetup();
+    $('#new-run-button').onclick = () => this.beginIntro();
     $('#resume-button').onclick = () => this.resumeRun();
+    $('#intro-continue-button').onclick = () => this.continueIntro();
+    $('#hub-army-button').onclick = () => this.openLoadout('hub');
+    $('#hub-upgrades-button').onclick = () => { this.renderResearch(); this.show('research'); };
+    $('#hub-missions-button').onclick = () => this.openStrategium();
     $('#settings-button').onclick = () => $('#settings-dialog').showModal();
     $('#credits-button').onclick = () => $('#credits-dialog').showModal();
     $('#close-settings-button').onclick = () => $('#settings-dialog').close();
@@ -174,12 +186,10 @@ export class Game {
       this.meta.settings = {...this.meta.settings,reducedMotion:event.target.checked};
       document.body.classList.toggle('reduced-motion', event.target.checked); this.save();
     };
-    $('#sector-loadout-button').onclick = () => this.openLoadout();
     $('#event-continue-button').onclick = () => this.finishPostWarEvent();
     $('#home-button').onclick = () => { if (!this.battle) { this.save(); this.renderHome(); this.show('home'); } };
     $('#help-button').onclick = () => $('#help-dialog').showModal();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
-    $('#open-loadout-button').onclick = () => this.openLoadout();
     $('#rotate-button').onclick = () => { this.rotated = !this.rotated; this.renderLoadout(); };
     $('#remove-button').onclick = () => this.removeSelected();
     $('#clear-button').onclick = () => { if (!this.run) return; this.run.deployed = []; this.selectedPlaced = null; this.renderLoadout(); this.save(); };
@@ -187,7 +197,7 @@ export class Game {
     $('#speed-button').onclick = () => this.toggleSpeed();
     $('#skip-button').onclick = () => this.resolveBattleNow();
     $('#run-end-button').onclick = () => this.handleEndButton();
-    $('#research-back-button').onclick = () => { this.renderHome(); this.show('home'); };
+    $('#research-back-button').onclick = () => { this.renderHub(); this.show('hub'); };
     for (const button of $$('[data-prep-tab]')) button.onclick = () => this.setPrepTab(button.dataset.prepTab);
   }
 
@@ -246,6 +256,8 @@ export class Game {
   show(name) {
     for (const screen of $$('.screen')) screen.classList.toggle('active', screen.id === `${name}-screen`);
     document.body.classList.toggle('main-menu-open', name === 'home');
+    document.body.classList.toggle('intro-open', name === 'intro');
+    document.body.classList.toggle('hub-open', name === 'hub');
     document.body.classList.toggle('battle-active', name === 'battle');
     if (name !== 'battle') this.clearBattleStage();
     this.currentScreen = name;
@@ -260,17 +272,19 @@ export class Game {
 
   goBack() {
     if (this.battle) return;
+    if (this.currentScreen === 'intro') { this.stopIntro(); this.renderHome(); return this.show('home'); }
+    if (this.currentScreen === 'hub') { this.renderHome(); return this.show('home'); }
     if (this.currentScreen === 'setup') {
       if (this.setupStage === 'honour') return this.renderSetup('faction');
       if (this.setupStage === 'faction') return this.renderSetup('tier');
       this.renderHome(); return this.show('home');
     }
     if (this.currentScreen === 'loadout') {
-      if (this.run?.region === null) { this.renderSectors(); return this.show('sector'); }
-      this.renderMap(); return this.show('map');
+      if (this.run?.pendingNode || this.loadoutReturn === 'map') { this.renderMap(); return this.show('map'); }
+      if (this.loadoutReturn === 'sector') { this.renderSectors(); return this.show('sector'); }
+      this.renderHub(); return this.show('hub');
     }
-    if (this.currentScreen === 'map') { this.renderSectors(); return this.show('sector'); }
-    if (this.currentScreen === 'sector' || this.currentScreen === 'research') { this.renderHome(); return this.show('home'); }
+    if (this.currentScreen === 'map' || this.currentScreen === 'sector' || this.currentScreen === 'research') { this.renderHub(); return this.show('hub'); }
     if (this.currentScreen === 'reward') return this.announceSave('CHOOSE A REWARD TO CONTINUE', true);
     this.renderHome(); this.show('home');
   }
@@ -280,6 +294,43 @@ export class Game {
     $('#new-run-button').textContent = this.run ? 'NEW GAME' : 'START';
     $('#reduced-motion-toggle').checked = Boolean(this.meta.settings?.reducedMotion);
     this.renderHeader();
+  }
+
+  beginIntro() {
+    this.stopIntro();
+    this.introComplete = false;
+    $('#intro-copy').innerHTML = '';
+    $('#intro-continue-button').textContent = 'SKIP TRANSMISSION';
+    this.show('intro');
+    const full = INTRO_SCRIPT.join('\n');
+    if (this.meta.settings?.reducedMotion) return this.finishIntroText();
+    let index = 0;
+    this.introTimer = setInterval(() => {
+      index++;
+      this.renderIntroText(full.slice(0, index));
+      if (index >= full.length) this.finishIntroText();
+    }, 24);
+  }
+
+  renderIntroText(text) {
+    const lines = text.split('\n');
+    $('#intro-copy').replaceChildren(...lines.map(line => {
+      const paragraph = document.createElement('p'); paragraph.textContent = line; return paragraph;
+    }));
+  }
+
+  finishIntroText() {
+    this.stopIntro();
+    this.renderIntroText(INTRO_SCRIPT.join('\n'));
+    this.introComplete = true;
+    $('#intro-continue-button').textContent = 'ASSUME COMMAND';
+  }
+
+  stopIntro() { if (this.introTimer) clearInterval(this.introTimer); this.introTimer = null; }
+
+  continueIntro() {
+    if (!this.introComplete) return this.finishIntroText();
+    this.beginSetup();
   }
 
   beginSetup() {
@@ -331,7 +382,7 @@ export class Game {
     this.selectedBlueprint = factionUnits[0]?.id || null;
     this.selectedPlaced = null;
     this.save();
-    this.renderSectors(); this.show('sector');
+    this.renderHub(); this.show('hub');
   }
 
   resumeRun() {
@@ -346,9 +397,27 @@ export class Game {
       $('#reward-gear-line').textContent = `${node.type === 'boss' ? 90 * (node.bossTier || 1) : 20 + node.stars * 10} CAMPAIGN SCORE`;
       return this.show('reward');
     }
-    if (this.run.pendingNode) return this.openLoadout();
-    if (this.run.region === null) { this.renderSectors(); this.show('sector'); }
-    else { this.renderMap(); this.show('map'); }
+    if (this.run.pendingNode) return this.openLoadout('map');
+    this.renderHub(); this.show('hub');
+  }
+
+  renderHub() {
+    if (!this.run) return;
+    const faction = this.faction(this.run.faction);
+    const completed = this.run.sectors.filter(sector => sector.status === 'complete').length;
+    $('#hub-army-status').textContent = `${this.usedPoints()} / ${this.getBaseCap()} PTS`;
+    $('#hub-req-status').textContent = `◆ ${this.meta.currency}`;
+    $('#hub-contract-status').textContent = `${completed} / ${this.run.sectors.length}`;
+    $('#hub-order').textContent = `${faction.name} patrol · Prepare the army, invest permanent Requisition, then accept a contract.`;
+    const active = this.run.region !== null;
+    $('#hub-mission-label').textContent = active ? 'RESUME CONTRACT' : 'SELECT CONTRACT';
+    $('#hub-mission-copy').textContent = active ? `${MISSION_SCRIPTS[this.run.region % MISSION_SCRIPTS.length].title} · ${this.run.step} areas secured.` : 'Hear the briefing and chart a mission.';
+  }
+
+  openStrategium() {
+    if (!this.run) return;
+    if (this.run.region !== null) { this.renderMap(); return this.show('map'); }
+    this.renderSectors(); this.show('sector');
   }
 
   protocolEffects() {
@@ -368,8 +437,9 @@ export class Game {
     return this.run.deployed.reduce((sum, placed) => sum + this.unit(placed.unitId).points, 0);
   }
 
-  openLoadout() {
+  openLoadout(returnTo = null) {
     if (!this.run) return;
+    if (returnTo) this.loadoutReturn = returnTo;
     this.renderLoadout();
     this.show('loadout');
   }
@@ -387,8 +457,8 @@ export class Game {
     this.renderGear();
     this.renderProtocols();
     const legal = used > 0 && used <= this.run.cap;
-    $('#deploy-button').disabled = !legal;
-    $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : this.run.region === null ? '⌖ SECTORS' : '⌖ MAP';
+    $('#deploy-button').disabled = Boolean(this.run.pendingNode) && !legal;
+    $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : this.loadoutReturn === 'map' ? '⌖ RETURN TO CHART' : '← RETURN TO COMMAND DECK';
     const chosen = this.unit(this.selectedBlueprint);
     $('#prep-status').textContent = legal ? `▦ ${this.run.deployed.length} · ${this.run.cap - used} FREE` : chosen ? `▸ ${chosen.name.toUpperCase()}` : '▦ SELECT';
   }
@@ -559,11 +629,13 @@ export class Game {
   }
 
   finishPrep() {
-    if (!this.run || this.usedPoints() <= 0 || this.usedPoints() > this.run.cap) return;
+    if (!this.run) return;
+    if (this.run.pendingNode && (this.usedPoints() <= 0 || this.usedPoints() > this.run.cap)) return;
     this.save();
     if (this.run.pendingNode) this.startBattle(this.run.pendingNode);
-    else if (this.run.region === null) { this.renderSectors(); this.show('sector'); }
-    else { this.renderMap(); this.show('map'); }
+    else if (this.loadoutReturn === 'map') { this.renderMap(); this.show('map'); }
+    else if (this.loadoutReturn === 'sector') { this.renderSectors(); this.show('sector'); }
+    else { this.renderHub(); this.show('hub'); }
   }
 
   enemyFaction() {
@@ -1290,7 +1362,7 @@ export class Game {
       const next = this.run.sectors[this.run.region + 1]; if (next) next.status = 'available';
       if (!next) return this.endRun(true);
       this.run.region = null; this.run.step = 0; this.run.sectorStars = 0;
-      this.save(); this.renderSectors(); this.show('sector'); return;
+      this.save(); this.renderHub(); this.show('hub'); return;
     } else this.run.step++;
     this.save();
     this.renderMap();
