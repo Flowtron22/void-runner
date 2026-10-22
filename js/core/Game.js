@@ -3,6 +3,16 @@ import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATA
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
 const PLAYABLE_FACTIONS = ['space-marines','imperial-fists','grey-knights'];
+const MISSION_SCRIPTS = [
+  {title:'THE ASHEN TITHE',quote:'A dead convoy still owes its tithe. Find who took it, break their hold, and bring me the names of those who paid them.',objective:'Secure Ashen Reach and identify the raiders.',reward:'CONTRACT REWARD · SECTOR BOSS REQUISITION'},
+  {title:'GHOSTS OF KARST',quote:'Karst Void has gone silent. Silence is rarely empty. Hunt the signal-thieves before their shadow reaches our fleet.',objective:'Trace the stolen signals through Karst Void.',reward:'CONTRACT REWARD · UNLOCK NEXT NAVIGATION CHART'},
+  {title:'THE MOURNING WARRANT',quote:'Pilgrims vanished at the Mourning Gate. Their distress calls now lure warships onto the rocks. End the false beacon.',objective:'Destroy the commander controlling the Mourning Gate.',reward:'CONTRACT REWARD · PERMANENT REQUISITION'},
+  {title:'CROWN OF CINDERS',quote:'The Cinder Crown shelters the architect of this war. Every lesser bounty has led us here. Bring the offensive to its final accounting.',objective:'Break the Cinder Crown and secure the campaign.',reward:'FINAL CONTRACT · MAXIMUM BOSS REWARD'},
+  {title:'THE IRON LEDGER',quote:'Another name has surfaced in the ledger. Their armour is heavy, their debt heavier. Collect both.',objective:'Secure the marked sector and eliminate its warlord.',reward:'CONTRACT REWARD · PERMANENT REQUISITION'},
+  {title:'THE HOLLOW THRONE',quote:'A throne without a ruler still gathers killers. Scatter the claimants before one of them becomes a king.',objective:'Defeat the strongest claimant in the sector.',reward:'CONTRACT REWARD · CAMPAIGN ADVANCE'},
+  {title:'BLACK SUN WARRANT',quote:'The charts end at a black sun. The bounty does not. Take your patrol beyond the sanctioned routes.',objective:'Chart the sector and silence its apex commander.',reward:'CONTRACT REWARD · PERMANENT REQUISITION'},
+  {title:'THE LAST DEBT',quote:'This is the final line in my ledger. Cross it out in fire, and the void will remember who collected.',objective:'Complete the final sector contract.',reward:'FINAL CONTRACT · CAMPAIGN VICTORY'}
+];
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -97,6 +107,13 @@ export class Game {
     this.units = this.factions.flatMap(faction => faction.units.map(unit => ({...unit, faction:faction.id, color:faction.color, mark:faction.mark})));
     this.meta = this.load(SAVE_KEY, { currency: 0, research: { logistics: 0, doctrine: 0, salvage: 0, insurance: 0 }, runs: 0, wins: 0 });
     this.run = this.load(RUN_KEY, null);
+    this.meta.settings ||= {};
+    if (this.run) {
+      this.run.story ||= {briefed:[],completed:[],pendingBriefing:null};
+      this.run.story.briefed ||= [];
+      this.run.story.completed ||= [];
+      this.run.story.pendingBriefing ??= null;
+    }
     this.selectedFaction = this.run?.faction || this.factions[0].id;
     this.selectedBlueprint = null;
     this.selectedPlaced = null;
@@ -104,22 +121,42 @@ export class Game {
     this.battle = null;
     this.battleTimer = null;
     this.battleSpeed = 1;
+    this.currentScreen = 'home';
+    this.setupStage = 'tier';
+    this.saveNoticeTimer = null;
     this.setupChoice = {tier:0,faction:null,honours:[]};
     this.bindUI();
     document.body.classList.toggle('reduced-motion', Boolean(this.meta.settings?.reducedMotion));
     this.renderHome();
     this.show('home');
+    window.addEventListener('pagehide', () => this.save({silent:true}));
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.save({silent:true}); });
   }
 
   load(key, fallback) {
     try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
   }
 
-  save() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(this.meta));
-    if (this.run) localStorage.setItem(RUN_KEY, JSON.stringify(this.run));
-    else localStorage.removeItem(RUN_KEY);
+  save({silent = false} = {}) {
+    try {
+      this.meta.lastSavedAt = Date.now();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(this.meta));
+      if (this.run) localStorage.setItem(RUN_KEY, JSON.stringify(this.run));
+      else localStorage.removeItem(RUN_KEY);
+      if (!silent) this.announceSave('◆ PROGRESS SAVED');
+    } catch {
+      this.announceSave('! SAVE FAILED', true);
+    }
     this.renderHeader();
+  }
+
+  announceSave(message, error = false) {
+    const toast = $('#save-toast'); if (!toast) return;
+    toast.textContent = message;
+    toast.classList.toggle('error', error);
+    toast.classList.add('visible');
+    clearTimeout(this.saveNoticeTimer);
+    this.saveNoticeTimer = setTimeout(() => toast.classList.remove('visible'), 1300);
   }
 
   bindUI() {
@@ -129,11 +166,14 @@ export class Game {
     $('#credits-button').onclick = () => $('#credits-dialog').showModal();
     $('#close-settings-button').onclick = () => $('#settings-dialog').close();
     $('#close-credits-button').onclick = () => $('#credits-dialog').close();
+    $('#back-button').onclick = () => this.goBack();
+    $('#mission-close-button').onclick = () => this.closeMissionBriefing();
+    $('#mission-accept-button').onclick = () => this.acceptMission();
+    $('#mission-log-button').onclick = () => this.openMissionBriefing(this.run?.region, true);
     $('#reduced-motion-toggle').onchange = event => {
       this.meta.settings = {...this.meta.settings,reducedMotion:event.target.checked};
       document.body.classList.toggle('reduced-motion', event.target.checked); this.save();
     };
-    $('#setup-back-button').onclick = () => this.show('home');
     $('#sector-loadout-button').onclick = () => this.openLoadout();
     $('#event-continue-button').onclick = () => this.finishPostWarEvent();
     $('#home-button').onclick = () => { if (!this.battle) { this.save(); this.renderHome(); this.show('home'); } };
@@ -147,6 +187,7 @@ export class Game {
     $('#speed-button').onclick = () => this.toggleSpeed();
     $('#skip-button').onclick = () => this.resolveBattleNow();
     $('#run-end-button').onclick = () => this.handleEndButton();
+    $('#research-back-button').onclick = () => { this.renderHome(); this.show('home'); };
     for (const button of $$('[data-prep-tab]')) button.onclick = () => this.setPrepTab(button.dataset.prepTab);
   }
 
@@ -207,8 +248,31 @@ export class Game {
     document.body.classList.toggle('main-menu-open', name === 'home');
     document.body.classList.toggle('battle-active', name === 'battle');
     if (name !== 'battle') this.clearBattleStage();
+    this.currentScreen = name;
+    const back = $('#back-button');
+    back.hidden = name === 'home';
+    back.disabled = name === 'battle';
+    back.title = name === 'battle' ? 'Battle in progress' : 'Go back';
+    if (this.run && name !== 'battle') { this.run.lastScreen = name; this.save({silent:true}); }
     window.scrollTo(0, 0);
     this.renderHeader();
+  }
+
+  goBack() {
+    if (this.battle) return;
+    if (this.currentScreen === 'setup') {
+      if (this.setupStage === 'honour') return this.renderSetup('faction');
+      if (this.setupStage === 'faction') return this.renderSetup('tier');
+      this.renderHome(); return this.show('home');
+    }
+    if (this.currentScreen === 'loadout') {
+      if (this.run?.region === null) { this.renderSectors(); return this.show('sector'); }
+      this.renderMap(); return this.show('map');
+    }
+    if (this.currentScreen === 'map') { this.renderSectors(); return this.show('sector'); }
+    if (this.currentScreen === 'sector' || this.currentScreen === 'research') { this.renderHome(); return this.show('home'); }
+    if (this.currentScreen === 'reward') return this.announceSave('CHOOSE A REWARD TO CONTINUE', true);
+    this.renderHome(); this.show('home');
   }
 
   renderHome() {
@@ -225,6 +289,7 @@ export class Game {
   }
 
   renderSetup(stage) {
+    this.setupStage = stage;
     const list = $('#setup-options'); list.innerHTML = '';
     const stages = ['tier','faction','honour'];
     const index = stages.indexOf(stage);
@@ -258,7 +323,8 @@ export class Game {
       hull: 3 + (this.meta.research.insurance || 0), maxHull: 3 + (this.meta.research.insurance || 0),
       data:0, stars:0, sectorStars:0, currency:0, chests:0, protocols:[honourId], stratagems:[], gear:[], deployed:[], history:[], offers:null,
       sectors:Array.from({length:tier.sectors},(_,i)=>({id:i,name:SECTOR_NAMES[i],status:i===0?'available':'locked',stars:0})),
-      unlockedUnits:factionUnits.slice(0,2).map(unit=>unit.id), battles:0, bosses:0, pendingNode:null, pendingPostWar:null
+      unlockedUnits:factionUnits.slice(0,2).map(unit=>unit.id), battles:0, bosses:0, pendingNode:null, pendingPostWar:null,
+      story:{briefed:[],completed:[],pendingBriefing:null}
     };
     this.run.cap = this.getBaseCap();
     this.meta.runs++;
@@ -270,6 +336,16 @@ export class Game {
 
   resumeRun() {
     if (!this.run) return;
+    if (this.run.story?.pendingBriefing !== null && this.run.story?.pendingBriefing !== undefined) {
+      this.renderSectors(); this.show('sector'); return this.openMissionBriefing(this.run.story.pendingBriefing);
+    }
+    if (this.run.rewardContext) {
+      this.renderRewardSegments(this.rewardSegmentOptions(this.run.rewardContext));
+      const node = this.run.rewardContext.node;
+      $('#reward-data').textContent = `+${node.stars || 0} ★`;
+      $('#reward-gear-line').textContent = `${node.type === 'boss' ? 90 * (node.bossTier || 1) : 20 + node.stars * 10} CAMPAIGN SCORE`;
+      return this.show('reward');
+    }
     if (this.run.pendingNode) return this.openLoadout();
     if (this.run.region === null) { this.renderSectors(); this.show('sector'); }
     else { this.renderMap(); this.show('map'); }
@@ -512,7 +588,7 @@ export class Game {
       button.className = `sector-card ${sector.status}`;
       button.style.setProperty('--gx',`${positions[index][0]}%`); button.style.setProperty('--gy',`${positions[index][1]}%`);
       button.disabled = sector.status === 'locked';
-      const status = sector.status === 'complete' ? `${sector.stars} ★ SECURED` : sector.status === 'available' ? 'ROUTE AVAILABLE' : 'SIGNAL LOCKED';
+      const status = sector.status === 'complete' ? `${sector.stars} ★ CONTRACT COMPLETE` : this.run.region === index ? 'CONTRACT ACTIVE' : sector.status === 'available' ? 'ROUTE AVAILABLE' : 'SIGNAL LOCKED';
       button.innerHTML = `<span>0${index + 1}</span><i></i><b>${sector.name}</b><small>${status}</small>`;
       button.onclick = () => this.enterSector(index); map.append(button);
     });
@@ -522,6 +598,46 @@ export class Game {
   enterSector(index) {
     const sector = this.run.sectors[index];
     if (!sector || sector.status === 'locked' || sector.status === 'complete') return;
+    if (this.run.region === index) { this.renderMap(); return this.show('map'); }
+    this.run.story ||= {briefed:[],completed:[],pendingBriefing:null};
+    this.run.story.pendingBriefing = index;
+    this.save();
+    this.openMissionBriefing(index);
+  }
+
+  missionFor(index) {
+    return MISSION_SCRIPTS[index] || MISSION_SCRIPTS.at(-1);
+  }
+
+  openMissionBriefing(index = this.run?.region, review = false) {
+    if (!this.run || index === null || index === undefined) return;
+    const mission = this.missionFor(index);
+    const sector = this.run.sectors[index];
+    $('#mission-kicker').textContent = `// CONTRACT ${String(index + 1).padStart(2,'0')} · ${sector.name}`;
+    $('#mission-title').textContent = mission.title;
+    $('#mission-copy').textContent = `“${mission.quote}”`;
+    $('#mission-objective').textContent = mission.objective;
+    $('#mission-reward').textContent = mission.reward;
+    $('#mission-accept-button').textContent = review ? 'RETURN TO CHART' : 'ACCEPT CONTRACT';
+    $('#mission-accept-button').dataset.review = review ? 'true' : 'false';
+    $('#mission-close-button').hidden = review;
+    $('#mission-dialog').showModal();
+  }
+
+  closeMissionBriefing() {
+    if (!$('#mission-dialog').open) return;
+    $('#mission-dialog').close();
+    if (this.run?.story) this.run.story.pendingBriefing = null;
+    this.save();
+  }
+
+  acceptMission() {
+    if ($('#mission-accept-button').dataset.review === 'true') return $('#mission-dialog').close();
+    const index = this.run?.story?.pendingBriefing;
+    if (index === null || index === undefined) return;
+    $('#mission-dialog').close();
+    this.run.story.pendingBriefing = null;
+    if (!this.run.story.briefed.includes(index)) this.run.story.briefed.push(index);
     this.run.region = index; this.run.step = 0; this.run.sectorStars = 0; this.run.offers = null;
     this.run.history = this.run.history.filter(node => node.region !== index);
     this.save(); this.renderMap(); this.show('map');
@@ -564,6 +680,9 @@ export class Game {
     $('#run-data').textContent = this.run.sectorStars;
     $('#run-currency').textContent = this.run.currency;
     $('#run-protocol-count').textContent = this.run.protocols.length;
+    const mission = this.missionFor(this.run.region);
+    $('#mission-strip-title').textContent = mission.title;
+    $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map'); map.innerHTML = '<div class="galaxy-nebula"></div><div class="galaxy-start"><i></i><span>ENTRY</span></div>';
     map.classList.add('area-galaxy');
     const history = this.run.history.filter(node => node.region === this.run.region).sort((a,b)=>a.step-b.step);
@@ -1052,18 +1171,24 @@ export class Game {
       honours:shuffle(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))).slice(0,3).map(item => item.id),
       stratagems:shuffle(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))).slice(0,3).map(item => item.id)
     };
-    const options = [
-      {kind:'currency',icon:'◆',name:'REQUISITION',tag:`CLAIM ${req}`,desc:'Take campaign currency for a future field store.'},
-      {kind:'honour',icon:'✦',name:'BATTLE HONOURS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of passive army rules.'},
-      {kind:'stratagem',icon:'⌖',name:'STRATAGEMS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of automatic command tactics.'}
-    ];
-    if (node.event === 'recruit') options.push({kind:'recruit',icon:'▦',name:'REINFORCEMENTS',tag:'CHOOSE A UNIT',desc:'Answer a recovered command signal.'});
-    if (node.event === 'store') options.push({kind:'store',icon:'⚙',name:'FIELD STORE',tag:`◆ ${this.run.currency}`,desc:'Spend campaign Requisition on Wargear.'});
+    const options = this.rewardSegmentOptions(this.run.rewardContext);
     this.renderRewardSegments(options);
     $('#reward-data').textContent = `+${node.stars || 0} ★`;
     $('#reward-gear-line').textContent = `${score} CAMPAIGN SCORE`;
     this.save();
     this.show('reward');
+  }
+
+  rewardSegmentOptions(context) {
+    const node = context.node;
+    const options = [
+      {kind:'currency',icon:'◆',name:'REQUISITION',tag:`CLAIM ${context.req}`,desc:'Take campaign currency for a future field store.'},
+      {kind:'honour',icon:'✦',name:'BATTLE HONOURS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of passive army rules.'},
+      {kind:'stratagem',icon:'⌖',name:'STRATAGEMS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of automatic command tactics.'}
+    ];
+    if (node.event === 'recruit') options.push({kind:'recruit',icon:'▦',name:'REINFORCEMENTS',tag:'CHOOSE A UNIT',desc:'Answer a recovered command signal.'});
+    if (node.event === 'store') options.push({kind:'store',icon:'⚙',name:'FIELD STORE',tag:`◆ ${this.run.currency}`,desc:'Spend campaign Requisition on Wargear.'});
+    return options;
   }
 
   renderRewardSegments(options) {
@@ -1155,6 +1280,8 @@ export class Game {
     if (wasBoss) {
       const sector = this.run.sectors[this.run.region];
       sector.status = 'complete'; sector.stars = this.run.sectorStars;
+      this.run.story ||= {briefed:[],completed:[],pendingBriefing:null};
+      if (!this.run.story.completed.includes(this.run.region)) this.run.story.completed.push(this.run.region);
       const tier = CAMPAIGN_TIERS[this.run.tierIndex];
       const permanent = tier.permanentReward * (node?.bossTier || 1);
       this.run.chests += permanent;

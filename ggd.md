@@ -312,6 +312,10 @@ Meta progression and the active campaign are stored in browser `localStorage`:
 | `void-runner-40k-campaign-v2` | Permanent currency, research, run/win counters and reduced-motion setting |
 | `combat-patrol-active-v3` | Active faction, scale, deployment, route, rewards and inventories |
 
+The active run now also stores its current UI state, contract briefing state, completed story contracts and pending Post-War reward. Saves occur after campaign mutations and again when the page is hidden or closed. A visible `PROGRESS SAVED` status confirms successful writes. Refreshing during a pending contract or Post-War choice restores that mandatory state instead of skipping it.
+
+Each sector is framed as a bounty contract issued by Bounty Marshal Severine Voss. Selecting a new sector opens a scripted briefing with an objective and reward, the area map carries an active-contract tracker, and completed sector contracts are recorded in `run.story`. The portrait and dialogue direction use the project's original soot, brass and oxblood gothic command style.
+
 Git transfers source and assets, not browser saves. Another PC, browser profile or origin starts with its own progress. Localhost and the production domain also have separate saves. No cloud save or save export/import UI exists yet. Old v2 active-run saves are not loaded by the current v3 campaign.
 
 ## 12. Source architecture
@@ -326,6 +330,7 @@ FTL/
 ├── js/data/units.js                   # Campaign tiers, sectors, Honours, Stratagems, Wargear, research
 ├── gif/                              # Active faction animations and unused future battle assets
 ├── assets/unit-silhouettes.png        # Shared portrait atlas
+├── assets/bounty-marshal-severine-voss.png # Original recurring mission-giver portrait
 ├── package-lock.json                 # Reproducible dependency versions
 ├── vercel.json                       # Vite build and dist output
 ├── ART_BIBLE.md

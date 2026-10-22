@@ -18,6 +18,7 @@
   </aside>
   <main id="app" class="app-shell">
     <header class="topbar pixel-panel">
+      <button id="back-button" class="brand-button" aria-label="Go back" hidden>←</button>
       <button id="home-button" class="brand-button" aria-label="Return to command">✠</button>
       <div class="brand-copy"><b>COMBAT PATROL</b><small id="location-label" hidden>CRUSADE COMMAND</small></div>
       <div class="top-stat" title="Requisition" hidden><small>◆</small><b id="meta-currency">0</b></div>
@@ -40,7 +41,7 @@
     </section>
 
     <section id="setup-screen" class="screen" aria-labelledby="setup-title">
-      <div class="section-head"><div><p class="eyebrow" id="setup-step">01 / 03 · CRUSADE SCALE</p><h2 id="setup-title">CHOOSE POINTS</h2></div><button id="setup-back-button">←</button></div>
+      <div class="section-head"><div><p class="eyebrow" id="setup-step">01 / 03 · CRUSADE SCALE</p><h2 id="setup-title">CHOOSE POINTS</h2></div></div>
       <div id="setup-options" class="setup-options"></div>
       <div class="setup-progress"><i class="active"></i><i></i><i></i></div>
     </section>
@@ -59,6 +60,11 @@
       <div class="run-stats pixel-panel">
         <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Sector stars"><small>★</small><b id="run-data">0</b></span><span title="Campaign Requisition"><small>◆</small><b id="run-currency">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span><button id="open-loadout-button" aria-label="Edit army">▦ EDIT</button>
       </div>
+      <button id="mission-log-button" class="mission-strip" aria-label="Review current contract">
+        <img src="assets/bounty-marshal-severine-voss.png" alt="Bounty Marshal Severine Voss" />
+        <span><small>ACTIVE CONTRACT</small><b id="mission-strip-title">AWAITING ORDERS</b><i id="mission-strip-progress">0 / 0</i></span>
+        <strong>›</strong>
+      </button>
       <div id="route-map" class="route-map" aria-label="Expedition route"></div>
     </section>
 
@@ -107,6 +113,19 @@
       <p class="eyebrow">// ARCHIVE</p><h2>COMBAT PATROL</h2><p>Original tactical roguelike prototype. Campaign design, interface and simulation created for this project. Unit data is adapted from the local KS roster.</p><button id="close-credits-button" class="primary large">BACK</button>
     </dialog>
 
+    <dialog id="mission-dialog" class="modal mission-dialog pixel-panel">
+      <button id="mission-close-button" class="dialog-back" aria-label="Back to sector map">←</button>
+      <div class="mission-portrait"><img src="assets/bounty-marshal-severine-voss.png" alt="Bounty Marshal Severine Voss" /></div>
+      <div class="mission-transmission">
+        <p class="eyebrow" id="mission-kicker">// ENCRYPTED CONTRACT</p>
+        <h2 id="mission-title">THE ASHEN TITHE</h2>
+        <b class="mission-speaker">BOUNTY MARSHAL SEVERINE VOSS</b>
+        <p id="mission-copy"></p>
+        <div class="mission-objective"><small>OBJECTIVE</small><b id="mission-objective"></b><span id="mission-reward"></span></div>
+        <button id="mission-accept-button" class="primary large">ACCEPT CONTRACT</button>
+      </div>
+    </dialog>
+
     <dialog id="event-dialog" class="modal pixel-panel">
       <p class="eyebrow" id="event-kicker">// FIELD EVENT</p><h2 id="event-title">REINFORCEMENTS</h2><p id="event-copy"></p><div id="event-options" class="event-options"></div><button id="event-continue-button" class="large">CONTINUE</button>
     </dialog>
@@ -121,6 +140,7 @@
       <p class="eyebrow" id="run-end-kicker">// EXPEDITION COMPLETE</p><h2 id="run-end-title">THE FRONT BREAKS.</h2><p id="run-end-copy"></p><div id="run-end-stats" class="end-ledger"></div><button id="run-end-button" class="primary large">RETURN TO COMMAND</button>
     </dialog>
   </main>
+  <div id="save-toast" class="save-toast" role="status" aria-live="polite">◆ PROGRESS SAVED</div>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
