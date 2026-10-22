@@ -224,7 +224,6 @@ export class Game {
     $('#home-button').onclick = () => { if (!this.battle) { this.save(); this.renderHome(); this.show('home'); } };
     $('#help-button').onclick = () => $('#help-dialog').showModal();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
-    $('#rotate-button').onclick = () => { this.rotated = !this.rotated; this.renderLoadout(); };
     $('#remove-button').onclick = () => this.removeSelected();
     $('#clear-button').onclick = () => { if (!this.run) return; this.run.deployed = []; this.selectedPlaced = null; this.renderLoadout(); this.save(); };
     $('#deploy-button').onclick = () => this.finishPrep();
@@ -544,10 +543,8 @@ export class Game {
       button.disabled = out || tooLarge || unrecovered;
       const weapon = unit.weapon;
       const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.leader ? `♛ → BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
-      const rules = [...(unit.weapon.keywords || []), ...(unit.abilities || [])].slice(0,5);
-      const badges = rules.map(rule => `<span class="rule-badge" title="${rule}" aria-label="${rule}">${ruleSymbol(rule)}</span>`).join('');
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
-      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id,deployedCount)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span><span class="rule-badges">${badges}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
+      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id,deployedCount)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
       roster.append(button);
     }
