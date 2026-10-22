@@ -13,13 +13,11 @@ This file describes the current code and records unfinished work explicitly. Sta
 ```text
 Main Menu: Start / Resume / Settings / Credits
     ↓
-Opening command transmission: who the commander is and why the patrol exists
+Choose unit size: Combat Patrol 500 / Incursion 1000 / Strike Force 2000 / Onslaught 3000
     ↓
-Choose campaign scale: 500 / 1000 / 1500 / 2000 / 3000 points
+Choose chapter: Grey Knight available / Ultramarine locked / Imperial Fist locked
     ↓
-Choose launch faction: Ultramarines / Imperial Fists / Grey Knights
-    ↓
-Choose one opening Battle Honour
+Ordo Malleus command transmission
     ↓
 Patrol vessel VIGILANT — recurring command hub
     ├── Ordeal: edit and deploy the army
@@ -45,7 +43,7 @@ Sector boss secured → return to the VIGILANT hub
 Secure every sector; bank permanent Requisition
 ```
 
-Campaign base scales are 500, 1000, 1500, 2000 and 3000 points. They contain 4, 5, 6, 7 and 8 sectors respectively. Higher scales also lengthen each sector, multiply enemy strength and increase permanent boss rewards. The selected scale stays fixed; Expanded Supply research adds 50 deployable points per rank and Rapid Muster adds 100 points for that run.
+Selectable campaign sizes are 500, 1000, 2000 and 3000 points. They contain 4, 5, 7 and 8 sectors respectively. Higher sizes also lengthen each sector, multiply enemy strength and increase permanent boss rewards. The selected size stays fixed; Expanded Supply research adds 50 deployable points per rank and Rapid Muster adds 100 points for that run. The older 1500-point tier remains in data only so existing saves can still load.
 
 Each normal area presents exactly three connected choices rated one, two and three stars. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
 
@@ -83,8 +81,9 @@ The previous original unit roster and flat-damage combat are no longer active.
 
 ```text
 NEW GAME
-  → opening transmission
-  → choose scale, faction and first Honour
+  → choose unit size
+  → choose chapter
+  → Ordo Malleus transmission
   → command deck
       Ordeal → edit army → command deck
       Research → permanent upgrades → command deck
@@ -101,11 +100,10 @@ The player chooses one base points scale for the entire run. Clearing sectors do
 
 | Scale | Sectors | Areas per sector | Enemy multiplier | Boss permanent reward |
 |---|---:|---:|---:|---:|
-| 500 Patrol | 4 | 3 + boss | 1.00× | 30 per tier |
-| 1,000 Strike Force | 5 | 4 + boss | 1.08× | 45 per tier |
-| 1,500 Battle Host | 6 | 4 + boss | 1.16× | 60 per tier |
-| 2,000 Onslaught | 7 | 5 + boss | 1.24× | 80 per tier |
-| 3,000 Apocalypse | 8 | 6 + boss | 1.34× | 110 per tier |
+| 500 Combat Patrol | 4 | 3 + boss | 1.00× | 30 per tier |
+| 1,000 Incursion | 5 | 4 + boss | 1.08× | 45 per tier |
+| 2,000 Strike Force | 7 | 5 + boss | 1.24× | 80 per tier |
+| 3,000 Onslaught | 8 | 6 + boss | 1.34× | 110 per tier |
 
 Every area layer exposes three connected battle choices worth 1–3 stars. Enemy faction and star rating are visible before deployment. Choosing one area closes the other two choices at that layer. Recruit/store signals are determined by sector, step and lane. Enemies and reward choices use random selection; the run's `seed` is stored but does not currently drive a seeded random generator.
 

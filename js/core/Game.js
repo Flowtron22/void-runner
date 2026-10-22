@@ -2,7 +2,12 @@ import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATA
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
-const PLAYABLE_FACTIONS = ['space-marines','imperial-fists','grey-knights'];
+const UNIT_SIZES = [
+  {tierIndex:0,label:'COMBAT PATROL'},
+  {tierIndex:1,label:'INCURSION'},
+  {tierIndex:3,label:'STRIKE FORCE'},
+  {tierIndex:4,label:'ONSLAUGHT'}
+];
 const MISSION_SCRIPTS = [
   {title:'THE ASHEN TITHE',quote:'A dead convoy still owes its tithe. Find who took it, break their hold, and bring me the names of those who paid them.',objective:'Secure Ashen Reach and identify the raiders.',reward:'CONTRACT REWARD · SECTOR BOSS REQUISITION'},
   {title:'GHOSTS OF KARST',quote:'Karst Void has gone silent. Silence is rarely empty. Hunt the signal-thieves before their shadow reaches our fleet.',objective:'Trace the stolen signals through Karst Void.',reward:'CONTRACT REWARD · UNLOCK NEXT NAVIGATION CHART'},
@@ -54,6 +59,11 @@ const BATTLE_ART = {
   'tyranids': {src:new URL('../../gif/tyranids_A.gif', import.meta.url).href, facing:'right'},
   'imperial-knights': {src:new URL('../../gif/imperial_knight.gif', import.meta.url).href, facing:'left'}
 };
+const CHAPTERS = [
+  {id:'grey-knights',label:'GREY KNIGHT',art:new URL('../../assets/chapter-grey-knight.jpg',import.meta.url).href,locked:false},
+  {id:'space-marines',label:'ULTRAMARINE',art:new URL('../../assets/chapter-ultramarines.webp',import.meta.url).href,locked:true},
+  {id:'imperial-fists',label:'IMPERIAL FIST',art:new URL('../../assets/chapter-imperial-fist.webp',import.meta.url).href,locked:true}
+];
 const UNIT_SPRITES = {
   'intercessor-squad':[0,0], 'terminator-squad':[1,0], 'redemptor-dreadnought':[2,0], 'captain':[3,0],
   'boyz':[0,1], 'meganobz':[1,1], 'deff-dread':[2,1], 'warboss':[3,1],
@@ -134,7 +144,7 @@ export class Game {
     this.introTimer = null;
     this.introComplete = false;
     this.saveNoticeTimer = null;
-    this.setupChoice = {tier:0,faction:null,honours:[]};
+    this.setupChoice = {tier:null,faction:null};
     this.bindUI();
     document.body.classList.toggle('reduced-motion', Boolean(this.meta.settings?.reducedMotion));
     this.renderHome();
@@ -170,7 +180,7 @@ export class Game {
   }
 
   bindUI() {
-    $('#new-run-button').onclick = () => this.beginIntro();
+    $('#new-run-button').onclick = () => this.beginSetup();
     $('#resume-button').onclick = () => this.resumeRun();
     $('#intro-continue-button').onclick = () => this.continueIntro();
     $('#hub-army-button').onclick = () => this.openLoadout('hub');
@@ -277,7 +287,6 @@ export class Game {
     if (this.currentScreen === 'intro') { this.stopIntro(); this.renderHome(); return this.show('home'); }
     if (this.currentScreen === 'hub') { this.renderHome(); return this.show('home'); }
     if (this.currentScreen === 'setup') {
-      if (this.setupStage === 'honour') return this.renderSetup('faction');
       if (this.setupStage === 'faction') return this.renderSetup('tier');
       this.renderHome(); return this.show('home');
     }
@@ -340,11 +349,11 @@ export class Game {
 
   continueIntro() {
     if (!this.introComplete) return this.finishIntroText();
-    this.beginSetup();
+    this.startRun();
   }
 
   beginSetup() {
-    this.setupChoice = {tier:null,faction:null,honours:shuffle(BATTLE_HONOURS).slice(0,3)};
+    this.setupChoice = {tier:null,faction:null};
     this.renderSetup('tier');
     this.show('setup');
   }
@@ -352,37 +361,34 @@ export class Game {
   renderSetup(stage) {
     this.setupStage = stage;
     const list = $('#setup-options'); list.innerHTML = '';
-    const stages = ['tier','faction','honour'];
+    const stages = ['tier','faction'];
     const index = stages.indexOf(stage);
-    $('#setup-step').textContent = `0${index + 1} / 03 · ${stage === 'tier' ? 'CRUSADE SCALE' : stage === 'faction' ? 'COMMAND' : 'FIRST HONOUR'}`;
-    $('#setup-title').textContent = stage === 'tier' ? 'CHOOSE POINTS' : stage === 'faction' ? 'CHOOSE FACTION' : 'CHOOSE 1 HONOUR';
+    $('#setup-step').textContent = `0${index + 1} / 02 · ${stage === 'tier' ? 'UNIT SIZE' : 'CHAPTER'}`;
+    $('#setup-title').textContent = stage === 'tier' ? 'CHOOSE UNIT SIZE' : 'CHOOSE YOUR CHAPTER';
+    list.classList.toggle('chapter-grid',stage === 'faction');
     $$('.setup-progress i').forEach((dot,i) => dot.classList.toggle('active', i <= index));
-    if (stage === 'tier') CAMPAIGN_TIERS.forEach((tier,tierIndex) => {
+    if (stage === 'tier') UNIT_SIZES.forEach(({tierIndex,label}) => {
+      const tier = CAMPAIGN_TIERS[tierIndex];
       const button = document.createElement('button'); button.className = 'setup-card tier-card';
-      button.innerHTML = `<span>0${tierIndex + 1}</span><b>${tier.points} PTS</b><small>${tier.name} · ${tier.sectors} SECTORS</small><i>${'◆'.repeat(Math.min(5,tierIndex + 1))}</i>`;
+      button.innerHTML = `<span>${tier.points}</span><b>${label}</b><small>${tier.sectors} SECTORS</small>`;
       button.onclick = () => { this.setupChoice.tier = tierIndex; this.renderSetup('faction'); }; list.append(button);
     });
-    if (stage === 'faction') PLAYABLE_FACTIONS.forEach(id => {
-      const faction = this.faction(id); const button = document.createElement('button'); button.className = 'setup-card faction-launch-card';
-      button.style.setProperty('--faction-color',faction.color);
-      button.innerHTML = `<span class="faction-mark">${faction.mark || '✠'}</span><b>${id === 'space-marines' ? 'ULTRAMARINES' : faction.name.toUpperCase()}</b><small>4 UNIT PATTERNS</small>`;
-      button.onclick = () => { this.setupChoice.faction = id; this.renderSetup('honour'); }; list.append(button);
-    });
-    if (stage === 'honour') this.setupChoice.honours.forEach(honour => {
-      const button = document.createElement('button'); button.className = 'setup-card honour-launch-card'; button.title = honour.desc;
-      button.innerHTML = `<span>${ruleSymbol(`${honour.name} ${honour.tag}`)}</span><b>${honour.name}</b><small>${honour.tag}</small>`;
-      button.onclick = () => this.startRun(honour.id); list.append(button);
+    if (stage === 'faction') CHAPTERS.forEach(chapter => {
+      const button = document.createElement('button'); button.className = `chapter-card ${chapter.locked ? 'locked' : ''}`;
+      button.disabled = chapter.locked;
+      button.innerHTML = `<img src="${chapter.art}" alt=""><b>${chapter.label}</b>${chapter.locked ? '<small>LOCKED</small>' : ''}`;
+      button.onclick = () => { this.setupChoice.faction = chapter.id; this.beginIntro(); }; list.append(button);
     });
   }
 
-  startRun(honourId) {
+  startRun() {
     const tier = CAMPAIGN_TIERS[this.setupChoice.tier ?? 0];
-    this.selectedFaction = this.setupChoice.faction || PLAYABLE_FACTIONS[0];
+    this.selectedFaction = this.setupChoice.faction || 'grey-knights';
     const factionUnits = this.units.filter(unit => unit.faction === this.selectedFaction);
     this.run = {
       seed: Date.now(), faction: this.selectedFaction, tierIndex:this.setupChoice.tier ?? 0, region:null, step:0, cap:tier.points,
       hull: 3 + (this.meta.research.insurance || 0), maxHull: 3 + (this.meta.research.insurance || 0),
-      data:0, stars:0, sectorStars:0, currency:0, chests:0, protocols:[honourId], stratagems:[], gear:[], deployed:[], history:[], offers:null,
+      data:0, stars:0, sectorStars:0, currency:0, chests:0, protocols:[], stratagems:[], gear:[], deployed:[], history:[], offers:null,
       sectors:Array.from({length:tier.sectors},(_,i)=>({id:i,name:SECTOR_NAMES[i],status:i===0?'available':'locked',stars:0})),
       unlockedUnits:factionUnits.slice(0,2).map(unit=>unit.id), battles:0, bosses:0, pendingNode:null, pendingPostWar:null,
       story:{briefed:[],completed:[],pendingBriefing:null}
