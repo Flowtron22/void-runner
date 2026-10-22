@@ -660,12 +660,22 @@ export class Game {
       button.className = `sector-card sector-${index % 2 ? 'east' : 'west'} ${sector.status}`;
       button.style.setProperty('--sector-y',`${6 + index * regionStride}%`);
       button.style.setProperty('--sector-h',`${regionStride - 2}%`);
+      button.style.setProperty('--sector-delay',`${index * 90}ms`);
       button.disabled = sector.status === 'locked';
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'AVAILABLE' : 'LOCKED';
       button.innerHTML = `<b><em><span>0${index + 1}</span></em>${sector.name}</b><small>${status}</small>`;
-      button.onclick = () => this.enterSector(index); map.append(button);
+      button.onclick = () => this.engageSector(button,index); map.append(button);
     });
     this.save();
+  }
+
+  engageSector(button,index) {
+    if (button.dataset.engaging) return;
+    if (document.body.classList.contains('reduced-motion')) return this.enterSector(index);
+    button.dataset.engaging = 'true';
+    button.classList.add('engaging');
+    $('#sector-map').classList.add('sector-engaging');
+    setTimeout(() => this.enterSector(index), 380);
   }
 
   enterSector(index) {
@@ -769,6 +779,7 @@ export class Game {
       const choice = this.makeNodeButton(node,`available zone-${layout.shape} ${node.type}`,true);
       choice.style.setProperty('--zone-x',`${layout.x}%`); choice.style.setProperty('--zone-y',`${layout.y}%`);
       choice.style.setProperty('--zone-w',`${layout.w}%`); choice.style.setProperty('--zone-h',`${layout.h}%`);
+      choice.style.setProperty('--zone-delay',`${offerIndex * 110}ms`);
       map.append(choice);
     });
     this.save();
@@ -782,7 +793,13 @@ export class Game {
     const rewardIcon = node.type === 'boss' ? '♜' : node.type === 'repair' ? '♥' : node.type === 'elite' ? '✦' : node.type === 'salvage' ? '⚙' : '◆';
     button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}${node.stars ? ` · ${'★'.repeat(node.stars)}` : ''}</small><span>${node.locked ? `NEEDS ${node.threshold} ★` : node.reward || ''}</span>`;
     button.disabled = !active || node.locked;
-    if (active && !node.locked) button.onclick = () => this.chooseNode(node);
+    if (active && !node.locked) button.onclick = () => {
+      if (button.dataset.engaging) return;
+      if (document.body.classList.contains('reduced-motion')) return this.chooseNode(node);
+      button.dataset.engaging = 'true'; button.classList.add('engaging');
+      $('#route-map').classList.add('zone-engaging');
+      setTimeout(() => this.chooseNode(node), 340);
+    };
     return button;
   }
 
