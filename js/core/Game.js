@@ -650,8 +650,9 @@ export class Game {
   }
 
   renderSectors() {
-    const map = $('#sector-map'); map.innerHTML = '<div class="galaxy-nebula"></div>';
-    const positions = [[16,72],[39,54],[70,70],[82,39],[57,24],[27,31],[39,10],[77,12]];
+    const map = $('#sector-map');
+    map.innerHTML = '<div class="galaxy-nebula"></div><div class="chart-grid"></div><i class="great-rift" aria-hidden="true"></i><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div><div class="chart-legend" aria-hidden="true"><span>● AVAILABLE</span><span>◇ LOCKED</span><span>✦ CLEARED</span></div>';
+    const positions = [[48,55],[27,35],[74,43],[34,76],[17,17],[18,86],[83,18],[67,76]];
     const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 100 100'); svg.classList.add('galaxy-routes');
     for (let i=1;i<this.run.sectors.length;i++) {
       const line = document.createElementNS('http://www.w3.org/2000/svg','line');
@@ -660,11 +661,12 @@ export class Game {
     }
     map.append(svg);
     this.run.sectors.forEach((sector,index) => {
+      sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
       button.className = `sector-card ${sector.status}`;
       button.style.setProperty('--gx',`${positions[index][0]}%`); button.style.setProperty('--gy',`${positions[index][1]}%`);
       button.disabled = sector.status === 'locked';
-      const status = sector.status === 'complete' ? `${sector.stars} ★ CONTRACT COMPLETE` : this.run.region === index ? 'CONTRACT ACTIVE' : sector.status === 'available' ? 'ROUTE AVAILABLE' : 'SIGNAL LOCKED';
+      const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'AVAILABLE' : 'LOCKED';
       button.innerHTML = `<span>0${index + 1}</span><i></i><b>${sector.name}</b><small>${status}</small>`;
       button.onclick = () => this.enterSector(index); map.append(button);
     });
