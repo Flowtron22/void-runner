@@ -204,6 +204,7 @@ export class Game {
 
   show(name) {
     for (const screen of $$('.screen')) screen.classList.toggle('active', screen.id === `${name}-screen`);
+    document.body.classList.toggle('main-menu-open', name === 'home');
     document.body.classList.toggle('battle-active', name === 'battle');
     if (name !== 'battle') this.clearBattleStage();
     window.scrollTo(0, 0);
@@ -212,7 +213,7 @@ export class Game {
 
   renderHome() {
     $('#resume-button').hidden = !this.run;
-    $('#new-run-button').textContent = '▶ PLAY';
+    $('#new-run-button').textContent = this.run ? 'NEW GAME' : 'START';
     $('#reduced-motion-toggle').checked = Boolean(this.meta.settings?.reducedMotion);
     this.renderHeader();
   }

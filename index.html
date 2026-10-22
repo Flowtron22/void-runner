@@ -25,21 +25,19 @@
     </header>
 
     <section id="home-screen" class="screen active" aria-labelledby="home-title">
-      <div class="hero-art" aria-hidden="true"><div class="pixel-moon"></div><div class="carrier-sprite"><i></i><i></i><i></i><i></i><i></i></div><div class="scan-line"></div></div>
-      <div class="hero-copy" hidden>
-        <p class="eyebrow">// GRIMDARK ROGUELIKE CAMPAIGN</p>
-        <h1 id="home-title">MUSTER AN ARMY.<br><span>ROLL THE BATTLE.</span></h1>
-        <p><b>MUSTER</b> · DEPLOY · AUTO-BATTLE · ASCEND</p>
+      <div class="menu-shade" aria-hidden="true"></div>
+      <div class="menu-title">
+        <span>IN THE GRIM DARKNESS BETWEEN THE STARS</span>
+        <h1 id="home-title">COMBAT<br><strong>PATROL</strong></h1>
+        <i aria-hidden="true"></i>
       </div>
-      <div class="rule-strip pixel-panel" hidden>
-        <div title="Build army"><b>▦</b><span>MUSTER</span></div><i></i><div title="Choose mission"><b>⌖</b><span>ROUTE</span></div><i></i><div title="Automatic battle"><b>⚄</b><span>BATTLE</span></div><i></i><div title="Gain rewards"><b>◆</b><span>REWARD</span></div>
-      </div>
-      <div class="home-actions">
-        <button id="new-run-button" class="primary large">▶ PLAY</button>
-        <button id="resume-button" class="large" hidden>▶ RESUME</button>
-        <button id="settings-button" class="large">⚙ SETTINGS</button>
-        <button id="credits-button" class="large">◇ CREDITS</button>
-      </div>
+      <nav class="home-actions" aria-label="Main menu options">
+        <button id="resume-button" class="menu-primary large" hidden>RESUME</button>
+        <button id="new-run-button" class="menu-primary large">START</button>
+        <button id="settings-button" class="large">SETTINGS</button>
+        <button id="credits-button" class="large">CREDITS</button>
+      </nav>
+      <small class="menu-version">COMBAT PATROL · CAMPAIGN PROTOTYPE</small>
     </section>
 
     <section id="setup-screen" class="screen" aria-labelledby="setup-title">
