@@ -17,14 +17,6 @@
     <div class="battle-lightning"></div>
   </aside>
   <main id="app" class="app-shell">
-    <header class="topbar pixel-panel">
-      <button id="back-button" class="brand-button" aria-label="Go back" hidden>←</button>
-      <button id="home-button" class="brand-button" aria-label="Return to command">✠</button>
-      <div class="brand-copy"><b>COMBAT PATROL</b><small id="location-label" hidden>CRUSADE COMMAND</small></div>
-      <div class="top-stat" title="Requisition" hidden><small>◆</small><b id="meta-currency">0</b></div>
-      <button id="help-button" class="icon-button" aria-label="How to play" hidden>?</button>
-    </header>
-
     <section id="home-screen" class="screen active" aria-labelledby="home-title">
       <div class="menu-shade" aria-hidden="true"></div>
       <div class="menu-title">
@@ -63,7 +55,6 @@
       <div class="hub-status pixel-panel">
         <span><small>ARMY</small><b id="hub-army-status">0 / 500 PTS</b></span>
         <span><small>PERMANENT REQ.</small><b id="hub-req-status">◆ 0</b></span>
-        <span><small>CONTRACTS</small><b id="hub-contract-status">0 / 4</b></span>
       </div>
       <nav class="hub-stations" aria-label="Command deck stations">
         <button id="hub-army-button" class="hub-station hub-station-army">
@@ -79,14 +70,14 @@
     </section>
 
     <section id="setup-screen" class="screen" aria-labelledby="setup-title">
-      <div class="section-head"><div><p class="eyebrow" id="setup-step">01 / 02 · UNIT SIZE</p><h2 id="setup-title">CHOOSE UNIT SIZE</h2></div></div>
+      <div class="section-head"><div><h2 id="setup-title">CHOOSE UNIT SIZE</h2></div></div>
       <div id="setup-options" class="setup-options"></div>
-      <div class="setup-progress"><i class="active"></i><i></i></div>
     </section>
 
     <section id="sector-screen" class="screen" aria-labelledby="sector-title">
       <div class="section-head"><div><p class="eyebrow" id="sector-kicker">GALAXY MAP</p><h2 id="sector-title">CHOOSE A SECTOR</h2></div><div class="cap-badge"><small>STARS</small><b id="campaign-stars">0</b><span>★</span></div></div>
       <div id="sector-map" class="sector-map"></div>
+      <div class="station-footer pixel-panel"><button class="command-return">← RETURN TO COMMAND DECK</button></div>
     </section>
 
     <section id="map-screen" class="screen" aria-labelledby="map-title">
@@ -103,6 +94,7 @@
         <strong>›</strong>
       </button>
       <div id="route-map" class="route-map" aria-label="Expedition route"></div>
+      <div class="station-footer pixel-panel"><button class="command-return">← RETURN TO COMMAND DECK</button></div>
     </section>
 
     <section id="loadout-screen" class="screen" aria-labelledby="loadout-title">
@@ -116,7 +108,7 @@
       <div class="prep-actions"><button id="remove-button" class="danger" aria-label="Remove selected unit">✕ REMOVE</button><button id="clear-button" aria-label="Clear formation">⌫</button></div>
       <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">▦ UNITS</button><button data-prep-tab="gear">⚙ <span id="gear-count">0</span></button><button data-prep-tab="protocols">✦ HONOURS</button></nav>
       <div id="unit-roster" class="prep-list active"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
-      <div class="sticky-action pixel-panel"><div hidden><small id="prep-status-label">▦</small><b id="prep-status">SELECT A UNIT</b></div><button id="deploy-button" class="primary" disabled>RETURN TO MAP</button></div>
+      <div class="station-footer pixel-panel"><div hidden><small id="prep-status-label">▦</small><b id="prep-status">SELECT A UNIT</b></div><button id="deploy-button" disabled>← RETURN TO COMMAND DECK</button></div>
     </section>
 
     <section id="battle-screen" class="screen" aria-labelledby="battle-title">
@@ -137,7 +129,7 @@
 
     <section id="research-screen" class="screen" aria-labelledby="research-title">
       <div class="section-head"><div><h2 id="research-title">ARMOURY</h2></div><div class="cap-badge"><small>◆</small><b id="research-currency">0</b></div></div>
-      <div id="research-grid" class="research-grid"></div><button id="research-back-button" class="large">← COMMAND</button>
+      <div id="research-grid" class="research-grid"></div><div class="station-footer pixel-panel"><button id="research-back-button" class="command-return">← RETURN TO COMMAND DECK</button></div>
     </section>
 
     <dialog id="settings-dialog" class="modal pixel-panel">
@@ -177,7 +169,6 @@
       <p class="eyebrow" id="run-end-kicker">// EXPEDITION COMPLETE</p><h2 id="run-end-title">THE FRONT BREAKS.</h2><p id="run-end-copy"></p><div id="run-end-stats" class="end-ledger"></div><button id="run-end-button" class="primary large">RETURN TO COMMAND</button>
     </dialog>
   </main>
-  <div id="save-toast" class="save-toast" role="status" aria-live="polite">◆ PROGRESS SAVED</div>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

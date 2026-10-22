@@ -165,7 +165,6 @@ export class Game {
     this.loadoutReturn = 'hub';
     this.introTimer = null;
     this.introComplete = false;
-    this.saveNoticeTimer = null;
     this.setupChoice = {tier:null,faction:null};
     this.bindUI();
     document.body.classList.toggle('reduced-motion', Boolean(this.meta.settings?.reducedMotion));
@@ -179,26 +178,16 @@ export class Game {
     try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
   }
 
-  save({silent = false} = {}) {
+  save() {
     try {
       this.meta.lastSavedAt = Date.now();
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.meta));
       if (this.run) localStorage.setItem(RUN_KEY, JSON.stringify(this.run));
       else localStorage.removeItem(RUN_KEY);
-      if (!silent) this.announceSave('◆ PROGRESS SAVED');
-    } catch {
-      this.announceSave('! SAVE FAILED', true);
+    } catch (error) {
+      console.error('Save failed', error);
     }
     this.renderHeader();
-  }
-
-  announceSave(message, error = false) {
-    const toast = $('#save-toast'); if (!toast) return;
-    toast.textContent = message;
-    toast.classList.toggle('error', error);
-    toast.classList.add('visible');
-    clearTimeout(this.saveNoticeTimer);
-    this.saveNoticeTimer = setTimeout(() => toast.classList.remove('visible'), 1300);
   }
 
   bindUI() {
@@ -212,7 +201,6 @@ export class Game {
     $('#credits-button').onclick = () => $('#credits-dialog').showModal();
     $('#close-settings-button').onclick = () => $('#settings-dialog').close();
     $('#close-credits-button').onclick = () => $('#credits-dialog').close();
-    $('#back-button').onclick = () => this.goBack();
     $('#mission-close-button').onclick = () => this.closeMissionBriefing();
     $('#mission-accept-button').onclick = () => this.acceptMission();
     $('#mission-log-button').onclick = () => this.openMissionBriefing(this.run?.region, true);
@@ -221,8 +209,6 @@ export class Game {
       document.body.classList.toggle('reduced-motion', event.target.checked); this.save();
     };
     $('#event-continue-button').onclick = () => this.finishPostWarEvent();
-    $('#home-button').onclick = () => { if (!this.battle) { this.save(); this.renderHome(); this.show('home'); } };
-    $('#help-button').onclick = () => $('#help-dialog').showModal();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
     $('#remove-button').onclick = () => this.removeSelected();
     $('#clear-button').onclick = () => { if (!this.run) return; this.run.deployed = []; this.selectedPlaced = null; this.renderLoadout(); this.save(); };
@@ -230,7 +216,7 @@ export class Game {
     $('#speed-button').onclick = () => this.toggleSpeed();
     $('#skip-button').onclick = () => this.resolveBattleNow();
     $('#run-end-button').onclick = () => this.handleEndButton();
-    $('#research-back-button').onclick = () => { this.renderHub(); this.show('hub'); };
+    for (const button of $$('.command-return')) button.onclick = () => { this.save(); this.renderHub(); this.show('hub'); };
     for (const button of $$('[data-prep-tab]')) button.onclick = () => this.setPrepTab(button.dataset.prepTab);
   }
 
@@ -282,8 +268,7 @@ export class Game {
   }
 
   renderHeader() {
-    $('#meta-currency').textContent = this.meta.currency;
-    $('#location-label').textContent = this.run ? `${this.faction(this.run.faction).name.toUpperCase()} // ${this.run.cap} PTS` : '40K CAMPAIGN';
+    // Navigation is handled by the consistent bottom return control.
   }
 
   show(name) {
@@ -294,10 +279,6 @@ export class Game {
     document.body.classList.toggle('battle-active', name === 'battle');
     if (name !== 'battle') this.clearBattleStage();
     this.currentScreen = name;
-    const back = $('#back-button');
-    back.hidden = name === 'home';
-    back.disabled = name === 'battle';
-    back.title = name === 'battle' ? 'Battle in progress' : 'Go back';
     if (this.run && name !== 'battle') { this.run.lastScreen = name; this.save({silent:true}); }
     window.scrollTo(0, 0);
     this.renderHeader();
@@ -317,7 +298,7 @@ export class Game {
       this.renderHub(); return this.show('hub');
     }
     if (this.currentScreen === 'map' || this.currentScreen === 'sector' || this.currentScreen === 'research') { this.renderHub(); return this.show('hub'); }
-    if (this.currentScreen === 'reward') return this.announceSave('CHOOSE A REWARD TO CONTINUE', true);
+    if (this.currentScreen === 'reward') return;
     this.renderHome(); this.show('home');
   }
 
@@ -382,22 +363,18 @@ export class Game {
   renderSetup(stage) {
     this.setupStage = stage;
     const list = $('#setup-options'); list.innerHTML = '';
-    const stages = ['tier','faction'];
-    const index = stages.indexOf(stage);
-    $('#setup-step').textContent = `0${index + 1} / 02 · ${stage === 'tier' ? 'UNIT SIZE' : 'CHAPTER'}`;
     $('#setup-title').textContent = stage === 'tier' ? 'CHOOSE UNIT SIZE' : 'CHOOSE YOUR CHAPTER';
     list.classList.toggle('chapter-grid',stage === 'faction');
-    $$('.setup-progress i').forEach((dot,i) => dot.classList.toggle('active', i <= index));
     if (stage === 'tier') UNIT_SIZES.forEach(({tierIndex,label}) => {
       const tier = CAMPAIGN_TIERS[tierIndex];
       const button = document.createElement('button'); button.className = 'setup-card tier-card';
-      button.innerHTML = `<span>${tier.points}</span><b>${label}</b><small>${tier.sectors} SECTORS</small>`;
+      button.innerHTML = `<span>${tier.points}</span><b>${label}</b>`;
       button.onclick = () => { this.setupChoice.tier = tierIndex; this.renderSetup('faction'); }; list.append(button);
     });
     if (stage === 'faction') CHAPTERS.forEach(chapter => {
       const button = document.createElement('button'); button.className = `chapter-card ${chapter.locked ? 'locked' : ''}`;
       button.disabled = chapter.locked;
-      button.innerHTML = `<img src="${chapter.art}" alt=""><b>${chapter.label}</b>${chapter.locked ? '<small>LOCKED</small>' : ''}`;
+      button.innerHTML = `<img src="${chapter.art}" alt=""><b>${chapter.label}</b>`;
       button.onclick = () => { this.setupChoice.faction = chapter.id; this.beginIntro(); }; list.append(button);
     });
   }
@@ -440,10 +417,8 @@ export class Game {
 
   renderHub() {
     if (!this.run) return;
-    const completed = this.run.sectors.filter(sector => sector.status === 'complete').length;
     $('#hub-army-status').textContent = `${this.usedPoints()} / ${this.getBaseCap()} PTS`;
     $('#hub-req-status').textContent = `◆ ${this.meta.currency}`;
-    $('#hub-contract-status').textContent = `${completed} / ${this.run.sectors.length}`;
     $('#hub-mission-label').textContent = 'OPERATION';
   }
 
