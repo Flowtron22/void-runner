@@ -272,3 +272,51 @@ body.intro-open .topbar{display:none}
 @keyframes planetPulse{50%{filter:brightness(1.25);box-shadow:0 0 0 9px #bd965015,0 0 29px #d8a958aa}}
 .reduced-motion .sector-card.available>span,.reduced-motion .area-galaxy .route-node.available::before{animation:none}
 @media(max-width:390px){.sector-map{height:470px}.area-galaxy{height:530px}.sector-card{width:96px}.area-galaxy .route-node{width:92px!important}.area-galaxy .route-node b{font-size:6.5px}}
+
+/* Extracted territory atlas: every visible region is its own transparent PNG and interaction surface. */
+.territory-piece{position:absolute!important;z-index:4;left:var(--territory-x)!important;top:var(--territory-y)!important;width:var(--territory-w)!important;height:var(--territory-h)!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;clip-path:none!important;overflow:visible!important;transform-origin:center;isolation:isolate}
+.territory-piece::before,.territory-piece::after{content:none!important}
+.territory-art{position:absolute;z-index:-1;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:auto;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 3px 5px #000b);transition:filter .18s ease,transform .18s ease,opacity .18s ease}
+.territory-copy{position:absolute;z-index:2;inset:12%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;pointer-events:auto;text-align:center;text-shadow:0 2px 4px #000,0 0 7px #000}
+
+#sector-screen .sector-map{min-height:620px}
+#sector-screen .sector-map .sector-card.territory-piece{display:block;animation:sectorDeploy .58s cubic-bezier(.16,.75,.24,1) both;animation-delay:var(--sector-delay);filter:none;opacity:1}
+#sector-screen .sector-map .sector-card.territory-piece .territory-copy b{display:flex;flex-direction:column;align-items:center;gap:4px;color:#f2ead9;font:800 10px/1.05 Georgia,serif;letter-spacing:.045em;white-space:normal}
+#sector-screen .sector-map .sector-card.territory-piece .territory-copy em{display:grid;place-items:center;width:29px;height:29px;transform:rotate(45deg);border:1px solid #f1d59b;background:#090d11e8;color:#f3d58e;font:800 8px Rajdhani,sans-serif;box-shadow:0 0 10px #000}
+#sector-screen .sector-map .sector-card.territory-piece .territory-copy em i{transform:rotate(-45deg);font-style:normal}
+#sector-screen .sector-map .sector-card.territory-piece .territory-copy small{color:#d6c9b2;font-size:6px;letter-spacing:.13em}
+#sector-screen .sector-map .sector-card.territory-piece.locked{opacity:.52;filter:none}
+#sector-screen .sector-map .sector-card.territory-piece.locked .territory-art{filter:grayscale(1) brightness(.54) drop-shadow(0 2px 3px #000)}
+#sector-screen .sector-map .sector-card.territory-piece.locked .territory-copy{opacity:.55}
+#sector-screen .sector-map .sector-card.territory-piece.available .territory-art{filter:sepia(.2) saturate(1.35) brightness(1.08) drop-shadow(0 0 8px #ff514b);animation:territorySignal 2.7s ease-in-out infinite}
+#sector-screen .sector-map .sector-card.territory-piece.complete .territory-art{filter:hue-rotate(94deg) saturate(.72) brightness(.88) drop-shadow(0 0 6px #70bd78)}
+#sector-screen .sector-map .sector-card.territory-piece:hover,#sector-screen .sector-map .sector-card.territory-piece:focus-visible{z-index:12;transform:translateY(-3px) scale(1.045);outline:none;filter:none}
+#sector-screen .sector-map .sector-card.territory-piece:hover .territory-art,#sector-screen .sector-map .sector-card.territory-piece:focus-visible .territory-art{filter:brightness(1.35) saturate(1.25) drop-shadow(0 0 14px #ff8878)}
+#sector-screen .sector-map .sector-card.territory-piece.engaging{z-index:15;animation:territoryEngage .38s ease-in forwards!important}
+
+#map-screen .area-galaxy{height:590px;min-height:590px}
+#map-screen .area-galaxy .territory-piece{display:block;animation:zoneDeploy .55s cubic-bezier(.16,.75,.24,1) both;animation-delay:var(--zone-delay,0ms)}
+#map-screen .area-galaxy .territory-piece .territory-art{filter:drop-shadow(0 3px 5px #000c)}
+#map-screen .area-galaxy .area-entry{color:#e1f2d8;animation:zoneDeploy .55s .32s cubic-bezier(.16,.75,.24,1) both,entryPulse 3.8s .9s ease-in-out infinite}
+#map-screen .area-galaxy .area-entry .territory-copy{inset:18%}
+#map-screen .area-galaxy .area-entry b{color:#ecf8e8;font:800 10px Georgia,serif}
+#map-screen .area-galaxy .area-entry small{color:#b9d3ba;font-size:6px;letter-spacing:.12em}
+#map-screen .area-galaxy .route-node.territory-piece{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent!important;filter:none;text-align:center;pointer-events:none}
+#map-screen .area-galaxy .route-node.territory-piece.available:not(:disabled),#map-screen .area-galaxy .route-node.territory-piece.available:not(:disabled).elite,#map-screen .area-galaxy .route-node.territory-piece.available:not(:disabled).boss{background:transparent!important;filter:none}
+#map-screen .area-galaxy .route-node.territory-piece>*:not(.territory-art){position:relative;z-index:2;pointer-events:auto;text-shadow:0 2px 4px #000,0 0 7px #000}
+#map-screen .area-galaxy .route-node.territory-piece>b{max-width:82%;color:#fff1df;font:800 8px/1.08 Georgia,serif}
+#map-screen .area-galaxy .route-node.territory-piece>small{max-width:80%;color:#e2d5c1;font-size:5.5px;white-space:normal}
+#map-screen .area-galaxy .route-node.territory-piece>span:not(.territory-signal){max-width:80%;color:#f1cd7a;font-size:5.5px}
+#map-screen .area-galaxy .route-node.territory-piece .territory-signal{position:absolute;z-index:1;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%) rotate(45deg);border:1px solid #ffe0a0;background:#17090ad1;box-shadow:0 0 0 4px #d8483c22,0 0 15px #ff5c4d99;pointer-events:none;animation:signalReticle 2.4s ease-in-out infinite}
+#map-screen .area-galaxy .route-node.territory-piece:hover,#map-screen .area-galaxy .route-node.territory-piece:focus-visible{z-index:12;transform:translateY(-3px) scale(1.045);outline:none;filter:none}
+#map-screen .area-galaxy .route-node.territory-piece:hover .territory-art,#map-screen .area-galaxy .route-node.territory-piece:focus-visible .territory-art{filter:brightness(1.35) saturate(1.35) drop-shadow(0 0 15px #ff6758)}
+#map-screen .area-galaxy .route-node.territory-piece.engaging{z-index:15;animation:territoryEngage .34s ease-in forwards!important}
+.territory-locked{pointer-events:none;opacity:.42;filter:grayscale(.7) brightness(.72)}
+.territory-locked>span{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);color:#8a9198;font:700 5px Rajdhani,sans-serif;letter-spacing:.12em;text-shadow:0 2px 4px #000}
+.area-galaxy.zone-engaging .territory-piece:not(.engaging){filter:grayscale(.9) brightness(.32);opacity:.24;transition:.22s}
+
+@keyframes territorySignal{50%{filter:brightness(1.25) saturate(1.45) drop-shadow(0 0 15px #ff685d)}}
+@keyframes signalReticle{50%{transform:translate(-50%,-50%) rotate(45deg) scale(1.12);box-shadow:0 0 0 8px #d8483c12,0 0 23px #ff5c4dcc}}
+@keyframes territoryEngage{0%{transform:none}45%{transform:scale(1.07);filter:brightness(1.8) drop-shadow(0 0 20px #ff8b79)}100%{transform:scale(1.2);opacity:0;filter:brightness(2.6) blur(3px)}}
+@media(max-width:390px){#sector-screen .sector-map{min-height:570px}#map-screen .area-galaxy{height:550px;min-height:550px}#sector-screen .sector-map .sector-card.territory-piece .territory-copy b{font-size:8.5px}}
+@media(prefers-reduced-motion:reduce){.territory-piece,.territory-art,.territory-signal{animation:none!important;transition:none!important}}

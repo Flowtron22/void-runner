@@ -64,6 +64,20 @@ const CHAPTERS = [
   {id:'space-marines',label:'ULTRAMARINE',art:new URL('../../assets/chapter-ultramarines.webp',import.meta.url).href,locked:true},
   {id:'imperial-fists',label:'IMPERIAL FIST',art:new URL('../../assets/chapter-imperial-fist.webp',import.meta.url).href,locked:true}
 ];
+const TERRITORY_ART = Array.from({length:10},(_,index) =>
+  new URL(`../../assets/maps/territories/territory-${String(index + 1).padStart(2,'0')}.png`,import.meta.url).href
+);
+const SECTOR_TERRITORIES = [2,5,7,9,1,3,0,4];
+const SECTOR_TERRITORY_LAYOUT = [
+  {x:2,y:2,w:58,h:25},{x:43,y:14,w:50,h:22},{x:37,y:29,w:58,h:20},{x:3,y:39,w:61,h:22},
+  {x:1,y:55,w:47,h:26},{x:36,y:56,w:59,h:25},{x:7,y:79,w:64,h:16},{x:53,y:76,w:43,h:22}
+];
+const AREA_TERRITORY_LAYOUT = [
+  {art:0,x:54.6,y:.7,w:33.4,h:14.8},{art:1,x:32.8,y:4.5,w:21.6,h:29.7},{art:2,x:5.3,y:14.5,w:30.6,h:36.7},
+  {art:3,x:44,y:15.3,w:25.3,h:28.4},{art:4,x:63.2,y:9.6,w:30.3,h:33.5},{art:5,x:25.4,y:31.2,w:20.7,h:21.9},
+  {art:6,x:76.8,y:19.2,w:22,h:33},{art:7,x:37,y:37.4,w:22.9,h:20.8},{art:8,x:54.8,y:39,w:25.5,h:16.7},
+  {art:9,x:8.8,y:49.3,w:29.6,h:19}
+];
 const GREY_KNIGHT_UNIT_ART = {
   'grey-knight-strike-squad':[
     new URL('../../assets/units/grey-knights/strike-squad.png',import.meta.url).href,
@@ -653,17 +667,20 @@ export class Game {
     const map = $('#sector-map');
     map.innerHTML = '<div class="galaxy-nebula"></div><div class="chart-grid"></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
     const count = this.run.sectors.length;
-    const regionStride = 86 / count;
     this.run.sectors.forEach((sector,index) => {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
-      button.className = `sector-card sector-${index % 2 ? 'east' : 'west'} ${sector.status}`;
-      button.style.setProperty('--sector-y',`${6 + index * regionStride}%`);
-      button.style.setProperty('--sector-h',`${regionStride - 2}%`);
+      const layout = SECTOR_TERRITORY_LAYOUT[index] || SECTOR_TERRITORY_LAYOUT.at(-1);
+      button.className = `sector-card territory-piece ${sector.status}`;
+      button.style.setProperty('--territory-x',`${layout.x}%`);
+      button.style.setProperty('--territory-y',`${layout.y}%`);
+      button.style.setProperty('--territory-w',`${layout.w}%`);
+      button.style.setProperty('--territory-h',`${layout.h}%`);
       button.style.setProperty('--sector-delay',`${index * 90}ms`);
       button.disabled = sector.status === 'locked';
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'AVAILABLE' : 'LOCKED';
-      button.innerHTML = `<b><em><span>0${index + 1}</span></em>${sector.name}</b><small>${status}</small>`;
+      const art = TERRITORY_ART[SECTOR_TERRITORIES[index] ?? index % TERRITORY_ART.length];
+      button.innerHTML = `<img class="territory-art" src="${art}" alt=""><span class="territory-copy"><b><em><i>0${index + 1}</i></em>${sector.name}</b><small>${status}</small></span>`;
       button.onclick = () => this.engageSector(button,index); map.append(button);
     });
     this.save();
@@ -767,20 +784,30 @@ export class Game {
     $('#mission-strip-title').textContent = mission.title;
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
-    map.innerHTML = `<div class="galaxy-nebula"></div><div class="chart-grid"></div><div class="area-entry"><b>START</b><small>AREA ${Math.min(this.run.step + 1,tier.depth + 1)}</small></div>`;
+    map.innerHTML = `<div class="galaxy-nebula"></div><div class="chart-grid"></div>`;
     map.classList.add('area-galaxy','territory-area-map');
-    const layouts = [
-      {x:4,y:20,w:43,h:35,shape:'west'},
-      {x:41,y:10,w:55,h:38,shape:'north'},
-      {x:47,y:46,w:49,h:39,shape:'east'}
-    ];
+    const entryLayout = AREA_TERRITORY_LAYOUT[9];
+    const entry = document.createElement('div');
+    entry.className = 'area-entry territory-piece';
+    entry.style.cssText = `--territory-x:${entryLayout.x}%;--territory-y:${entryLayout.y}%;--territory-w:${entryLayout.w}%;--territory-h:${entryLayout.h}%`;
+    entry.innerHTML = `<img class="territory-art" src="${TERRITORY_ART[entryLayout.art]}" alt=""><span class="territory-copy"><b>START</b><small>AREA ${Math.min(this.run.step + 1,tier.depth + 1)}</small></span>`;
+    map.append(entry);
+    const offerLayouts = [AREA_TERRITORY_LAYOUT[2],AREA_TERRITORY_LAYOUT[5],AREA_TERRITORY_LAYOUT[7]];
     this.run.offers.forEach((node,offerIndex) => {
-      const layout = layouts[offerIndex];
-      const choice = this.makeNodeButton(node,`available zone-${layout.shape} ${node.type}`,true);
-      choice.style.setProperty('--zone-x',`${layout.x}%`); choice.style.setProperty('--zone-y',`${layout.y}%`);
-      choice.style.setProperty('--zone-w',`${layout.w}%`); choice.style.setProperty('--zone-h',`${layout.h}%`);
+      const layout = offerLayouts[offerIndex];
+      const choice = this.makeNodeButton(node,`available territory-piece ${node.type}`,true);
+      choice.style.setProperty('--territory-x',`${layout.x}%`); choice.style.setProperty('--territory-y',`${layout.y}%`);
+      choice.style.setProperty('--territory-w',`${layout.w}%`); choice.style.setProperty('--territory-h',`${layout.h}%`);
       choice.style.setProperty('--zone-delay',`${offerIndex * 110}ms`);
+      choice.insertAdjacentHTML('afterbegin',`<img class="territory-art" src="${TERRITORY_ART[layout.art]}" alt=""><span class="territory-signal" aria-hidden="true"></span>`);
       map.append(choice);
+    });
+    AREA_TERRITORY_LAYOUT.filter(layout => ![2,5,7,9].includes(layout.art)).forEach((layout,index) => {
+      const locked = document.createElement('div');
+      locked.className = 'territory-locked territory-piece';
+      locked.style.cssText = `--territory-x:${layout.x}%;--territory-y:${layout.y}%;--territory-w:${layout.w}%;--territory-h:${layout.h}%;--zone-delay:${(index + 3) * 70}ms`;
+      locked.innerHTML = `<img class="territory-art" src="${TERRITORY_ART[layout.art]}" alt=""><span>NO SIGNAL</span>`;
+      map.append(locked);
     });
     this.save();
   }
