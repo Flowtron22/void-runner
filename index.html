@@ -88,9 +88,9 @@
       <div class="run-stats pixel-panel">
         <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Sector stars"><small>★</small><b id="run-data">0</b></span><span title="Campaign Requisition"><small>◆</small><b id="run-currency">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span>
       </div>
-      <button id="mission-log-button" class="mission-strip" aria-label="Review current contract">
-        <img src="assets/bounty-marshal-severine-voss.png" alt="Bounty Marshal Severine Voss" />
-        <span><small>ACTIVE CONTRACT</small><b id="mission-strip-title">AWAITING ORDERS</b><i id="mission-strip-progress">0 / 0</i></span>
+      <button id="mission-log-button" class="mission-strip" aria-label="Review current Inquisitorial directive">
+        <img src="assets/chapter-grey-knight.jpg" alt="Grey Knights strike force" />
+        <span><small>ACTIVE DIRECTIVE</small><b id="mission-strip-title">AWAITING ORDERS</b><i id="mission-strip-progress">0 / 0</i></span>
         <strong>›</strong>
       </button>
       <div id="route-map" class="route-map" aria-label="Expedition route"></div>
@@ -143,15 +143,17 @@
     </dialog>
 
     <dialog id="mission-dialog" class="modal mission-dialog pixel-panel">
-      <button id="mission-close-button" class="dialog-back" aria-label="Back to sector map">←</button>
-      <div class="mission-portrait"><img src="assets/bounty-marshal-severine-voss.png" alt="Bounty Marshal Severine Voss" /></div>
+      <div class="mission-portrait"><img src="assets/chapter-grey-knight.jpg" alt="Grey Knights strike force receiving an Ordo Malleus directive" /></div>
       <div class="mission-transmission">
-        <p class="eyebrow" id="mission-kicker">// ENCRYPTED CONTRACT</p>
+        <p class="eyebrow" id="mission-kicker">// INQUISITORIAL DIRECTIVE</p>
         <h2 id="mission-title">THE ASHEN TITHE</h2>
-        <b class="mission-speaker">BOUNTY MARSHAL SEVERINE VOSS</b>
+        <b class="mission-speaker">ORDO MALLEUS · SEALED AUTHORITY</b>
         <p id="mission-copy"></p>
         <div class="mission-objective"><small>OBJECTIVE</small><b id="mission-objective"></b><span id="mission-reward"></span></div>
-        <button id="mission-accept-button" class="primary large">ACCEPT CONTRACT</button>
+        <div class="mission-actions">
+          <button id="mission-accept-button" class="primary large">ACCEPT DIRECTIVE</button>
+          <button id="mission-belay-button" class="large">BELAY</button>
+        </div>
       </div>
     </dialog>
 

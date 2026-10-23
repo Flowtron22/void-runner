@@ -9,14 +9,14 @@ const UNIT_SIZES = [
   {tierIndex:4,label:'ONSLAUGHT'}
 ];
 const MISSION_SCRIPTS = [
-  {title:'THE ASHEN TITHE',quote:'A dead convoy still owes its tithe. Find who took it, break their hold, and bring me the names of those who paid them.',objective:'Secure Ashen Reach and identify the raiders.',reward:'CONTRACT REWARD · SECTOR BOSS REQUISITION'},
-  {title:'GHOSTS OF KARST',quote:'Karst Void has gone silent. Silence is rarely empty. Hunt the signal-thieves before their shadow reaches our fleet.',objective:'Trace the stolen signals through Karst Void.',reward:'CONTRACT REWARD · UNLOCK NEXT NAVIGATION CHART'},
-  {title:'THE MOURNING WARRANT',quote:'Pilgrims vanished at the Mourning Gate. Their distress calls now lure warships onto the rocks. End the false beacon.',objective:'Destroy the commander controlling the Mourning Gate.',reward:'CONTRACT REWARD · PERMANENT REQUISITION'},
-  {title:'CROWN OF CINDERS',quote:'The Cinder Crown shelters the architect of this war. Every lesser bounty has led us here. Bring the offensive to its final accounting.',objective:'Break the Cinder Crown and secure the campaign.',reward:'FINAL CONTRACT · MAXIMUM BOSS REWARD'},
-  {title:'THE IRON LEDGER',quote:'Another name has surfaced in the ledger. Their armour is heavy, their debt heavier. Collect both.',objective:'Secure the marked sector and eliminate its warlord.',reward:'CONTRACT REWARD · PERMANENT REQUISITION'},
-  {title:'THE HOLLOW THRONE',quote:'A throne without a ruler still gathers killers. Scatter the claimants before one of them becomes a king.',objective:'Defeat the strongest claimant in the sector.',reward:'CONTRACT REWARD · CAMPAIGN ADVANCE'},
-  {title:'BLACK SUN WARRANT',quote:'The charts end at a black sun. The bounty does not. Take your patrol beyond the sanctioned routes.',objective:'Chart the sector and silence its apex commander.',reward:'CONTRACT REWARD · PERMANENT REQUISITION'},
-  {title:'THE LAST DEBT',quote:'This is the final line in my ledger. Cross it out in fire, and the void will remember who collected.',objective:'Complete the final sector contract.',reward:'FINAL CONTRACT · CAMPAIGN VICTORY'}
+  {title:'THE ASHEN TITHE',quote:'Astropathic choirs report a breach beneath Ashen Reach. Confirm daemonic manifestation, seal the rift and leave no witness to the corruption.',objective:'Secure Ashen Reach and identify the source of the incursion.',reward:'ORDO REQUISITION · SECTOR COMMAND AUTHORITY'},
+  {title:'GHOSTS OF KARST',quote:'Karst Void has fallen silent under cipher Vermilion. Recover the black signal and purge every vessel that answers it.',objective:'Trace the warp signal through Karst Void.',reward:'CLASSIFIED OBJECTIVE · UNLOCK NAVIGATION CHART'},
+  {title:'THE MOURNING GATE',quote:'A false beacon carries the voices of the dead. Break the summoning lattice before the Mourning Gate becomes a permanent wound.',objective:'Destroy the daemonhost controlling the Mourning Gate.',reward:'ORDO REQUISITION · PERMANENT SANCTION'},
+  {title:'CROWN OF CINDERS',quote:'The Cinder Crown conceals the architect of this incursion. Invoke the final canticles and bring the entire station to judgement.',objective:'Banish the sector daemon and secure the campaign.',reward:'PRIORITY EXTREMIS · MAXIMUM REQUISITION'},
+  {title:'THE IRON CATECHISM',quote:'A corrupted war engine has awakened beneath the iron moons. Its machine spirit must be exorcised before it reaches the populated systems.',objective:'Board the war engine and destroy its profane core.',reward:'CLASSIFIED OBJECTIVE · PERMANENT SANCTION'},
+  {title:'THE HOLLOW THRONE',quote:'An empty throne is broadcasting a psychic command across the sector. Silence its claimants and recover the forbidden reliquary intact.',objective:'Purge the throne complex and contain the relic.',reward:'ORDO REQUISITION · CAMPAIGN ADVANCE'},
+  {title:'BLACK SUN PROTOCOL',quote:'The sanctioned charts end at a black sun. Proceed under seal, locate the breach and deny the enemy all passage into realspace.',objective:'Chart the forbidden system and close the warp breach.',reward:'CLASSIFIED OBJECTIVE · PERMANENT SANCTION'},
+  {title:'THE LAST SEAL',quote:'The final ward is failing. Commit the brotherhood, complete the banishment and consign every record of this place to flame.',objective:'Complete the final Inquisitorial directive.',reward:'PRIORITY ABSOLUTE · CAMPAIGN VICTORY'}
 ];
 const INTRO_SCRIPT = [
   'Across the Imperium, worlds fall silent. Heresy spreads. The veil between reality and the Warp grows thin.',
@@ -210,8 +210,8 @@ export class Game {
     $('#credits-button').onclick = () => $('#credits-dialog').showModal();
     $('#close-settings-button').onclick = () => $('#settings-dialog').close();
     $('#close-credits-button').onclick = () => $('#credits-dialog').close();
-    $('#mission-close-button').onclick = () => this.closeMissionBriefing();
     $('#mission-accept-button').onclick = () => this.acceptMission();
+    $('#mission-belay-button').onclick = () => this.closeMissionBriefing();
     $('#mission-log-button').onclick = () => this.openMissionBriefing(this.run?.region, true);
     $('#reduced-motion-toggle').onchange = event => {
       this.meta.settings = {...this.meta.settings,reducedMotion:event.target.checked};
@@ -798,14 +798,14 @@ export class Game {
     if (!this.run || index === null || index === undefined) return;
     const mission = this.missionFor(index);
     const sector = this.run.sectors[index];
-    $('#mission-kicker').textContent = `// CONTRACT ${String(index + 1).padStart(2,'0')} · ${sector.name}`;
+    $('#mission-kicker').textContent = `// DIRECTIVE ${String(index + 1).padStart(2,'0')} · ${sector.name}`;
     $('#mission-title').textContent = mission.title;
     $('#mission-copy').textContent = `“${mission.quote}”`;
     $('#mission-objective').textContent = mission.objective;
     $('#mission-reward').textContent = mission.reward;
-    $('#mission-accept-button').textContent = review ? 'RETURN TO CHART' : 'ACCEPT CONTRACT';
+    $('#mission-accept-button').textContent = review ? 'RETURN TO CHART' : 'ACCEPT DIRECTIVE';
     $('#mission-accept-button').dataset.review = review ? 'true' : 'false';
-    $('#mission-close-button').hidden = review;
+    $('#mission-belay-button').hidden = review;
     $('#mission-dialog').showModal();
   }
 
@@ -879,7 +879,7 @@ export class Game {
       choice.style.setProperty('--system-x',`${layout.x}%`); choice.style.setProperty('--system-y',`${layout.y}%`);
       choice.style.setProperty('--planet-size',layout.size);
       choice.style.setProperty('--zone-delay',`${offerIndex * 110}ms`);
-      choice.insertAdjacentHTML('afterbegin',`<span class="destination-planet destination-system tone-${layout.tone}" aria-hidden="true"><i class="destination-sun"></i><span class="mini-orbit orbit-a"><i></i></span><span class="mini-orbit orbit-b"><i></i></span></span>`);
+      choice.insertAdjacentHTML('afterbegin',`<span class="destination-planet destination-system tone-${layout.tone}" aria-hidden="true"><i class="destination-sun"></i></span>`);
       stage.append(choice);
     });
     this.bindGalaxyNavigation(map,stage,.78);
