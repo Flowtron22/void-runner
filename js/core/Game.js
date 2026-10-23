@@ -674,14 +674,14 @@ export class Game {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
       const layout = GALAXY_SYSTEM_LAYOUT[index] || GALAXY_SYSTEM_LAYOUT.at(-1);
-      button.className = `sector-card galaxy-system ${sector.status} ${activeIndex === index ? 'active-system' : ''}`;
+      button.className = `sector-card galaxy-system ${sector.status} ${activeIndex === index ? 'active-system' : ''} ${index === 0 ? 'start-system' : ''}`;
       button.style.setProperty('--system-x',`${layout.x}%`);
       button.style.setProperty('--system-y',`${layout.y}%`);
       button.style.setProperty('--system-size',layout.size);
       button.style.setProperty('--sector-delay',`${index * 90}ms`);
       button.disabled = sector.status === 'locked' && activeIndex !== index;
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'TRAVEL AVAILABLE' : 'UNCHARTED';
-      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i class="star-flare"></i></span><span class="system-copy"><b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
+      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i class="star-flare"></i></span><span class="system-copy">${index === 0 ? '<mark>START POINT</mark>' : ''}<b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
       button.onclick = () => this.engageSector(button,index); stage.append(button);
     });
     const focusIndex = activeIndex ?? this.run.sectors.findIndex(sector => sector.status === 'available');
@@ -720,7 +720,17 @@ export class Game {
     };
     requestAnimationFrame(() => centerView(initialScale));
     window.addEventListener('resize',paint,{signal:controller.signal});
-    viewport.addEventListener('wheel',event => { event.preventDefault(); zoomAt(state.scale * (event.deltaY > 0 ? .9 : 1.1),event.clientX,event.clientY); },{passive:false,signal:controller.signal});
+    viewport.addEventListener('wheel',event => {
+      event.preventDefault();
+      if (event.ctrlKey || event.metaKey) {
+        zoomAt(state.scale * (event.deltaY > 0 ? .9 : 1.1),event.clientX,event.clientY);
+        return;
+      }
+      const horizontal = Math.abs(event.deltaX) > 1 ? event.deltaX : event.deltaY;
+      state.x -= horizontal;
+      state.y -= Math.abs(event.deltaX) > 1 ? event.deltaY : 0;
+      paint();
+    },{passive:false,signal:controller.signal});
     viewport.addEventListener('pointerdown',event => {
       if (event.target.closest('.galaxy-instrument')) return;
       pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});

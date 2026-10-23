@@ -345,6 +345,7 @@ body.star-chart-open .station-footer{width:min(calc(100% - 24px),580px)}
 .system-star.tone-blue{filter:hue-rotate(164deg)}.system-star.tone-white{filter:saturate(.2) brightness(1.2)}.system-star.tone-red{filter:hue-rotate(325deg) saturate(1.6)}
 .system-copy{position:absolute;z-index:3;left:50%;top:55%;display:grid;width:auto!important;min-width:150px;height:auto!important;transform:translateX(-50%);justify-items:center;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;pointer-events:none;text-shadow:0 2px 5px #000,0 0 10px #000}
 .system-copy b{color:#edf4f5;font:800 12px/1.1 Georgia,serif;letter-spacing:.08em}.system-copy small{margin-top:4px;color:#96c3d3;font:700 6px Rajdhani,sans-serif;letter-spacing:.16em}.system-copy em{position:absolute;left:4px;top:-43px;color:#d9eff7;font:700 6px Rajdhani,sans-serif;font-style:normal}
+.system-copy mark{display:none}.start-system .system-copy mark{position:absolute;left:50%;top:-58px;display:block;padding:5px 11px;transform:translateX(-50%);border:1px solid #ffe09a;color:#15100a;background:#f0c463;box-shadow:0 0 16px #f0b94ccc;font:900 10px Rajdhani,sans-serif;letter-spacing:.14em;white-space:nowrap}.start-system .system-copy mark::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border:4px solid transparent;border-top-color:#f0c463}.start-system .system-star{box-shadow:0 0 8px 2px #fff,0 0 24px 8px #f3c26fb8,0 0 46px 13px #de744f8c!important}
 #sector-screen .sector-map .galaxy-system .system-copy em{display:block;width:auto;height:auto;transform:none;border:0;background:none;box-shadow:none}
 #sector-screen .sector-map .galaxy-system.locked{opacity:.58;filter:grayscale(.85)}
 #sector-screen .sector-map .galaxy-system.locked .system-star{opacity:.46;box-shadow:0 0 9px #8fa9b6}
@@ -403,7 +404,7 @@ body.star-chart-open .app-shell{width:min(100%,480px);margin-inline:0;padding-in
 body.star-chart-open .station-footer{width:min(calc(100% - 16px),464px)}
 .star-chart-open #sector-screen .section-head,.star-chart-open #map-screen>.section-head,.star-chart-open #map-screen>.run-stats,.star-chart-open #map-screen>.mission-strip{max-width:none}
 
-#sector-screen .sector-map,#map-screen .area-galaxy.star-system-map{touch-action:none;cursor:grab;overscroll-behavior:contain;animation:none;background:#020407}
+#sector-screen .sector-map,#map-screen .area-galaxy.star-system-map{touch-action:none;cursor:grab;overscroll-behavior:contain;user-select:none;-webkit-user-select:none;animation:none;background:#020407}
 #sector-screen .sector-map.navigating,#map-screen .area-galaxy.star-system-map.navigating{cursor:grabbing}
 #sector-screen .sector-map{height:min(690px,calc(100dvh - 152px));min-height:570px}
 #map-screen .area-galaxy.star-system-map{height:min(620px,calc(100dvh - 276px));min-height:470px}
