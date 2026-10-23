@@ -155,6 +155,29 @@ Show the galaxy on a dedicated cartographic display. The galaxy level communicat
 
 Pan and zoom must feel like moving an instrument camera across a continuous chart. The background must cover the full navigable extent at every supported zoom. Starting position, current location, reachable systems, and locked signals require unmistakable states. Keep chart density low enough that labels and missions remain readable.
 
+#### WebGL cartography specification
+
+The chart is a restrained 2.5D instrument, not a free-flight space scene. Use a perspective camera, layered stars, sparse dust, and carefully placed depth to make the display feel expansive while preserving portrait-screen composition. Keep the camera upright and constrain its travel and zoom. Do not add unrestricted orbit rotation, a horizon, or exposed edges around the rendered field.
+
+The galaxy and local-system views must be authored as different places:
+
+- **Galaxy view:** broad, dark and sparse. Named sectors are compact stellar concentrations with a small emissive core, spectral variation, and enough separation for labels. The current or available sector carries a localized pulse; locked sectors remain legible without becoming bright buttons.
+- **Local-system view:** closer and more dimensional. A sector-specific star, dust distribution, navigation reference, strike-cruiser marker, and reachable mission systems establish that the camera travelled inward. Do not reuse the galaxy field as a blurred background.
+
+WebGL owns depth, light, star particles, travel motion, and hit targets. HTML owns names, threat and availability copy, focus order, and assistive semantics. Project every label from its three-dimensional anchor on each frame so text stays sharp and attached while panning, zooming, resizing, or travelling. A pointer raycast and its corresponding HTML control must select the same destination and must not fire twice.
+
+Selection states use light and instrument response rather than animated planetary rings:
+
+- **Available:** readable core, restrained emissive pulse, clear name and status.
+- **Focused or hovered:** brighter core, thin acquisition reticle, and increased label contrast.
+- **Selected:** short camera approach followed by the briefing or local chart.
+- **Locked:** dim signal, visible name, and explicit lock reason where needed.
+- **Current or starting position:** persistent navigation marker that remains visible at every allowed zoom.
+
+Camera travel should take roughly 500–900 ms and settle cleanly. Direct manipulation stops the travel before accepting a new gesture. Reduced motion changes travel into an immediate camera placement and removes pulsing or drift that is not required for state recognition.
+
+Keep the renderer practical on mobile. Load the WebGL module only when Operation opens, cap device pixel ratio, avoid full-screen bloom and expensive post-processing, and dispose of controls, geometry, material, texture, renderer, observers, and animation frames when leaving the chart. Prefer a few deterministic particle layers over a dense generated galaxy. If WebGL fails, retain the authored chart background and fully usable HTML destination controls.
+
 ### Deployment and army management
 
 Use a tactical chart table or armoury terminal. Units appear as painted dossiers, pict feeds, or heraldic identification plates. Large walkers and knights must occupy visibly larger grid footprints; a single character uses the established 4×4 tile footprint rule where defined by gameplay. Locked units need a clear operational reason such as unrecovered pattern, insufficient allowance, or unavailable stock.

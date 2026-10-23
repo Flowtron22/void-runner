@@ -125,6 +125,29 @@ Stars unlock choices; they are not spent. Boss victory also awards its tier in s
 
 The sector and local charts use fixed three-dimensional coordinates, perspective depth, raycast selection, constrained panning, wheel/pinch zoom, and a camera-travel confirmation. The current implementation still advances missions by layers; it is not yet a persistent free-form territory network with all adjacent systems visible at once.
 
+### 4.1 WebGL navigation contract
+
+`GalaxyMap3D` provides two modes through one renderer lifecycle:
+
+| Mode | Purpose | Required scene language |
+|---|---|---|
+| Galaxy | Select an available sector | Sparse large-scale field, compact stellar sector signals, localized emission, projected sector labels |
+| Local system | Choose the next battle in an active directive | Distinct deeper field, central star, dust, strike-cruiser marker, three reachable mission systems |
+
+The renderer is imported only when Operation opens so army building, combat and the command deck do not pay the Three.js bundle cost. `Game` remains authoritative for campaign state and supplies destinations, labels, status and selection callbacks. `GalaxyMap3D` owns the scene, camera, raycasting, projection, gestures, animation and cleanup. Camera position is presentation state and is not written to the campaign save.
+
+Navigation behavior is fixed:
+
+- One-finger or mouse drag pans across the chart; wheel and two-finger pinch zoom within authored bounds.
+- The camera remains upright and constrained. The minimum zoom still covers the viewport, and no gesture may reveal an empty canvas edge.
+- Selecting a raycast target or its projected HTML control begins the same destination action. The camera approaches the signal before `Game` opens the next view unless reduced motion is active.
+- Labels are DOM controls projected from the same world coordinates as their WebGL signals. They remain keyboard-focusable and readable by assistive technology.
+- The starting/current position has a persistent marker. Availability, focus, selected and locked states remain distinguishable without color alone.
+- Leaving Operation cancels animation and input listeners and disposes the WebGL scene. Returning constructs a fresh view from campaign state.
+- If WebGL initialization fails, the static chart treatment and DOM controls remain functional so campaign progress is never blocked by rendering support.
+
+The chart adds spatial presentation without changing route rules. The galaxy shows the sectors already defined by campaign size and completion state. The local view shows the current layer's three offers. Persistent adjacency, free-form travel and a fully visible sector territory network are future campaign features and require new saved topology rather than renderer-only work.
+
 ## 5. Factions and JSON data
 
 The runtime fetches `public/data/warhammer-roster.json`. It is a compact, deployment-safe derivative of the KS army JSON rather than a second manually invented ruleset.
@@ -402,6 +425,10 @@ Required checks:
 - Wargear equips to one selected deployed unit.
 - Setup offers 500, 1,000, 2,000, and 3,000-point scales and the chosen base scale persists through every sector. The 1,500-point tier remains data-only for save compatibility.
 - Both maps use spatial WebGL scenes; pan, wheel/pinch zoom, raycasting, projected labels, and camera travel work without exposing empty space.
+- Galaxy and local-system views have visibly different fields and scale; entering a sector reads as travel inward rather than reuse of one background.
+- At 320, 390 and 480 CSS px widths, labels stay anchored after pan, zoom, travel and resize, and the starting/current marker remains visible.
+- Pointer targets and projected DOM controls select each destination exactly once; keyboard activation follows the same route.
+- Reduced motion skips camera flight, WebGL fallback leaves navigation usable, and leaving Operation stops its animation loop and releases the renderer.
 - Post-War Affairs generates three to five single-claim blocks, removes each claimed block, and blocks travel until every claim and special event is resolved.
 - Recruitment unlocks a pattern and stores charge the shown temporary currency.
 - Stars unlock boss tiers without being consumed; boss victory unlocks the next sector.
@@ -429,8 +456,8 @@ The 4×4 silhouette atlas contains 16 archetypes. Many additional factions reuse
 Known follow-ups identified from the current source:
 
 1. **Art-direction migration:** rebuild the current cyan/pixel and flat-card presentation around the physical gothic terminal, localized phosphor, painterly portrait, and environmental rules in `artstyle.md`. Existing gameplay behavior must remain stable during this migration.
-2. **Galaxy layout:** develop the spatial charts into a persistent territory and adjacency map. Current area progression still advances by hidden layers even though the presentation suggests a broader navigable chart.
-3. **Map clarity:** enlarge small galaxy labels at phone widths, keep the starting position unmistakable, and ensure the full panning and zoom range is covered by authored chart imagery.
+2. **Persistent route topology:** the WebGL charts now provide spatial navigation, but area progression still advances through generated layers. A persistent territory and adjacency map needs an explicit saved graph, route reveal rules, and migration for active campaigns.
+3. **Cartography polish:** validate projected label size and collision at phone widths, add more sector-specific local-system landmarks, and tune star density and emission against the restrained gothic-terminal direction. Preserve the existing coverage, starting marker, gesture bounds, accessibility controls, and WebGL fallback.
 4. **Exhausted reward pools:** a partly exhausted Enhancement or Stratagem pool can show fewer than three choices. A fully exhausted pool converts the claim to 10 Requisition, but partial pools still need equivalent replacement options.
 5. **Higher-point army growth:** four patterns, stock limits, and the 6×5 grid can prevent using the full 2,000/3,000-point allowance. Expand the roster or define point-scale stock and grid rules before treating those scales as balanced.
 6. **Help copy:** the current Help dialog still describes a single reward choice and uses the older Honour terminology. Update it to explain clearing all three to five claims.
@@ -458,4 +485,4 @@ Tell the next coding agent: "Read gdd.md, README.md and artstyle.md, inspect git
 
 All referenced runtime images, GIFs, source and the dependency lockfile belong in Git. `node_modules/`, `dist/`, `.env*` and `.vercel/` are intentionally ignored and must be regenerated or configured locally. Vercel CLI authentication/project linkage is machine-specific; do not commit tokens or copy `.vercel` as a substitute for relinking. Existing deployment configuration builds with `npm run build` and serves `dist/`.
 
-Production URL at handoff: `https://combatpatrol.vercel.app`. The latest gameplay fix before this documentation pass is `ef21484`; the complete reference archive was added in `98d3398`. The reference material informs future original production art and is not itself a runtime asset library.
+Production URL at handoff: `https://combatpatrol.vercel.app`. The interactive WebGL cartography was introduced in `972b2f2`; the complete reference archive was added in `98d3398` and extended in `c246ebc`. The reference material informs future original production art and is not itself a runtime asset library.
