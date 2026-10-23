@@ -65,8 +65,8 @@ const CHAPTERS = [
   {id:'imperial-fists',label:'IMPERIAL FIST',art:new URL('../../assets/chapter-imperial-fist.webp',import.meta.url).href,locked:true}
 ];
 const GALAXY_SYSTEM_LAYOUT = [
-  {x:31,y:59,size:1.22,tone:'gold'},{x:25,y:39,size:.88,tone:'blue'},{x:69,y:51,size:1.05,tone:'white'},
-  {x:78,y:35,size:.78,tone:'red'},{x:82,y:62,size:.94,tone:'blue'},{x:63,y:81,size:.7,tone:'white'},
+  {x:10,y:22,size:1.22,tone:'gold'},{x:15,y:13,size:.88,tone:'blue'},{x:40,y:22,size:1.05,tone:'white'},
+  {x:73,y:78,size:.78,tone:'red'},{x:82,y:62,size:.94,tone:'blue'},{x:63,y:81,size:.7,tone:'white'},
   {x:23,y:43,size:.68,tone:'red'},{x:88,y:39,size:.62,tone:'gold'}
 ];
 const SYSTEM_DESTINATION_LAYOUT = [
@@ -668,14 +668,8 @@ export class Game {
       const nextSector = this.run.sectors.find(sector => sector.status !== 'complete');
       if (nextSector) nextSector.status = 'available';
     }
-    map.innerHTML = '<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
+    map.innerHTML = `<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="segmentum-label label-aura">STELLE DELL'AURA</div><div class="segmentum-label label-obscurus">SEGMENTUM<br>OBSCURUS</div><div class="segmentum-label label-solar">SEGMENTUM<br>SOLAR</div><div class="segmentum-label label-ultimus">SEGMENTUM<br>ULTIMUS</div><div class="segmentum-label label-uhulis">SETTORE<br>UHULIS</div><div class="segmentum-label label-tempestus">SEGMENTUM<br>TEMPESTUS</div><div class="segmentum-label label-velata">LA ZONA VELATA</div><div class="segmentum-label label-frangia">LA FRANGIA ORIENTALE</div></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>`;
     const stage = map.querySelector('.galaxy-stage');
-    for (let index = 0; index < 72; index++) {
-      const star = document.createElement('i');
-      star.className = 'distant-star';
-      star.style.cssText = `--sx:${(index * 47) % 97}%;--sy:${(index * 71) % 93}%;--sd:${(index % 9) * -.23}s;--ss:${index % 7 === 0 ? 2 : 1}px`;
-      stage.append(star);
-    }
     this.run.sectors.forEach((sector,index) => {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');

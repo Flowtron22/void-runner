@@ -334,6 +334,7 @@ body.star-chart-open .station-footer{width:min(calc(100% - 24px),580px)}
 .distant-star{position:absolute;z-index:2;left:var(--sx);top:var(--sy);width:var(--ss);height:var(--ss);border-radius:50%;background:#d9efff;box-shadow:0 0 5px #b9e4ff;opacity:.42;pointer-events:none;animation:starBlink 2.1s var(--sd) ease-in-out infinite}
 .galaxy-core-label,.rift-label{position:absolute;z-index:3;pointer-events:none;color:#b8cad178;font:700 8px Rajdhani,sans-serif;letter-spacing:.28em;text-shadow:0 0 8px #8bd9ff55}
 .galaxy-core-label{left:49%;top:46%;transform:rotate(-8deg)}.rift-label{right:3%;top:48%;transform:rotate(72deg);color:#d15c686e}
+.segmentum-label{position:absolute;z-index:5;color:#e9edf0d6;font:700 clamp(10px,1.35vw,17px)/1.18 Georgia,serif;letter-spacing:.16em;text-align:center;text-shadow:0 2px 5px #000,0 0 9px #000;pointer-events:none;white-space:nowrap}.label-aura{left:5%;top:14%;transform:rotate(-40deg)}.label-obscurus{left:27%;top:9%}.label-solar{left:14%;top:46%}.label-ultimus{left:75%;top:34%}.label-uhulis{left:8%;top:70%}.label-tempestus{left:17%;top:85%}.label-velata{left:14%;top:94%;transform:rotate(7deg)}.label-frangia{right:1.5%;top:52%;transform:rotate(-84deg);transform-origin:right center}
 
 #sector-screen .sector-map .galaxy-system{position:absolute;z-index:5;left:var(--system-x);top:var(--system-y);display:block;width:clamp(122px,17vw,188px);height:104px;min-height:0;padding:0;transform:translate(-50%,-50%);border:0;background:transparent!important;box-shadow:none;filter:none;overflow:visible;text-align:center;animation:systemArrive .62s var(--sector-delay) cubic-bezier(.16,.78,.2,1) both}
 #sector-screen .sector-map .galaxy-system::before,#sector-screen .sector-map .galaxy-system::after{content:none!important}
@@ -406,7 +407,8 @@ body.star-chart-open .station-footer{width:min(calc(100% - 16px),464px)}
 #sector-screen .sector-map.navigating,#map-screen .area-galaxy.star-system-map.navigating{cursor:grabbing}
 #sector-screen .sector-map{height:min(690px,calc(100dvh - 152px));min-height:570px}
 #map-screen .area-galaxy.star-system-map{height:min(620px,calc(100dvh - 276px));min-height:470px}
-.galaxy-stage{position:absolute;z-index:2;left:0;top:0;width:190%;height:170%;overflow:hidden;transform-origin:0 0;will-change:transform;background:#02050a url("../assets/tilted-sector-galaxy.png") center/cover no-repeat;box-shadow:inset 0 0 90px #0008}
+.galaxy-stage{position:absolute;z-index:2;left:0;top:0;width:190%;height:170%;overflow:hidden;transform-origin:0 0;will-change:transform;background:#02050a url("../assets/clean-segmentum-map.png") center/cover no-repeat;box-shadow:inset 0 0 90px #0008}
+.galaxy-stage:not(.system-stage){width:280%;height:160%}
 .galaxy-stage.system-stage{width:185%;height:170%;background:#02050b url("../assets/deep-sector-starfield.png") center/cover no-repeat}
 .galaxy-stage:not(.system-stage)>.galaxy-disc{display:none}
 .galaxy-stage::after{content:"";position:absolute;z-index:4;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 25%,#02040a2e 76%,#0007 100%)}
@@ -431,5 +433,5 @@ body.star-chart-open .station-footer{width:min(calc(100% - 16px),464px)}
 #map-screen .area-galaxy .route-node.system-destination:hover .destination-system,#map-screen .area-galaxy .route-node.system-destination:focus-visible .destination-system{filter:brightness(1.28);box-shadow:none}
 
 @keyframes missionSignalPulse{50%{transform:translate(-50%,-50%) scale(1.18);box-shadow:0 0 9px 3px #fff,0 0 22px 8px #eeae5daa,0 0 38px 13px #d45f3866}}
-@media(max-width:390px){.galaxy-stage{width:195%}.galaxy-stage.system-stage{width:190%}}
+@media(max-width:390px){.galaxy-stage:not(.system-stage){width:280%}.galaxy-stage.system-stage{width:190%}}
 @media(prefers-reduced-motion:reduce){.mini-orbit{animation:none!important}}
