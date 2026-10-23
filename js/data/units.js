@@ -33,11 +33,11 @@ export const SECTOR_NAMES = [
 
 export const STRATAGEMS = [
   {id:'command-relay',name:'Command Relay',tag:'START +1 CP',desc:'Begin every battle with one additional Command Point.',effect:{startingCp:1}},
-  {id:'orbital-mark',name:'Orbital Mark',tag:'FIRST SALVO',desc:'Improve hit rolls during the first battle round.',effect:{openingHit:1}},
+  {id:'orbital-mark',name:'Orbital Mark',tag:'FIRST SALVO',desc:'Every unit gains one additional attack per model during the first battle round.',effect:{openingAttacks:1}},
   {id:'reserve-wave',name:'Reserve Wave',tag:'RECOVER',desc:'Recover one campaign attempt when the current sector boss falls.',effect:{bossRepair:1}},
-  {id:'auspex-grid',name:'Auspex Grid',tag:'TARGET LOCK',desc:'Improve wound rolls during the first battle round.',effect:{openingWound:1}},
+  {id:'auspex-grid',name:'Auspex Grid',tag:'TARGET LOCK',desc:'Hit rolls of 5+ automatically wound during the first battle round.',effect:{openingAutoWound:5}},
   {id:'field-cache',name:'Field Cache',tag:'+20 REQ',desc:'Gain 20 campaign Requisition immediately.',effect:{currency:20}},
-  {id:'armour-doctrine',name:'Armour Doctrine',tag:'ROUND 1 SAVE',desc:'Improve saves during the first battle round.',effect:{openingSave:1}}
+  {id:'armour-doctrine',name:'Aegis Protocol',tag:'ROUND 1 WARD',desc:'Grant every unit a 5+ Invulnerable Save during the first battle round.',effect:{openingInvuln:5}}
 ];
 
 export const RESEARCH = [

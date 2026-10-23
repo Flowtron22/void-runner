@@ -227,7 +227,13 @@ export class Game {
     $('#event-continue-button').onclick = () => this.finishPostWarEvent();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
     $('#remove-button').onclick = () => this.removeSelected();
-    $('#clear-button').onclick = () => { if (!this.run) return; this.run.deployed = []; this.selectedPlaced = null; this.renderLoadout(); this.save(); };
+    $('#clear-button').onclick = () => {
+      if (!this.run) return;
+      this.run.deployed = [];
+      for (const gear of this.run.gear) gear.equippedTo = null;
+      this.selectedPlaced = null;
+      this.renderLoadout(); this.save();
+    };
     $('#deploy-button').onclick = () => this.finishPrep();
     $('#speed-button').onclick = () => this.toggleSpeed();
     $('#skip-button').onclick = () => this.resolveBattleNow();
@@ -541,7 +547,7 @@ export class Game {
       button.style.setProperty('--unit-color', unit.color);
       button.disabled = out || tooLarge || unrecovered;
       const weapon = unit.weapon;
-      const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.leader ? `♛ → BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
+      const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.leader ? `${unit.size[0]}×${unit.size[1]} · ♛ GRID OR BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
       button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id,deployedCount)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
@@ -572,10 +578,11 @@ export class Game {
   renderProtocols() {
     const list = $('#protocol-list');
     list.innerHTML = '';
-    if (!this.run.protocols.length) {
+    if (!this.run.protocols.length && !(this.run.stratagems || []).length) {
       list.innerHTML = '<div class="protocol-card"><span>✦</span><div><b>EMPTY</b></div></div>';
       return;
     }
+    if (this.run.protocols.length) list.insertAdjacentHTML('beforeend','<div class="protocol-heading"><b>ENHANCEMENTS</b><small>PASSIVE · ENTIRE CAMPAIGN</small></div>');
     for (const id of this.run.protocols) {
       const honour = BATTLE_HONOURS.find(item => item.id === id);
       const el = document.createElement('div');
@@ -584,6 +591,7 @@ export class Game {
       el.innerHTML = `<span>${ruleSymbol(`${honour.name} ${honour.tag}`)}</span><div><b>${honour.name}</b><small>${honour.tag}</small></div>`;
       list.append(el);
     }
+    if ((this.run.stratagems || []).length) list.insertAdjacentHTML('beforeend','<div class="protocol-heading tactical"><b>STRATAGEMS</b><small>TACTICAL · CONDITIONAL EFFECTS</small></div>');
     for (const id of this.run.stratagems || []) {
       const stratagem = STRATAGEMS.find(item => item.id === id);
       const el = document.createElement('div'); el.className = 'protocol-card'; el.title = stratagem.desc;
@@ -611,7 +619,6 @@ export class Game {
   placeUnit(x, y) {
     const unit = this.unit(this.selectedBlueprint);
     if (!unit) return;
-    if (unit.leader) { $('#prep-status').textContent = 'TAP AN ELIGIBLE DEPLOYED BODYGUARD UNIT'; return; }
     const [w, h] = this.sizeFor(unit, this.rotated);
     const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
     if (deployedCount >= unit.stock) return;
@@ -641,7 +648,7 @@ export class Game {
     if (!this.selectedPlaced) return;
     const removing = new Set([this.selectedPlaced, ...this.run.deployed.filter(unit => unit.attachedTo === this.selectedPlaced).map(unit => unit.id)]);
     this.run.deployed = this.run.deployed.filter(unit => !removing.has(unit.id));
-    for (const gear of this.run.gear) if (gear.equippedTo === this.selectedPlaced) gear.equippedTo = null;
+    for (const gear of this.run.gear) if (removing.has(gear.equippedTo)) gear.equippedTo = null;
     this.selectedPlaced = null;
     this.save();
     this.renderLoadout();
@@ -857,7 +864,7 @@ export class Game {
       return [1,2,3].map((bossTier,lane) => ({
         id:`r${r}-boss-${bossTier}`,type:'boss',bossTier,
         name:['WARLORD','CHAMPION','APEX COMMANDER'][bossTier-1],
-        reward:`${bossTier}★ · +${tier.permanentReward * bossTier} PERMANENT REQ`,
+        reward:`${bossTier}★ · BANK ${tier.permanentReward * bossTier} REQ ON CAMPAIGN VICTORY`,
         difficulty:(1 + bossTier * .22) * tier.enemyScale, enemyFaction:enemy.id,
         locked:this.run.sectorStars < thresholds[bossTier-1], threshold:thresholds[bossTier-1], stars:bossTier,lane
       }));
@@ -1187,6 +1194,7 @@ export class Game {
     }
     const effects = actor.side === 'player' ? this.protocolEffects() : {};
     const tactics = actor.side === 'player' && this.battle.round === 1 ? this.stratagemEffects() : {};
+    attacks += models * (tactics.openingAttacks || 0);
     const hitTarget = clamp(actor.weapon.hit - actor.hitBonus - (tactics.openingHit || 0), 2, 6);
     const attackDie = actor.side === 'player' ? playerD6 : d6;
     const saveDie = target.side === 'player' ? playerD6 : d6;
@@ -1196,7 +1204,8 @@ export class Game {
     if (!rules.torrent && !oathReroll && leader.hitReroll !== 'failed') hitRolls = this.commandReroll(actor, hitRolls, hitTarget, 'Hit');
     let hits = rules.torrent ? attacks : hitRolls.filter(roll => roll !== 1 && roll >= hitTarget).length;
     const criticalHits = hitRolls.filter(roll => roll === 6).length;
-    const autoWounds = effects.lethalHits || rules.lethalHits ? criticalHits : 0;
+    const tacticalAutoWounds = tactics.openingAutoWound ? hitRolls.filter(roll => roll !== 1 && roll >= tactics.openingAutoWound).length : 0;
+    const autoWounds = tacticalAutoWounds || (effects.lethalHits || rules.lethalHits ? criticalHits : 0);
     const sustainedHits = Math.max(effects.sustainedHits || 0, rules.sustainedHits || 0, leader.sustainedHits || 0);
     if (sustainedHits) hits += criticalHits * sustainedHits;
     const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness) - actor.woundBonus - (tactics.openingWound || 0), 2, 6);
@@ -1210,7 +1219,8 @@ export class Game {
     const criticalWoundNeeded = antiNeeded || 6;
     const devastating = rules.devastatingWounds ? woundRolls.filter(roll => roll !== 1 && roll >= criticalWoundNeeded).length : 0;
     const armourTarget = clamp(target.save - actor.weapon.ap - target.saveBonus, 2, 7);
-    const saveTarget = Math.min(armourTarget, target.invuln || 7);
+    const defendingTactics = target.side === 'player' && this.battle.round === 1 ? this.stratagemEffects() : {};
+    const saveTarget = Math.min(armourTarget, target.invuln || 7, defendingTactics.openingInvuln || 7);
     let saveRolls = Array.from({length:Math.max(0,wounds-devastating)}, saveDie);
     saveRolls = this.commandReroll(target, saveRolls, saveTarget, 'Save');
     const saves = saveRolls.filter(roll => saveTarget <= 6 && roll >= saveTarget).length;
@@ -1232,7 +1242,7 @@ export class Game {
       damageLost += lost;
       if (remainingHp[0] <= 0) remainingHp.shift();
     }
-    const ruleNotes = [halfRange && rules.rapidFire ? `Rapid Fire +${rules.rapidFire}` : '', rules.blast ? `Blast +${Math.floor(target.hp.length/5)*rules.blast}A/model` : '', rules.torrent ? 'Torrent: automatic hits' : '', rules.woundReroll ? 'Twin-linked wound re-rolls' : '', antiNeeded ? `Anti-${target.keywords.includes('Infantry') ? 'Infantry' : target.keywords.includes('Monster') ? 'Monster' : 'Vehicle'} ${antiNeeded}+` : '', devastating ? `${devastating} Devastating Wound${devastating === 1 ? '' : 's'}` : '', rules.melta ? `Melta +${rules.melta} damage` : '', sustainedHits ? `Sustained Hits ${sustainedHits}` : '', autoWounds ? `${autoWounds} Lethal Hit${autoWounds === 1 ? '' : 's'}` : ''].filter(Boolean);
+    const ruleNotes = [tactics.openingAttacks ? `Orbital Mark +${models * tactics.openingAttacks} attacks` : '', tacticalAutoWounds ? `Auspex ${tacticalAutoWounds} automatic wound${tacticalAutoWounds === 1 ? '' : 's'}` : '', defendingTactics.openingInvuln ? `Aegis ${defendingTactics.openingInvuln}+ ward` : '', halfRange && rules.rapidFire ? `Rapid Fire +${rules.rapidFire}` : '', rules.blast ? `Blast +${Math.floor(target.hp.length/5)*rules.blast}A/model` : '', rules.torrent ? 'Torrent: automatic hits' : '', rules.woundReroll ? 'Twin-linked wound re-rolls' : '', antiNeeded ? `Anti-${target.keywords.includes('Infantry') ? 'Infantry' : target.keywords.includes('Monster') ? 'Monster' : 'Vehicle'} ${antiNeeded}+` : '', devastating ? `${devastating} Devastating Wound${devastating === 1 ? '' : 's'}` : '', rules.melta ? `Melta +${rules.melta} damage` : '', sustainedHits ? `Sustained Hits ${sustainedHits}` : '', !tacticalAutoWounds && autoWounds ? `${autoWounds} Lethal Hit${autoWounds === 1 ? '' : 's'}` : ''].filter(Boolean);
     return {actor:actor.name,target:target.name,actorRef:actor,targetRef:target,attacks,attackDice,hitRolls,hitTarget,hits,woundRolls,woundNeeded:effectiveWoundNeeded,wounds,saveRolls,saveTarget,saves,damageRolls,damageLost,remainingHp,devastating,lethal:autoWounds,ruleNotes,applied:false};
   }
 
@@ -1384,11 +1394,19 @@ export class Game {
     const node = context.node;
     const stars = clamp(node.stars || 1, 1, 3);
     const total = clamp(2 + stars + (node.type === 'boss' || node.event ? 1 : 0), 3, 5);
-    context.claims ||= {currency:1, honour:1 + (total >= 4 ? 1 : 0), stratagem:1 + (total >= 5 ? 1 : 0)};
-    context.claimed ||= {currency:0, honour:0, stratagem:0};
+    if (context.rewardVersion !== 2) {
+      const previous = context.claimed || {};
+      context.claims = {currency:1, honour:1, stratagem:1, gear:total >= 4 ? 1 : 0, recovery:total >= 5 ? 1 : 0};
+      context.claimed = {
+        currency:Math.min(previous.currency || 0, 1), honour:Math.min(previous.honour || 0, 1),
+        stratagem:Math.min(previous.stratagem || 0, 1), gear:0, recovery:0
+      };
+      context.rewardVersion = 2;
+    }
     context.honours ||= shuffle(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))).map(item => item.id);
     context.stratagems ||= shuffle(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))).map(item => item.id);
-    context.totalClaims ||= Object.values(context.claims).reduce((sum,value) => sum + value, 0);
+    context.wargear ||= shuffle(WARGEAR).map(item => item.id);
+    context.totalClaims = Object.values(context.claims).reduce((sum,value) => sum + value, 0);
     return context;
   }
 
@@ -1398,15 +1416,18 @@ export class Game {
   }
 
   rewardClaimsRemaining() {
-    return ['currency','honour','stratagem'].reduce((sum,kind) => sum + this.rewardRemaining(kind), 0);
+    const context = this.ensureRewardState(this.run.rewardContext);
+    return Object.keys(context.claims).reduce((sum,kind) => sum + this.rewardRemaining(kind), 0);
   }
 
   rewardSegmentOptions(context) {
     return [
       {kind:'currency',icon:'◆',name:'REQUISITION',tag:`CLAIM ${context.req}`,desc:'Secure campaign currency for a future field store.'},
       {kind:'honour',icon:'✦',name:'ENHANCEMENTS',tag:'CHOOSE 1 OF 3',desc:'Select a permanent enhancement for this campaign.'},
-      {kind:'stratagem',icon:'⌖',name:'STRATAGEMS',tag:'CHOOSE 1 OF 3',desc:'Select an automatic command tactic.'}
-    ];
+      {kind:'stratagem',icon:'⌖',name:'STRATAGEMS',tag:'CHOOSE 1 OF 3',desc:'Select a situational command tactic.'},
+      {kind:'gear',icon:'⚙',name:'WARGEAR CACHE',tag:'CHOOSE 1 OF 3',desc:'Recover one item that can be assigned to a deployed unit.'},
+      {kind:'recovery',icon:'♥',name:'FORCE RECOVERY',tag:this.run.hull < this.run.maxHull ? 'RESTORE 1 ATTEMPT' : 'FULL STRENGTH · +10 REQ',desc:'Restore campaign strength after a high-risk victory.'}
+    ].filter(option => context.claims[option.kind]);
   }
 
   renderRewardSegments() {
@@ -1419,12 +1440,12 @@ export class Game {
     const list = $('#reward-options'); list.innerHTML = '';
     for (const option of options) {
       const left = this.rewardRemaining(option.kind);
+      if (!left) continue;
       const button = document.createElement('button');
-      button.className = `reward-option pixel-panel ${left ? '' : 'claimed'}`;
-      button.disabled = !left;
+      button.className = 'reward-option pixel-panel';
       button.title = option.desc;
       button.setAttribute('aria-label', `${option.name}: ${option.desc}`);
-      button.innerHTML = `<b>${option.icon} ${option.name}</b><small>${option.desc}</small><span>${left ? `${left} CLAIM${left === 1 ? '' : 'S'} REMAINING · ${option.tag}` : 'SECURED'}</span>`;
+      button.innerHTML = `<b>${option.icon} ${option.name}</b><small>${option.desc}</small><span>${option.tag}</span>`;
       button.onclick = () => this.selectPostWarSegment(option.kind);
       list.append(button);
     }
@@ -1442,9 +1463,15 @@ export class Game {
       this.save();
       return this.renderRewardSegments();
     }
-    const source = kind === 'honour' ? BATTLE_HONOURS : STRATAGEMS;
-    const owned = kind === 'honour' ? this.run.protocols : this.run.stratagems;
-    const key = kind === 'honour' ? 'honours' : 'stratagems';
+    if (kind === 'recovery') {
+      if (this.run.hull < this.run.maxHull) this.run.hull++;
+      else this.run.currency += 10;
+      context.claimed.recovery++;
+      return this.renderRewardSegments();
+    }
+    const source = kind === 'honour' ? BATTLE_HONOURS : kind === 'stratagem' ? STRATAGEMS : WARGEAR;
+    const owned = kind === 'honour' ? this.run.protocols : kind === 'stratagem' ? this.run.stratagems : [];
+    const key = kind === 'honour' ? 'honours' : kind === 'stratagem' ? 'stratagems' : 'wargear';
     let ids = context[key].filter(id => !owned.includes(id));
     if (!ids.length) {
       this.run.currency += 10;
@@ -1453,13 +1480,15 @@ export class Game {
     }
     context[key] = ids;
     ids = ids.slice(0,3);
-    $('#reward-title').textContent = kind === 'honour' ? 'CHOOSE AN ENHANCEMENT' : 'CHOOSE A STRATAGEM';
-    $('#reward-copy').textContent = `${this.rewardRemaining(kind)} ${kind === 'honour' ? 'ENHANCEMENT' : 'STRATAGEM'} CLAIM${this.rewardRemaining(kind) === 1 ? '' : 'S'} REMAINING`;
+    const choiceName = kind === 'honour' ? 'ENHANCEMENT' : kind === 'stratagem' ? 'STRATAGEM' : 'WARGEAR';
+    $('#reward-title').textContent = `CHOOSE ${choiceName === 'ENHANCEMENT' ? 'AN' : 'A'} ${choiceName}`;
+    $('#reward-copy').textContent = `ONE ${choiceName} MAY BE SECURED`;
     const list = $('#reward-options'); list.innerHTML = '';
     ids.forEach(id => {
       const item = source.find(entry => entry.id === id); const button = document.createElement('button');
       button.className = 'reward-option pixel-panel'; button.title = item.desc;
-      button.innerHTML = `<b>${kind === 'honour' ? ruleSymbol(`${item.name} ${item.tag}`) : '⌖'} ${item.name}</b><small>${item.desc}</small><span>${item.tag}</span>`;
+      const symbol = kind === 'honour' ? ruleSymbol(`${item.name} ${item.tag}`) : kind === 'stratagem' ? '⌖' : '⚙';
+      button.innerHTML = `<b>${symbol} ${item.name}</b><small>${item.desc}</small><span>${kind === 'gear' ? 'RECOVERED WARGEAR' : item.tag}</span>`;
       button.onclick = () => this.claimPostWarChoice(kind,id); list.append(button);
     });
     const back = document.createElement('button');
@@ -1474,6 +1503,7 @@ export class Game {
       this.run.stratagems.push(id);
       this.run.currency += STRATAGEMS.find(item => item.id === id)?.effect.currency || 0;
     }
+    if (kind === 'gear') this.run.gear.push({gearId:id,equippedTo:null,id:`${id}-${Date.now()}`});
     this.run.rewardContext.claimed[kind]++;
     this.save();
     this.renderRewardSegments();
@@ -1562,7 +1592,7 @@ export class Game {
   }
 
   endRun(victory) {
-    const earned = this.run.chests + Math.floor(this.run.currency * .25);
+    const earned = victory ? this.run.chests + Math.floor(this.run.currency * .25) : 0;
     this.meta.currency += earned;
     if (victory) this.meta.wins++;
     const snapshot = {battles:this.run.battles,bosses:this.run.bosses,data:this.run.data,stars:this.run.stars,chests:earned};
@@ -1570,7 +1600,7 @@ export class Game {
     this.save();
     $('#run-end-kicker').textContent = victory ? '// CAMPAIGN COMPLETE' : '// CAMPAIGN LOST';
     $('#run-end-title').textContent = victory ? 'VICTORY.' : 'THE OFFENSIVE ENDS.';
-    $('#run-end-copy').textContent = victory ? 'Every sector is secured. Run-only Enhancements, Stratagems and Wargear are cleared; permanent Requisition remains.' : 'The army is lost, but secured boss rewards reached command.';
+    $('#run-end-copy').textContent = victory ? 'Every required sector is secured. Banked campaign rewards are now permanent Requisition; run-only Enhancements, Stratagems and Wargear are cleared.' : 'The offensive ended before every required sector was secured. Banked campaign rewards were lost.';
     $('#run-end-stats').innerHTML = `<span>BATTLES WON<b>${snapshot.battles}</b></span><span>SECTORS CLEARED<b>${snapshot.bosses}</b></span><span>STARS<b>${snapshot.stars}</b></span><span>PERMANENT REQ<b>+${snapshot.chests}</b></span>`;
     $('#run-end-button').textContent = 'RETURN TO COMMAND';
     $('#run-end-button').dataset.action = 'home';
