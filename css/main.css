@@ -333,7 +333,7 @@ body.star-chart-open .station-footer{width:min(calc(100% - 24px),580px)}
 .galaxy-disc{position:absolute;z-index:1;left:50%;top:51%;width:78%;height:44%;transform:translate(-50%,-50%) rotate(-14deg);border-radius:50%;background:radial-gradient(ellipse,#fff8 0 1%,#c5d9ff4a 3%,#8f6b9b25 23%,transparent 68%);filter:blur(10px);opacity:.72;pointer-events:none;animation:galaxySpin 42s linear infinite}
 .distant-star{position:absolute;z-index:2;left:var(--sx);top:var(--sy);width:var(--ss);height:var(--ss);border-radius:50%;background:#d9efff;box-shadow:0 0 5px #b9e4ff;opacity:.42;pointer-events:none;animation:starBlink 2.1s var(--sd) ease-in-out infinite}
 .galaxy-core-label,.rift-label{position:absolute;z-index:3;pointer-events:none;color:#b8cad178;font:700 8px Rajdhani,sans-serif;letter-spacing:.28em;text-shadow:0 0 8px #8bd9ff55}
-.galaxy-core-label{left:47%;top:48%;transform:rotate(-14deg)}.rift-label{right:3%;top:48%;transform:rotate(72deg);color:#d15c686e}
+.galaxy-core-label{left:49%;top:46%;transform:rotate(-8deg)}.rift-label{right:3%;top:48%;transform:rotate(72deg);color:#d15c686e}
 
 #sector-screen .sector-map .galaxy-system{position:absolute;z-index:5;left:var(--system-x);top:var(--system-y);display:block;width:clamp(122px,17vw,188px);height:104px;min-height:0;padding:0;transform:translate(-50%,-50%);border:0;background:transparent!important;box-shadow:none;filter:none;overflow:visible;text-align:center;animation:systemArrive .62s var(--sector-delay) cubic-bezier(.16,.78,.2,1) both}
 #sector-screen .sector-map .galaxy-system::before,#sector-screen .sector-map .galaxy-system::after{content:none!important}
@@ -406,7 +406,7 @@ body.star-chart-open .station-footer{width:min(calc(100% - 16px),464px)}
 #sector-screen .sector-map.navigating,#map-screen .area-galaxy.star-system-map.navigating{cursor:grabbing}
 #sector-screen .sector-map{height:min(690px,calc(100dvh - 152px));min-height:570px}
 #map-screen .area-galaxy.star-system-map{height:min(620px,calc(100dvh - 276px));min-height:470px}
-.galaxy-stage{position:absolute;z-index:2;left:0;top:0;width:190%;height:170%;overflow:hidden;transform-origin:0 0;will-change:transform;background:#03060a url("../assets/imperial-galaxy-chart.webp") 47% 40%/auto 145% no-repeat;box-shadow:inset 0 0 90px #0008}
+.galaxy-stage{position:absolute;z-index:2;left:0;top:0;width:190%;height:170%;overflow:hidden;transform-origin:0 0;will-change:transform;background:#02050a url("../assets/tilted-sector-galaxy.png") center/cover no-repeat;box-shadow:inset 0 0 90px #0008}
 .galaxy-stage.system-stage{width:185%;height:170%;background:#02050b url("../assets/deep-sector-starfield.png") center/cover no-repeat}
 .galaxy-stage:not(.system-stage)>.galaxy-disc{display:none}
 .galaxy-stage::after{content:"";position:absolute;z-index:4;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 25%,#02040a2e 76%,#0007 100%)}

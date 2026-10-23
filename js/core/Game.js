@@ -65,8 +65,8 @@ const CHAPTERS = [
   {id:'imperial-fists',label:'IMPERIAL FIST',art:new URL('../../assets/chapter-imperial-fist.webp',import.meta.url).href,locked:true}
 ];
 const GALAXY_SYSTEM_LAYOUT = [
-  {x:17,y:68,size:1.22,tone:'gold'},{x:34,y:28,size:.88,tone:'blue'},{x:52,y:53,size:1.05,tone:'white'},
-  {x:71,y:22,size:.78,tone:'red'},{x:82,y:62,size:.94,tone:'blue'},{x:63,y:81,size:.7,tone:'white'},
+  {x:31,y:59,size:1.22,tone:'gold'},{x:25,y:39,size:.88,tone:'blue'},{x:69,y:51,size:1.05,tone:'white'},
+  {x:78,y:35,size:.78,tone:'red'},{x:82,y:62,size:.94,tone:'blue'},{x:63,y:81,size:.7,tone:'white'},
   {x:23,y:43,size:.68,tone:'red'},{x:88,y:39,size:.62,tone:'gold'}
 ];
 const SYSTEM_DESTINATION_LAYOUT = [
@@ -668,7 +668,7 @@ export class Game {
       const nextSector = this.run.sectors.find(sector => sector.status !== 'complete');
       if (nextSector) nextSector.status = 'available';
     }
-    map.innerHTML = '<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div><div class="rift-label" aria-hidden="true">CICATRIX MALEDICTUM</div></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
+    map.innerHTML = '<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
     const stage = map.querySelector('.galaxy-stage');
     for (let index = 0; index < 72; index++) {
       const star = document.createElement('i');
@@ -692,7 +692,7 @@ export class Game {
     });
     const focusIndex = activeIndex ?? this.run.sectors.findIndex(sector => sector.status === 'available');
     const focus = GALAXY_SYSTEM_LAYOUT[Math.max(0,focusIndex)] || {x:50,y:50};
-    this.bindGalaxyNavigation(map,stage,.78,focus.x,focus.y);
+    this.bindGalaxyNavigation(map,stage,.62,focus.x,focus.y);
     this.save();
   }
 
