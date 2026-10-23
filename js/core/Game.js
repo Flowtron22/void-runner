@@ -69,9 +69,9 @@ const CHAPTERS = [
   {id:'imperial-fists',label:'IMPERIAL FIST',art:new URL('../../assets/chapter-imperial-fist.webp',import.meta.url).href,locked:true}
 ];
 const GALAXY_SYSTEM_LAYOUT = [
-  {x:10,y:22,size:1.22,tone:'gold'},{x:15,y:13,size:.88,tone:'blue'},{x:40,y:22,size:1.05,tone:'white'},
-  {x:73,y:78,size:.78,tone:'red'},{x:82,y:62,size:.94,tone:'blue'},{x:63,y:81,size:.7,tone:'white'},
-  {x:23,y:43,size:.68,tone:'red'},{x:88,y:39,size:.62,tone:'gold'}
+  {x:32,y:22,size:1.22,tone:'gold'},{x:66,y:14,size:.88,tone:'blue'},{x:54,y:38,size:1.05,tone:'white'},
+  {x:75,y:56,size:.78,tone:'red'},{x:30,y:56,size:.94,tone:'blue'},{x:55,y:73,size:.7,tone:'white'},
+  {x:25,y:85,size:.68,tone:'red'},{x:77,y:86,size:.62,tone:'gold'}
 ];
 const SYSTEM_DESTINATION_LAYOUT = [
   {x:27,y:31,size:1.05,tone:'amber'},{x:73,y:34,size:.86,tone:'ice'},{x:59,y:74,size:1.16,tone:'crimson'}
@@ -180,7 +180,8 @@ export class Game {
     this.loadoutReturn = 'hub';
     this.introTimer = null;
     this.introComplete = false;
-    this.galaxyGestureController = null;
+    this.galaxyScene = null;
+    this.galaxyMountId = 0;
     this.setupChoice = {tier:null,faction:null};
     this.bindUI();
     document.body.classList.toggle('reduced-motion', Boolean(this.meta.settings?.reducedMotion));
@@ -294,6 +295,11 @@ export class Game {
   }
 
   show(name) {
+    if (name !== 'sector' && name !== 'map') {
+      this.galaxyMountId++;
+      this.galaxyScene?.destroy();
+      this.galaxyScene = null;
+    }
     for (const screen of $$('.screen')) screen.classList.toggle('active', screen.id === `${name}-screen`);
     document.body.classList.toggle('main-menu-open', name === 'home');
     document.body.classList.toggle('intro-open', name === 'intro');
@@ -681,127 +687,54 @@ export class Game {
   }
 
   renderSectors() {
+    this.galaxyScene?.destroy();
+    this.galaxyScene = null;
     const map = $('#sector-map');
-    map.className = 'sector-map';
+    map.className = 'sector-map webgl-star-map';
     const activeIndex = Number.isInteger(this.run.region) ? this.run.region : null;
     if (activeIndex !== null && this.run.sectors[activeIndex]) this.run.sectors[activeIndex].status = 'available';
     if (!this.run.sectors.some(sector => sector.status === 'available')) {
       const nextSector = this.run.sectors.find(sector => sector.status !== 'complete');
       if (nextSector) nextSector.status = 'available';
     }
-    map.innerHTML = `<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="segmentum-label label-aura">STELLE DELL'AURA</div><div class="segmentum-label label-obscurus">SEGMENTUM<br>OBSCURUS</div><div class="segmentum-label label-solar">SEGMENTUM<br>SOLAR</div><div class="segmentum-label label-ultimus">SEGMENTUM<br>ULTIMUS</div><div class="segmentum-label label-uhulis">SETTORE<br>UHULIS</div><div class="segmentum-label label-tempestus">SEGMENTUM<br>TEMPESTUS</div><div class="segmentum-label label-velata">LA ZONA VELATA</div><div class="segmentum-label label-frangia">LA FRANGIA ORIENTALE</div></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>`;
-    const stage = map.querySelector('.galaxy-stage');
+    map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout" aria-hidden="true"><span>ASTRONOMICAN LINK</span><b>SEGMENTUM CHART</b></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>`;
+    const labelLayer = map.querySelector('.webgl-map-labels');
+    const systems = [];
     this.run.sectors.forEach((sector,index) => {
       sector.name = SECTOR_NAMES[index] || sector.name;
       const button = document.createElement('button');
       const layout = GALAXY_SYSTEM_LAYOUT[index] || GALAXY_SYSTEM_LAYOUT.at(-1);
-      button.className = `sector-card galaxy-system ${sector.status} ${activeIndex === index ? 'active-system' : ''} ${index === 0 ? 'start-system' : ''}`;
-      button.style.setProperty('--system-x',`${layout.x}%`);
-      button.style.setProperty('--system-y',`${layout.y}%`);
-      button.style.setProperty('--system-size',layout.size);
-      button.style.setProperty('--sector-delay',`${index * 90}ms`);
+      button.className = `webgl-map-label sector-card ${sector.status} ${activeIndex === index ? 'active-system' : ''} ${index === 0 ? 'start-system' : ''}`;
       button.disabled = sector.status === 'locked' && activeIndex !== index;
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'TRAVEL AVAILABLE' : 'UNCHARTED';
-      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i class="star-flare"></i></span><span class="system-copy">${index === 0 ? '<mark>START POINT</mark>' : ''}<b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
-      button.onclick = () => this.engageSector(button,index); stage.append(button);
+      button.innerHTML = `<span class="webgl-label-copy">${index === 0 ? '<mark>START POINT</mark>' : ''}<b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
+      labelLayer.append(button);
+      systems.push({
+        id:String(index),name:sector.name,status:sector.status,tone:layout.tone,size:layout.size,
+        position:[(layout.x-50)*.18,(50-layout.y)*.24,(index%3-1)*1.8],
+        locked:button.disabled,available:sector.status==='available'||activeIndex===index,button
+      });
     });
-    const focusIndex = activeIndex ?? this.run.sectors.findIndex(sector => sector.status === 'available');
-    const focus = GALAXY_SYSTEM_LAYOUT[Math.max(0,focusIndex)] || {x:50,y:50};
-    this.bindGalaxyNavigation(map,stage,.62,focus.x,focus.y);
+    this.mountGalaxyScene({
+        viewport:map,canvas:map.querySelector('.galaxy-webgl'),labelLayer,mode:'galaxy',systems,
+        reducedMotion:Boolean(this.meta.settings?.reducedMotion),
+        onSelect:id => this.enterSector(Number(id))
+      },map);
     this.save();
   }
 
-  bindGalaxyNavigation(viewport,stage,initialScale = 1,focusX = 50,focusY = 50) {
-    this.galaxyGestureController?.abort();
-    const controller = new AbortController();
-    this.galaxyGestureController = controller;
-    const pointers = new Map();
-    const state = {x:0,y:0,scale:initialScale,startX:0,startY:0,baseX:0,baseY:0,startDistance:0,startScale:initialScale,moved:false,suppressUntil:0};
-    const clampView = () => {
-      const viewportRect = viewport.getBoundingClientRect();
-      const width = stage.offsetWidth * state.scale;
-      const height = stage.offsetHeight * state.scale;
-      const minX = Math.min(0,viewportRect.width - width), minY = Math.min(0,viewportRect.height - height);
-      state.x = clamp(state.x,minX,0); state.y = clamp(state.y,minY,0);
-    };
-    const paint = () => { clampView(); stage.style.transform = `translate3d(${state.x}px,${state.y}px,0) scale(${state.scale})`; };
-    const centerView = (scale = initialScale) => {
-      state.scale = scale;
-      state.x = viewport.clientWidth / 2 - stage.offsetWidth * state.scale * focusX / 100;
-      state.y = viewport.clientHeight / 2 - stage.offsetHeight * state.scale * focusY / 100;
-      paint();
-    };
-    const zoomAt = (nextScale,clientX,clientY) => {
-      const rect = viewport.getBoundingClientRect();
-      const px = clientX - rect.left, py = clientY - rect.top;
-      const scale = clamp(nextScale,.62,2.5);
-      state.x = px - (px - state.x) * scale / state.scale;
-      state.y = py - (py - state.y) * scale / state.scale;
-      state.scale = scale; paint();
-    };
-    requestAnimationFrame(() => centerView(initialScale));
-    window.addEventListener('resize',paint,{signal:controller.signal});
-    viewport.addEventListener('wheel',event => {
-      event.preventDefault();
-      if (event.ctrlKey || event.metaKey) {
-        zoomAt(state.scale * (event.deltaY > 0 ? .9 : 1.1),event.clientX,event.clientY);
-        return;
-      }
-      const horizontal = Math.abs(event.deltaX) > 1 ? event.deltaX : event.deltaY;
-      state.x -= horizontal;
-      state.y -= Math.abs(event.deltaX) > 1 ? event.deltaY : 0;
-      paint();
-    },{passive:false,signal:controller.signal});
-    viewport.addEventListener('pointerdown',event => {
-      if (event.target.closest('.galaxy-instrument')) return;
-      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
-      if (pointers.size === 1) {
-        state.startX = event.clientX; state.startY = event.clientY;
-        state.baseX = state.x; state.baseY = state.y; state.moved = false;
-      }
-      if (pointers.size === 2) { const [a,b] = [...pointers.values()]; state.startDistance = Math.hypot(a.x-b.x,a.y-b.y); state.startScale = state.scale; }
-      viewport.classList.add('navigating');
-    },{signal:controller.signal});
-    viewport.addEventListener('pointermove',event => {
-      if (!pointers.has(event.pointerId)) return;
-      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
-      if (pointers.size === 1) {
-        const dx = event.clientX - state.startX, dy = event.clientY - state.startY;
-        if (Math.hypot(dx,dy) > 5) {
-          state.moved = true;
-          if (!viewport.hasPointerCapture(event.pointerId)) viewport.setPointerCapture(event.pointerId);
-        }
-        state.x = state.baseX + dx; state.y = state.baseY + dy; paint();
-      } else {
-        const [a,b] = [...pointers.values()]; const distance = Math.hypot(a.x-b.x,a.y-b.y);
-        if (Math.abs(distance-state.startDistance) > 4) {
-          state.moved = true;
-          if (!viewport.hasPointerCapture(event.pointerId)) viewport.setPointerCapture(event.pointerId);
-        }
-        zoomAt(state.startScale * distance / Math.max(1,state.startDistance),(a.x+b.x)/2,(a.y+b.y)/2);
-      }
-    },{signal:controller.signal});
-    const release = event => {
-      pointers.delete(event.pointerId);
-      if (pointers.size === 1) {
-        const [remaining] = pointers.values();
-        state.startX = remaining.x; state.startY = remaining.y; state.baseX = state.x; state.baseY = state.y;
-      } else if (!pointers.size) {
-        viewport.classList.remove('navigating');
-        if (state.moved) state.suppressUntil = Date.now() + 180;
-      }
-    };
-    viewport.addEventListener('pointerup',release,{signal:controller.signal}); viewport.addEventListener('pointercancel',release,{signal:controller.signal});
-    viewport.addEventListener('click',event => { if (Date.now() < state.suppressUntil) { event.preventDefault(); event.stopPropagation(); } },{capture:true,signal:controller.signal});
-  }
-
-  engageSector(button,index) {
-    if (button.dataset.engaging) return;
-    if (document.body.classList.contains('reduced-motion')) return this.enterSector(index);
-    button.dataset.engaging = 'true';
-    button.classList.add('engaging');
-    $('#sector-map').classList.add('sector-engaging');
-    setTimeout(() => this.enterSector(index), 380);
+  async mountGalaxyScene(options,map) {
+    const mountId=++this.galaxyMountId;
+    try {
+      const { GalaxyMap3D }=await import('../render/GalaxyMap3D.js');
+      if (mountId!==this.galaxyMountId || !map.isConnected) return;
+      this.galaxyScene?.destroy();
+      this.galaxyScene=new GalaxyMap3D(options);
+    } catch (error) {
+      if (mountId!==this.galaxyMountId) return;
+      console.error('Unable to initialize the stellar chart',error);
+      map.classList.add('webgl-fallback');
+    }
   }
 
   enterSector(index) {
@@ -881,6 +814,8 @@ export class Game {
   }
 
   renderMap() {
+    this.galaxyScene?.destroy();
+    this.galaxyScene = null;
     if (!this.run.offers) this.run.offers = this.makeOffers();
     const tier = CAMPAIGN_TIERS[this.run.tierIndex];
     const sector = this.run.sectors[this.run.region];
@@ -895,23 +830,32 @@ export class Game {
     $('#mission-strip-title').textContent = mission.title;
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
-    map.className = 'route-map area-galaxy star-system-map';
-    map.innerHTML = `<div class="galaxy-stage system-stage"><div class="galaxy-nebula"></div><div class="system-dust" aria-hidden="true"></div><div class="chart-grid"></div><div class="orbit-ring orbit-one" aria-hidden="true"></div><div class="orbit-ring orbit-two" aria-hidden="true"></div><div class="orbit-ring orbit-three" aria-hidden="true"></div><div class="primary-star" aria-hidden="true"><i></i><span>${sector.name}</span></div><div class="system-ship" aria-label="Grey Knights strike cruiser"><i></i><b>STRIKE CRUISER</b><small>IN SYSTEM</small></div><div class="system-planet decorative-planet planet-one" aria-hidden="true"></div><div class="system-planet decorative-planet planet-two" aria-hidden="true"></div></div>`;
-    const stage = map.querySelector('.galaxy-stage');
+    map.className = 'route-map area-galaxy star-system-map webgl-star-map local-webgl-map';
+    map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout local" aria-hidden="true"><span>LOCAL CARTOGRAPHY</span><b>${sector.name}</b></div>`;
+    const labelLayer = map.querySelector('.webgl-map-labels');
+    const systems = [{id:'__core',name:sector.name,tone:'gold',size:1.25,position:[-1.2,.2,-2.5],locked:true,primary:true}];
     this.run.offers.forEach((node,offerIndex) => {
       const layout = SYSTEM_DESTINATION_LAYOUT[offerIndex];
-      const choice = this.makeNodeButton(node,`available system-destination ${node.type}`,true);
-      choice.style.setProperty('--system-x',`${layout.x}%`); choice.style.setProperty('--system-y',`${layout.y}%`);
-      choice.style.setProperty('--planet-size',layout.size);
-      choice.style.setProperty('--zone-delay',`${offerIndex * 110}ms`);
-      choice.insertAdjacentHTML('afterbegin',`<span class="destination-planet destination-system tone-${layout.tone}" aria-hidden="true"><i class="destination-sun"></i></span>`);
-      stage.append(choice);
+      const choice = this.makeNodeButton(node,`webgl-map-label available ${node.type}`,true,true);
+      labelLayer.append(choice);
+      systems.push({
+        id:node.id,name:node.name,tone:layout.tone,size:layout.size,
+        position:[(layout.x-50)*.15,(50-layout.y)*.18,(offerIndex-1)*1.5],
+        locked:Boolean(node.locked),available:!node.locked,button:choice
+      });
     });
-    this.bindGalaxyNavigation(map,stage,.78);
+    this.mountGalaxyScene({
+        viewport:map,canvas:map.querySelector('.galaxy-webgl'),labelLayer,mode:'local',systems,
+        reducedMotion:Boolean(this.meta.settings?.reducedMotion),
+        onSelect:id => {
+          const node=this.run.offers.find(offer=>offer.id===id);
+          if (node) this.chooseNode(node);
+        }
+      },map);
     this.save();
   }
 
-  makeNodeButton(node, classes, active) {
+  makeNodeButton(node, classes, active, deferToScene = false) {
     const button = document.createElement('button');
     button.className = `route-node ${classes}`;
     const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'SECTOR BOSS',closed:'UNKNOWN'};
@@ -919,7 +863,7 @@ export class Game {
     const rewardIcon = node.type === 'boss' ? '♜' : node.type === 'repair' ? '♥' : node.type === 'elite' ? '✦' : node.type === 'salvage' ? '⚙' : '◆';
     button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}${node.stars ? ` · ${'★'.repeat(node.stars)}` : ''}</small><span>${node.locked ? `NEEDS ${node.threshold} ★` : node.reward || ''}</span>`;
     button.disabled = !active || node.locked;
-    if (active && !node.locked) button.onclick = () => {
+    if (active && !node.locked && !deferToScene) button.onclick = () => {
       if (button.dataset.engaging) return;
       if (document.body.classList.contains('reduced-motion')) return this.chooseNode(node);
       button.dataset.engaging = 'true'; button.classList.add('engaging');

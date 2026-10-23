@@ -8,7 +8,7 @@ A portrait-first Warhammer 40,000 army-building roguelike with automatic, visibl
 - Collect campaign Enhancements that improve the army while the selected base point scale stays fixed throughout the run.
 - Encounter enemies from the full 19-faction data roster.
 - Arrange units on a 6×5 deployment grid.
-- Travel across galaxy charts containing 4–8 sectors; choose three star-rated areas and unlock stronger sector bosses with collected stars.
+- Travel through interactive Three.js galaxy and local-system charts with constrained pan, wheel/pinch zoom, emissive selectable stars, projected accessible labels, and camera approaches; choose three star-rated areas and unlock stronger sector bosses with collected stars.
 - Watch Attacks, Hits, Wounds, Saves and Damage roll automatically. Player combat dice receive a modest low-roll recovery advantage; enemy dice remain standard D6 rolls.
 - Resolve 3–5 distinct Post-War Affairs claims after a victory: one Requisition cache, one Enhancement, one Stratagem, then Wargear and Force Recovery on richer routes. Each block closes after its single claim, and special route events resolve before travel continues.
 - Bank sector-boss rewards during the campaign. They become permanent research Requisition only after every required sector is completed; temporary run currency buys Wargear in field stores.

@@ -47,7 +47,7 @@ Selectable campaign sizes are 500, 1000, 2000 and 3000 points. They contain 4, 5
 
 Each normal area presents exactly three connected choices rated one, two and three stars. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
 
-Both navigation views are literal galaxy charts, not vertical skill trees. The sector view places named planets across a star field and joins them with charted travel lanes. The area view is a local constellation: the entry beacon, previously secured planets, three currently reachable systems and the distant boss signal occupy spatial coordinates connected by luminous routes.
+Both navigation views are interactive Three.js charts, not vertical skill trees. The sector view places named stellar signals in a navigable three-dimensional star field. Selecting a signal performs a camera approach before opening its directive. The area view loads a visually distinct local-system scene with a central star, deeper dust field, strike-cruiser marker, and three reachable mission systems. DOM labels remain projected over the WebGL scene for crisp text, keyboard use, and screen-reader access.
 
 Post-War Affairs is a multi-claim interaction. Every victory generates three to five claim blocks according to threat, route, and mission type. Requisition, Enhancement, and Stratagem appear once. Richer rewards add Wargear Cache and Force Recovery. Requisition resolves immediately; choice blocks open three concrete options and accept one. Each block disappears after its single claim. The player must clear every generated claim and any special route event before continuing the path.
 
@@ -123,7 +123,7 @@ Boss tiers use these unlock thresholds, where `depth` is the number of regular a
 
 Stars unlock choices; they are not spent. Boss victory also awards its tier in stars. The first enemy unit becomes the boss, gains an HP multiplier of `1.25 + tier × 0.2`, and gains one Attack per model. Finishing the boss's Post-War segment secures the sector and unlocks the next one. Finishing the last sector ends the campaign.
 
-The sector chart uses fixed planet coordinates and travel lanes. The area chart draws the entry beacon, completed route, three current systems and distant boss signal. The current implementation still advances by layers; it is not yet a persistent free-form territory network with all adjacent areas visible.
+The sector and local charts use fixed three-dimensional coordinates, perspective depth, raycast selection, constrained panning, wheel/pinch zoom, and a camera-travel confirmation. The current implementation still advances missions by layers; it is not yet a persistent free-form territory network with all adjacent systems visible at once.
 
 ## 5. Factions and JSON data
 
@@ -352,6 +352,7 @@ void-runner/
 ├── public/data/warhammer-roster.json  # Compact KS-derived data
 ├── js/main.js                         # Loads JSON, starts game
 ├── js/core/Game.js                    # Campaign, builder and D6 engine
+├── js/render/GalaxyMap3D.js           # WebGL galaxy/local-system renderer and input
 ├── js/data/units.js                   # Campaign tiers, sectors, Enhancements, Stratagems, Wargear, research
 ├── gif/                              # Active faction animations and unused future battle assets
 ├── assets/unit-silhouettes.png        # Shared portrait atlas
@@ -371,7 +372,7 @@ Important methods for continued work:
 | Responsibility | Methods |
 |---|---|
 | Setup and saves | `beginSetup`, `renderSetup`, `startRun`, `resumeRun`, `save` |
-| Galaxy navigation | `renderSectors`, `enterSector`, `makeOffers`, `renderMap`, `advanceRoute` |
+| Galaxy navigation | `renderSectors`, `enterSector`, `makeOffers`, `renderMap`, `advanceRoute`; `GalaxyMap3D` owns 3D rendering, projection and gestures |
 | Formation | `renderLoadout`, `placeUnit`, `attachLeader`, `equipGear` |
 | Dice and simulation | `startBattle`, `prepareDiceAttack`, `applyDiceAttack`, `commandPhase` |
 | Post-War segments | `openRewards`, `selectPostWarSegment`, `claimPostWarChoice`, `completePostWarSegment` |
@@ -400,7 +401,7 @@ Required checks:
 - Enhancements change the specified passive roll or characteristic.
 - Wargear equips to one selected deployed unit.
 - Setup offers 500, 1,000, 2,000, and 3,000-point scales and the chosen base scale persists through every sector. The 1,500-point tier remains data-only for save compatibility.
-- Both maps use spatial galaxy charts; the three reachable areas have distinct positions.
+- Both maps use spatial WebGL scenes; pan, wheel/pinch zoom, raycasting, projected labels, and camera travel work without exposing empty space.
 - Post-War Affairs generates three to five single-claim blocks, removes each claimed block, and blocks travel until every claim and special event is resolved.
 - Recruitment unlocks a pattern and stores charge the shown temporary currency.
 - Stars unlock boss tiers without being consumed; boss victory unlocks the next sector.
