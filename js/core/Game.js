@@ -668,7 +668,7 @@ export class Game {
       const nextSector = this.run.sectors.find(sector => sector.status !== 'complete');
       if (nextSector) nextSector.status = 'available';
     }
-    map.innerHTML = '<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div><div class="rift-label" aria-hidden="true">CICATRIX MALEDICTUM</div></div><div class="galaxy-instrument"><button type="button" data-galaxy-zoom="out" aria-label="Zoom out">−</button><button type="button" data-galaxy-zoom="reset" aria-label="Reset galaxy view">◎</button><button type="button" data-galaxy-zoom="in" aria-label="Zoom in">+</button></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
+    map.innerHTML = '<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div><div class="rift-label" aria-hidden="true">CICATRIX MALEDICTUM</div></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
     const stage = map.querySelector('.galaxy-stage');
     for (let index = 0; index < 72; index++) {
       const star = document.createElement('i');
@@ -687,12 +687,12 @@ export class Game {
       button.style.setProperty('--sector-delay',`${index * 90}ms`);
       button.disabled = sector.status === 'locked' && activeIndex !== index;
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'TRAVEL AVAILABLE' : 'UNCHARTED';
-      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i class="star-flare"></i><span class="mini-orbit orbit-a"><i></i></span><span class="mini-orbit orbit-b"><i></i></span></span><span class="system-copy"><b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
+      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i class="star-flare"></i></span><span class="system-copy"><b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
       button.onclick = () => this.engageSector(button,index); stage.append(button);
     });
     const focusIndex = activeIndex ?? this.run.sectors.findIndex(sector => sector.status === 'available');
     const focus = GALAXY_SYSTEM_LAYOUT[Math.max(0,focusIndex)] || {x:50,y:50};
-    this.bindGalaxyNavigation(map,stage,1,focus.x,focus.y);
+    this.bindGalaxyNavigation(map,stage,.78,focus.x,focus.y);
     this.save();
   }
 
@@ -702,7 +702,6 @@ export class Game {
     this.galaxyGestureController = controller;
     const pointers = new Map();
     const state = {x:0,y:0,scale:initialScale,startX:0,startY:0,baseX:0,baseY:0,startDistance:0,startScale:initialScale,moved:false,suppressUntil:0};
-    const coverScale = () => Math.max(viewport.clientWidth / stage.offsetWidth,viewport.clientHeight / stage.offsetHeight);
     const clampView = () => {
       const viewportRect = viewport.getBoundingClientRect();
       const width = stage.offsetWidth * state.scale;
@@ -712,7 +711,7 @@ export class Game {
     };
     const paint = () => { clampView(); stage.style.transform = `translate3d(${state.x}px,${state.y}px,0) scale(${state.scale})`; };
     const centerView = (scale = initialScale) => {
-      state.scale = Math.max(scale,coverScale());
+      state.scale = scale;
       state.x = viewport.clientWidth / 2 - stage.offsetWidth * state.scale * focusX / 100;
       state.y = viewport.clientHeight / 2 - stage.offsetHeight * state.scale * focusY / 100;
       paint();
@@ -720,13 +719,13 @@ export class Game {
     const zoomAt = (nextScale,clientX,clientY) => {
       const rect = viewport.getBoundingClientRect();
       const px = clientX - rect.left, py = clientY - rect.top;
-      const scale = clamp(nextScale,coverScale(),2.5);
+      const scale = clamp(nextScale,.62,2.5);
       state.x = px - (px - state.x) * scale / state.scale;
       state.y = py - (py - state.y) * scale / state.scale;
       state.scale = scale; paint();
     };
     requestAnimationFrame(() => centerView(initialScale));
-    window.addEventListener('resize',() => { state.scale = Math.max(state.scale,coverScale()); paint(); },{signal:controller.signal});
+    window.addEventListener('resize',paint,{signal:controller.signal});
     viewport.addEventListener('wheel',event => { event.preventDefault(); zoomAt(state.scale * (event.deltaY > 0 ? .9 : 1.1),event.clientX,event.clientY); },{passive:false,signal:controller.signal});
     viewport.addEventListener('pointerdown',event => {
       if (event.target.closest('.galaxy-instrument')) return;
@@ -769,9 +768,6 @@ export class Game {
     };
     viewport.addEventListener('pointerup',release,{signal:controller.signal}); viewport.addEventListener('pointercancel',release,{signal:controller.signal});
     viewport.addEventListener('click',event => { if (Date.now() < state.suppressUntil) { event.preventDefault(); event.stopPropagation(); } },{capture:true,signal:controller.signal});
-    viewport.querySelector('[data-galaxy-zoom="in"]').onclick = () => zoomAt(state.scale * 1.22,viewport.getBoundingClientRect().left + viewport.clientWidth/2,viewport.getBoundingClientRect().top + viewport.clientHeight/2);
-    viewport.querySelector('[data-galaxy-zoom="out"]').onclick = () => zoomAt(state.scale / 1.22,viewport.getBoundingClientRect().left + viewport.clientWidth/2,viewport.getBoundingClientRect().top + viewport.clientHeight/2);
-    viewport.querySelector('[data-galaxy-zoom="reset"]').onclick = () => centerView(initialScale);
   }
 
   engageSector(button,index) {
@@ -875,7 +871,7 @@ export class Game {
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
     map.className = 'route-map area-galaxy star-system-map';
-    map.innerHTML = `<div class="galaxy-stage system-stage"><div class="galaxy-nebula"></div><div class="system-dust" aria-hidden="true"></div><div class="chart-grid"></div><div class="orbit-ring orbit-one" aria-hidden="true"></div><div class="orbit-ring orbit-two" aria-hidden="true"></div><div class="orbit-ring orbit-three" aria-hidden="true"></div><div class="primary-star" aria-hidden="true"><i></i><span>${sector.name.replace(' SECTOR','')}</span></div><div class="system-ship" aria-label="Grey Knights strike cruiser"><i></i><b>STRIKE CRUISER</b><small>IN SYSTEM</small></div><div class="system-planet decorative-planet planet-one" aria-hidden="true"></div><div class="system-planet decorative-planet planet-two" aria-hidden="true"></div></div><div class="galaxy-instrument"><button type="button" data-galaxy-zoom="out" aria-label="Zoom out">−</button><button type="button" data-galaxy-zoom="reset" aria-label="Reset system view">◎</button><button type="button" data-galaxy-zoom="in" aria-label="Zoom in">+</button></div>`;
+    map.innerHTML = `<div class="galaxy-stage system-stage"><div class="galaxy-nebula"></div><div class="system-dust" aria-hidden="true"></div><div class="chart-grid"></div><div class="orbit-ring orbit-one" aria-hidden="true"></div><div class="orbit-ring orbit-two" aria-hidden="true"></div><div class="orbit-ring orbit-three" aria-hidden="true"></div><div class="primary-star" aria-hidden="true"><i></i><span>${sector.name}</span></div><div class="system-ship" aria-label="Grey Knights strike cruiser"><i></i><b>STRIKE CRUISER</b><small>IN SYSTEM</small></div><div class="system-planet decorative-planet planet-one" aria-hidden="true"></div><div class="system-planet decorative-planet planet-two" aria-hidden="true"></div></div>`;
     const stage = map.querySelector('.galaxy-stage');
     this.run.offers.forEach((node,offerIndex) => {
       const layout = SYSTEM_DESTINATION_LAYOUT[offerIndex];
@@ -886,7 +882,7 @@ export class Game {
       choice.insertAdjacentHTML('afterbegin',`<span class="destination-planet destination-system tone-${layout.tone}" aria-hidden="true"><i class="destination-sun"></i><span class="mini-orbit orbit-a"><i></i></span><span class="mini-orbit orbit-b"><i></i></span></span>`);
       stage.append(choice);
     });
-    this.bindGalaxyNavigation(map,stage,1);
+    this.bindGalaxyNavigation(map,stage,.78);
     this.save();
   }
 
