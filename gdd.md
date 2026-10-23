@@ -1,12 +1,12 @@
 # COMBAT PATROL — 40K Roguelike Campaign GDD
 
-This is the authoritative gameplay and implementation handoff. Read it with `ART_BIBLE.md` before editing the project.
+This is the authoritative gameplay and implementation handoff. Read it with `artstyle.md` before editing the project.
 
 ## 1. Clear design statement
 
 The game is now a portrait-first 40K-inspired army-building roguelike with automatic dice combat and a star-driven sector campaign.
 
-Last handoff update: 22 October 2026. The patrol-vessel hub is the campaign's navigation baseline.
+Last handoff update: 23 October 2026. The command deck is the campaign's stable navigation baseline.
 
 This file describes the current code and records unfinished work explicitly. Start with section 15 when continuing on another PC. Do not restore the superseded spaceship game or the old campaign that increased points after each warzone.
 
@@ -26,15 +26,15 @@ Patrol vessel VIGILANT — recurring command hub
               ↓
           Galaxy sector map
               ↓
-          Bounty Marshal briefing
+          Inquisitorial directive briefing
     ↓
 Connected area map: choose one of three star-rated battles
     ↓
 Manual deployment → automatic visible-dice battle
     ↓
-Post-War Affairs: choose a segment
+Post-War Affairs: clear every generated claim
     ↓
-Requisition / three Honours / three Stratagems / recruit / store
+Requisition / Enhancement / Stratagem / optional Wargear / optional Recovery
     ↓
 Collected stars unlock stronger sector boss tiers
     ↓
@@ -49,13 +49,15 @@ Each normal area presents exactly three connected choices rated one, two and thr
 
 Both navigation views are literal galaxy charts, not vertical skill trees. The sector view places named planets across a star field and joins them with charted travel lanes. The area view is a local constellation: the entry beacon, previously secured planets, three currently reachable systems and the distant boss signal occupy spatial coordinates connected by luminous routes.
 
-Post-War Affairs is a two-stage interaction. First, the player chooses an event segment: Requisition, Battle Honours, Stratagems and—when generated for that area—Reinforcements or Field Store. Requisition resolves immediately. Honour and Stratagem segments then open three concrete choices; the player takes one. Reinforcement and Store segments open their own unit/item selections. The player completes one segment per battle.
+Post-War Affairs is a multi-claim interaction. Every victory generates three to five claim blocks according to threat, route, and mission type. Requisition, Enhancement, and Stratagem appear once. Richer rewards add Wargear Cache and Force Recovery. Requisition resolves immediately; choice blocks open three concrete options and accept one. Each block disappears after its single claim. The player must clear every generated claim and any special route event before continuing the path.
 
 Post-War rewards are run-only unless explicitly labeled permanent:
 
-- **Requisition:** currency spent in an occasional field store.
-- **Battle Honour:** passive army rule for the current run.
-- **Stratagem:** automatic command modifier for the current run.
+- **Requisition:** temporary campaign currency used during the active run.
+- **Enhancement:** passive army-wide rule for the current run.
+- **Stratagem:** distinct situational or opening-round command effect for the current run.
+- **Wargear Cache:** one item selected from three and assigned later during deployment.
+- **Force Recovery:** restores one campaign attempt, or grants temporary Requisition when already at full strength.
 - **Reinforcement signal:** occasionally unlocks one of the faction's two unrecovered unit patterns.
 - **Field store:** occasionally offers three Wargear items for campaign Requisition.
 
@@ -63,7 +65,7 @@ Only the first two unit patterns in the chosen faction's JSON are available at c
 
 - **40K supplies the army layer:** factions, units, points, models, Toughness, Saves, Wounds, Invulnerable Saves, weapon Attacks, Hit values, Strength, AP and Damage.
 - **The KS project supplies the data and dice model:** compact game data is derived from `D:/Projects/Minigames/KS/solo-lab/public/armies`, and attack resolution follows the KS sequence.
-- **The roguelike supplies the campaign wrapper:** choose areas, collect stars, select a sector boss tier and gain temporary Honours, Stratagems, recruits and Wargear. Boss rewards become permanent Requisition when the run ends.
+- **The roguelike supplies the campaign wrapper:** choose areas, collect stars, select a sector boss tier and gain temporary Enhancements, Stratagems, recruits and Wargear. Banked boss rewards become permanent Requisition only after the full campaign is won.
 
 The previous original unit roster and flat-damage combat are no longer active.
 
@@ -71,7 +73,9 @@ The previous original unit roster and flat-damage combat are no longer active.
 
 - Portrait-first reference frame: 480×854.
 - Desktop keeps the game inside a centered portrait command board.
-- The global visual direction follows the KS project's tactile grimdark command-table language: soot-black iron, aged bone, brass, oxblood, restrained military typography, and original gothic-industrial motifs.
+- The global visual direction follows `artstyle.md`: physical gothic shipboard terminals, blackened iron, aged brass, smoked CRT glass, parchment, wax, localized phosphor emission, painterly portraits, and original ecclesiastical-industrial motifs.
+- Major screens must feel installed inside the command vessel rather than arranged as flat webpage cards.
+- Green, amber, red, and rare cyan emission must come from a believable screen, lamp, lens, signal, or celestial source.
 - No interaction depends on hover.
 - Minimum touch target is 40 CSS px.
 - Active screens use symbols, stat chips and numbers before prose. Full rule names live in tooltips and Help.
@@ -88,15 +92,15 @@ NEW GAME
       Ordeal → edit army → command deck
       Research → permanent upgrades → command deck
       Operation → select contract → mission briefing → area chart
-  → choose battle → deployment → automatic battle → Post-War Affairs → area chart
+  → choose battle → deployment → automatic battle → clear all Post-War Affairs claims → area chart
   → sector boss → command deck → next contract
 ```
 
-The command deck is the player's stable home between contracts. It presents three direct actions: **Ordeal**, **Research**, and **Operation**. Operation opens either the contract chart or the active operation. Back from the sector chart, active area chart, Ordeal, or Research returns to the command deck. Mandatory battle rewards remain blocking until claimed.
+The command deck is the player's stable home between directives. It presents three direct actions: **Ordeal**, **Research**, and **Operation**. Operation opens either the sector chart or the active operation. Back from the sector chart, active area chart, Ordeal, or Research returns to the command deck. Mandatory battle rewards remain blocking until every generated claim is cleared.
 
 ## 4. Campaign structure
 
-The player chooses one base points scale for the entire run. Clearing sectors does not increase it; research and the Rapid Muster Honour can increase the actual deployment allowance.
+The player chooses one base points scale for the entire run. Clearing sectors does not increase it; research and the Rapid Muster Enhancement can increase the actual deployment allowance.
 
 | Scale | Sectors | Areas per sector | Enemy multiplier | Boss permanent reward |
 |---|---:|---:|---:|---:|
@@ -200,7 +204,7 @@ The selected faction determines the available roster. A deployed army must satis
 1. Total unit points cannot exceed the current deployment allowance.
 2. Unit footprints cannot overlap or extend beyond the 6×5 deployment grid.
 
-Units may be rotated. Stock limits restrict duplicates. Unrecovered units and units costing more than the deployment allowance remain visible but locked. A Leader is attached to an eligible deployed Bodyguard and shares its grid position; it is not independently placed.
+Units may be rotated. Stock limits restrict duplicates. Unrecovered units and units costing more than the deployment allowance remain visible but locked. A Leader can be placed independently on the deployment grid or attached to an eligible deployed Bodyguard. An attached Leader shares its Bodyguard's grid position and cannot be targeted until that Bodyguard is destroyed.
 
 The selected army composition persists between battles. Combat fighters are rebuilt at full model count and wounds for each battle; unit deaths do not permanently delete the deployed formation. Defeat costs one campaign attempt, leaves the selected area pending, and opens deployment for a retry. A run starts with three attempts plus Campaign Reserve ranks.
 
@@ -209,6 +213,8 @@ The selected army composition persists between battles. Combat fighters are rebu
 The player does not issue orders during combat. Available controls are playback speed and immediate resolution.
 
 Every unit attacks once per round while it has surviving models. An attack uses the following visible sequence:
+
+Player rolls use a restrained advantage curve: an initial result of 1 or 2 has a 40% chance to be rerolled once. Enemy rolls use an unmodified D6. This applies consistently to player attacks, saves, Battle-shock dice, Feel No Pain, and Command Re-roll results. It improves the player's expected outcome without guaranteeing success or changing the displayed die range.
 
 ### 7.1 Attacks
 
@@ -220,7 +226,7 @@ Roll one D6 per attack.
 
 - A natural 1 always fails.
 - A result equal to or greater than the weapon’s Hit value succeeds.
-- Battle Honours and permanent training can improve the required value.
+- Enhancements and permanent training can improve the required value.
 - A natural 6 may trigger Lethal Hits or Sustained Hits.
 
 ### 7.3 Wound rolls
@@ -282,9 +288,9 @@ Combat currently uses a simple automatic targeting rule:
 
 Formation therefore affects which player unit is attacked first, while roster and dice determine the exchange.
 
-## 9. Battle Honours
+## 9. Enhancements
 
-Setup offers three random Battle Honours and the player chooses one before entering the galaxy map. After a victory, entering the Battle Honours segment opens up to three unowned Honour choices. The player selects one, completing that area's Post-War Affairs. Honours last only for the active campaign.
+After every victory, the Enhancement claim opens up to three unowned passive upgrades. The player selects one, the Enhancement block closes, and Post-War Affairs returns so the remaining claims can be resolved. Enhancements last only for the active campaign and are mechanically distinct from Stratagems.
 
 Current effects include:
 
@@ -300,7 +306,7 @@ Current effects include:
 
 ## 10. Wargear
 
-The Field Store segment offers three random Wargear items priced at 20, 30 and 40 campaign Requisition. A player can buy one item or continue without buying; either completes that segment. Supply, Elite and Boss victories no longer automatically award Wargear.
+The Wargear Cache claim appears in four- and five-claim Post-War rewards and grants one free item chosen from three. A separate Field Store event offers three random Wargear items priced at 20, 30 and 40 temporary Requisition. The player can buy one item or continue without buying; either resolves that event.
 
 To equip owned Wargear, select a deployed unit and then choose an item in the gear tab. One item may be equipped per deployed unit.
 
@@ -311,7 +317,7 @@ Current Wargear modifies Hit rolls, Saves, Toughness, Attacks or Invulnerable Sa
 There are two separate Requisition balances:
 
 - `run.currency`: temporary currency collected through the Requisition segment or Field Cache Stratagem and spent at field stores. Requisition awards are `round((18 + stars × 8) × (1 + salvage rank × 0.15))`.
-- `meta.currency`: permanent currency. At campaign end, add all secured boss rewards (`run.chests`) plus `floor(run.currency × 0.25)`, on either victory or defeat.
+- `meta.currency`: permanent currency. It receives secured boss rewards (`run.chests`) plus `floor(run.currency × 0.25)` only when the player completes every required sector and wins the campaign. A failed campaign awards no permanent Requisition.
 
 Battle score (`run.data`) is separate from both balances. Regular victories award `20 + stars × 10`; bosses award `90 × boss tier`. Score has no spending mechanic.
 
@@ -322,7 +328,7 @@ Permanent upgrades:
 - **Requisition Rights:** increases earned Requisition.
 - **Campaign Reserve:** adds campaign attempts.
 
-The research definitions and purchase methods remain in the code, but the current Play / Settings / Credits menu does not expose the Armoury screen. Existing saved research still applies. Restoring an intended upgrade entry point is follow-up work.
+Research is available from the command deck through **Research**. Purchases spend permanent Requisition and apply to future and active campaign calculations as defined by each upgrade.
 
 Meta progression and the active campaign are stored in browser `localStorage`:
 
@@ -331,29 +337,30 @@ Meta progression and the active campaign are stored in browser `localStorage`:
 | `void-runner-40k-campaign-v2` | Permanent currency, research, run/win counters and reduced-motion setting |
 | `combat-patrol-active-v3` | Active faction, scale, deployment, route, rewards and inventories |
 
-The active run now also stores its current UI state, contract briefing state, completed story contracts and pending Post-War reward. Saves occur after campaign mutations and again when the page is hidden or closed. A visible `PROGRESS SAVED` status confirms successful writes. Refreshing during a pending contract or Post-War choice restores that mandatory state instead of skipping it.
+The active run also stores its directive briefing state, completed sector directives, partially resolved Post-War claims, pending special events, unlocked units, and equipment assignments. Saves occur after campaign mutations and again when the page is hidden or closed. Saving is silent; there is no progress popup. Refreshing during a pending directive, reward choice, or special event restores that mandatory state instead of skipping it.
 
-Each sector is framed as a bounty contract issued by Bounty Marshal Severine Voss. Selecting a new sector opens a scripted briefing with an objective and reward, the area map carries an active-contract tracker, and completed sector contracts are recorded in `run.story`. The portrait and dialogue direction use the project's original soot, brass and oxblood gothic command style.
+Each sector is framed as a sealed Ordo Malleus directive. Selecting a new sector opens a scripted briefing with an objective and authority reward, the area map carries an active-directive tracker, and completed directives are recorded in `run.story`. Portraits and briefing machinery follow `artstyle.md`: painterly environmental character art inside a physical shipboard transmission terminal.
 
 Git transfers source and assets, not browser saves. Another PC, browser profile or origin starts with its own progress. Localhost and the production domain also have separate saves. No cloud save or save export/import UI exists yet. Old v2 active-run saves are not loaded by the current v3 campaign.
 
 ## 12. Source architecture
 
 ```text
-FTL/
+void-runner/
 ├── index.html
 ├── css/main.css
 ├── public/data/warhammer-roster.json  # Compact KS-derived data
 ├── js/main.js                         # Loads JSON, starts game
 ├── js/core/Game.js                    # Campaign, builder and D6 engine
-├── js/data/units.js                   # Campaign tiers, sectors, Honours, Stratagems, Wargear, research
+├── js/data/units.js                   # Campaign tiers, sectors, Enhancements, Stratagems, Wargear, research
 ├── gif/                              # Active faction animations and unused future battle assets
 ├── assets/unit-silhouettes.png        # Shared portrait atlas
-├── assets/bounty-marshal-severine-voss.png # Original recurring mission-giver portrait
+├── assets/                         # Runtime maps, portraits, silhouettes and environmental art
+├── ref/                            # Checked-in visual study archive; not direct runtime art
 ├── package-lock.json                 # Reproducible dependency versions
 ├── vercel.json                       # Vite build and dist output
-├── ART_BIBLE.md
-├── ggd.md
+├── artstyle.md
+├── gdd.md
 └── README.md
 ```
 
@@ -390,11 +397,11 @@ Required checks:
 - Strength/Toughness thresholds follow the table above.
 - AP and Invulnerable Saves choose the better valid save.
 - Damage does not spill between models.
-- Battle Honours change the specified roll or characteristic.
+- Enhancements change the specified passive roll or characteristic.
 - Wargear equips to one selected deployed unit.
-- Setup offers all five point scales and the chosen base scale persists through every sector.
+- Setup offers 500, 1,000, 2,000, and 3,000-point scales and the chosen base scale persists through every sector. The 1,500-point tier remains data-only for save compatibility.
 - Both maps use spatial galaxy charts; the three reachable areas have distinct positions.
-- Post-War Affairs opens category segments before actual Honour or Stratagem choices.
+- Post-War Affairs generates three to five single-claim blocks, removes each claimed block, and blocks travel until every claim and special event is resolved.
 - Recruitment unlocks a pattern and stores charge the shown temporary currency.
 - Stars unlock boss tiers without being consumed; boss victory unlocks the next sector.
 - Requisition and permanent upgrades persist.
@@ -408,11 +415,11 @@ These run-only Stratagems supplement automatic core Command Re-roll and Insane B
 | Stratagem | Implemented effect |
 |---|---|
 | Command Relay | +1 starting CP per battle |
-| Orbital Mark | +1 to Hit during round 1 |
+| Orbital Mark | +1 Attack per model during round 1 |
 | Reserve Wave | Recover one attempt after securing a sector boss |
-| Auspex Grid | +1 to Wound during round 1 |
+| Auspex Grid | Hit rolls of 5+ automatically wound during round 1 |
 | Field Cache | Gain 20 campaign Requisition when first acquired |
-| Armour Doctrine | Declared as round-1 Save improvement; effect is not yet consumed by combat |
+| Aegis Protocol | Every unit gains a 5+ Invulnerable Save during round 1 |
 
 Desktop battle GIFs are mapped by faction in `BATTLE_ART`. Ultramarines use `spacemarine_A.gif`, Grey Knights use `greyknight_A.gif`, and Imperial Fists use `imperialfist.gif`. The GIF theater appears during battle at widths of 1100 px and above. It flips artwork toward the center, fires background beams, flashes on impacts, shakes on heavy hits, and dissolves the defeated side. Unit cards have rupture/death effects. Reduced motion is available in Settings and also respects the operating-system preference.
 
@@ -420,14 +427,14 @@ The 4×4 silhouette atlas contains 16 archetypes. Many additional factions reuse
 
 Known follow-ups identified from the current source:
 
-1. **Post-War reload recovery:** `rewardContext` is saved, but `resumeRun()` checks `pendingNode` first and can reopen deployment for a won battle instead of restoring its reward selection. Persist and restore the current reward/event substep before claiming robust resume support.
-2. **Deployment return before sector entry:** the galaxy screen allows Edit Army while `region` is null. `finishPrep()` then calls `renderMap()`, which expects a selected sector. Return to the sector chart when no sector is active.
-3. **Armour Doctrine:** wire `openingSave` into the defending player's first-round save calculation.
-4. **Upgrade access:** restore an intentional Armoury entry point and bind its Back action; the screen currently exists without menu wiring.
-5. **Galaxy layout:** develop the spatial charts into a persistent territory/adjacency map closer to the supplied reference. Current area progression still follows layers, and most future systems are hidden.
-6. **Exhausted reward pools:** fewer than three unowned Honours/Stratagems produce fewer choices; exhausted pools fall back to owned choices that may provide no benefit. Add meaningful replacements.
-7. **Higher-point army growth:** four patterns, stock limits and the 6×5 grid can prevent using the full 2000/3000-point allowance. Expand the roster or define point-scale stock/grid rules before treating those scales as balanced.
-8. **Presentation:** enlarge tiny galaxy labels at phone widths and expand unique unit silhouettes. Maintain the user's preference for concise text and clear icons.
+1. **Art-direction migration:** rebuild the current cyan/pixel and flat-card presentation around the physical gothic terminal, localized phosphor, painterly portrait, and environmental rules in `artstyle.md`. Existing gameplay behavior must remain stable during this migration.
+2. **Galaxy layout:** develop the spatial charts into a persistent territory and adjacency map. Current area progression still advances by hidden layers even though the presentation suggests a broader navigable chart.
+3. **Map clarity:** enlarge small galaxy labels at phone widths, keep the starting position unmistakable, and ensure the full panning and zoom range is covered by authored chart imagery.
+4. **Exhausted reward pools:** a partly exhausted Enhancement or Stratagem pool can show fewer than three choices. A fully exhausted pool converts the claim to 10 Requisition, but partial pools still need equivalent replacement options.
+5. **Higher-point army growth:** four patterns, stock limits, and the 6×5 grid can prevent using the full 2,000/3,000-point allowance. Expand the roster or define point-scale stock and grid rules before treating those scales as balanced.
+6. **Help copy:** the current Help dialog still describes a single reward choice and uses the older Honour terminology. Update it to explain clearing all three to five claims.
+7. **Asset coverage:** many factions still reuse silhouette fallbacks. Create original readable unit art and painterly briefing portraits without shipping files from `ref/` directly.
+8. **CSS consolidation:** the stylesheet contains overlapping legacy galaxy, territory, pixel-panel, and later override blocks. Consolidate them as each screen is rebuilt so state ownership and responsive behavior remain understandable.
 
 Further expansion can add multiple weapon loadouts, explicit shooting/melee phases, terrain/cover, objective scoring, faction-specific rewards and damage-contribution breakdowns. Supported dice rules listed in section 7 must not be re-added as if missing.
 
@@ -446,8 +453,8 @@ npm run dev
 
 Open the Local URL printed by Vite (normally `http://127.0.0.1:4173/`). Use an installed Node version satisfying Vite 7's engine constraint in `package-lock.json` (Node 22.12+ is suitable). The former absolute project folder is not a runtime dependency. The local KS project is required only when re-extracting source data; the checked-in compact JSON runs independently.
 
-Tell the next coding agent: "Read ggd.md, README.md and ART_BIBLE.md, inspect git status, then continue the current COMBAT PATROL campaign. Preserve the three launch factions, points-scale setup, category-first Post-War Affairs and galaxy-map direction. Read the known follow-ups before claiming completion."
+Tell the next coding agent: "Read gdd.md, README.md and artstyle.md, inspect git status, then continue the current COMBAT PATROL campaign. Preserve the three launch factions, points-scale setup, multi-claim Post-War Affairs, player dice advantage, and galaxy-map direction. Read the known follow-ups before claiming completion."
 
 All referenced runtime images, GIFs, source and the dependency lockfile belong in Git. `node_modules/`, `dist/`, `.env*` and `.vercel/` are intentionally ignored and must be regenerated or configured locally. Vercel CLI authentication/project linkage is machine-specific; do not commit tokens or copy `.vercel` as a substitute for relinking. Existing deployment configuration builds with `npm run build` and serves `dist/`.
 
-Production URL at handoff: `https://combatpatrol.vercel.app`. The last gameplay release was `6dc3304`. This handoff updates documentation and tracks additional future GIF assets; it does not resolve the known gameplay follow-ups above.
+Production URL at handoff: `https://combatpatrol.vercel.app`. The latest gameplay fix before this documentation pass is `ef21484`; the complete reference archive was added in `98d3398`. The reference material informs future original production art and is not itself a runtime asset library.

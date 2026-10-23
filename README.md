@@ -32,7 +32,7 @@ npm run check
 npm run build
 ```
 
-Read [ggd.md](ggd.md) for the complete rules and handoff. Read [ART_BIBLE.md](ART_BIBLE.md) before changing the visual direction.
+Read [gdd.md](gdd.md) for the complete rules and handoff. Read [artstyle.md](artstyle.md) before changing the visual direction or creating production artwork.
 
 ## Continue on another PC
 
