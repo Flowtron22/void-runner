@@ -342,8 +342,9 @@ body.star-chart-open .station-footer{width:min(calc(100% - 24px),580px)}
 .system-star::before{width:180%;height:180%;animation:systemRing 3s linear infinite}.system-star::after{width:250%;height:250%;border-style:dotted;opacity:.42;animation:systemRing 5s linear reverse infinite}
 .system-star>i{position:absolute;left:50%;top:50%;width:440%;height:2px;transform:translate(-50%,-50%) rotate(-17deg);background:linear-gradient(90deg,transparent,#dff6ff99,transparent);filter:blur(.4px)}
 .system-star.tone-blue{filter:hue-rotate(164deg)}.system-star.tone-white{filter:saturate(.2) brightness(1.2)}.system-star.tone-red{filter:hue-rotate(325deg) saturate(1.6)}
-.system-copy{position:absolute;z-index:3;left:50%;top:60%;display:grid;min-width:150px;transform:translateX(-50%);justify-items:center;pointer-events:none;text-shadow:0 2px 5px #000,0 0 10px #000}
+.system-copy{position:absolute;z-index:3;left:50%;top:60%;display:grid;width:auto!important;min-width:150px;height:auto!important;transform:translateX(-50%);justify-items:center;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;pointer-events:none;text-shadow:0 2px 5px #000,0 0 10px #000}
 .system-copy b{color:#edf4f5;font:800 12px/1.1 Georgia,serif;letter-spacing:.08em}.system-copy small{margin-top:4px;color:#96c3d3;font:700 6px Rajdhani,sans-serif;letter-spacing:.16em}.system-copy em{position:absolute;left:4px;top:-43px;color:#d9eff7;font:700 6px Rajdhani,sans-serif;font-style:normal}
+#sector-screen .sector-map .galaxy-system .system-copy em{display:block;width:auto;height:auto;transform:none;border:0;background:none;box-shadow:none}
 #sector-screen .sector-map .galaxy-system.locked{opacity:.58;filter:grayscale(.85)}
 #sector-screen .sector-map .galaxy-system.locked .system-star{opacity:.46;box-shadow:0 0 9px #8fa9b6}
 #sector-screen .sector-map .galaxy-system.available .system-star{animation:availableStar 2.4s ease-in-out infinite}
@@ -394,3 +395,41 @@ body.star-chart-open .station-footer{width:min(calc(100% - 24px),580px)}
 @media(min-width:800px){body.star-chart-open::before,body.star-chart-open::after{content:none}.star-chart-open #sector-screen .section-head,.star-chart-open #map-screen>.section-head,.star-chart-open #map-screen>.run-stats,.star-chart-open #map-screen>.mission-strip{max-width:1120px;margin-inline:auto}.star-chart-open #map-screen>.run-stats{margin-bottom:12px}}
 @media(max-width:620px){#sector-screen .sector-map{min-height:650px}.system-copy{min-width:112px}.system-copy b{font-size:9px}#map-screen .area-galaxy.star-system-map{height:590px;min-height:590px}.orbit-one{width:42%;height:23%}.orbit-two{width:72%;height:45%}.orbit-three{width:104%;height:69%}#map-screen .area-galaxy .route-node.system-destination{width:116px!important}.system-ship{left:7%;bottom:7%}}
 @media(prefers-reduced-motion:reduce){.galaxy-disc,.distant-star,.system-star,.primary-star,.primary-star>i,.system-ship,.destination-planet::before,.galaxy-system,.system-destination{animation:none!important;transition:none!important}}
+
+/* Portrait star-chart viewport: the world pans and zooms beneath fixed CIC controls. */
+body.star-chart-open{display:flex;justify-content:center}
+body.star-chart-open .app-shell{width:min(100%,480px);margin-inline:0;padding-inline:10px}
+body.star-chart-open .station-footer{width:min(calc(100% - 16px),464px)}
+.star-chart-open #sector-screen .section-head,.star-chart-open #map-screen>.section-head,.star-chart-open #map-screen>.run-stats,.star-chart-open #map-screen>.mission-strip{max-width:none}
+
+#sector-screen .sector-map,#map-screen .area-galaxy.star-system-map{touch-action:none;cursor:grab;overscroll-behavior:contain;animation:none;background:#020407}
+#sector-screen .sector-map.navigating,#map-screen .area-galaxy.star-system-map.navigating{cursor:grabbing}
+#sector-screen .sector-map{height:min(690px,calc(100dvh - 152px));min-height:570px}
+#map-screen .area-galaxy.star-system-map{height:min(620px,calc(100dvh - 276px));min-height:470px}
+.galaxy-stage{position:absolute;z-index:2;left:0;top:0;width:165%;height:118%;overflow:hidden;transform-origin:0 0;will-change:transform;background:#03060a url("../assets/milky-way-star-chart.jpg") center/cover no-repeat;box-shadow:inset 0 0 145px #000}
+.galaxy-stage.system-stage{width:160%;height:124%;background-position:center 54%}
+.galaxy-stage::after{content:"";position:absolute;z-index:4;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 12%,#02040a73 72%,#000b 100%)}
+.galaxy-stage>.galaxy-nebula,.galaxy-stage>.chart-grid,.galaxy-stage>.system-dust{inset:0}
+.galaxy-stage>.galaxy-disc,.galaxy-stage>.distant-star,.galaxy-stage>.galaxy-core-label,.galaxy-stage>.rift-label,.galaxy-stage>.galaxy-system,.galaxy-stage>.orbit-ring,.galaxy-stage>.primary-star,.galaxy-stage>.system-ship,.galaxy-stage>.decorative-planet,.galaxy-stage>.system-destination{z-index:6}
+
+.galaxy-instrument{position:absolute;z-index:32;left:9px;right:9px;top:9px;display:grid;grid-template-columns:minmax(0,1fr) repeat(3,34px);gap:5px;align-items:center;padding:5px;border:1px solid #7086908f;background:linear-gradient(90deg,#060a0eea,#121a20df);box-shadow:0 6px 20px #000b,inset 0 1px #bdd7df20;cursor:default;touch-action:manipulation}
+.galaxy-instrument>span{padding-left:7px;overflow:hidden;color:#97b3be;font:700 7px Rajdhani,sans-serif;letter-spacing:.11em;white-space:nowrap;text-overflow:ellipsis}
+.galaxy-instrument>button{width:34px;height:30px;min-height:30px;padding:0;border:1px solid #8aa0aa;color:#e8d5a7;background:#111a20;box-shadow:none;font:800 15px/1 Rajdhani,sans-serif}
+.galaxy-instrument>button:hover,.galaxy-instrument>button:focus-visible{border-color:#e2c178;color:#fff4cc;outline:none;background:#27323a}
+.chart-compass{z-index:31!important;top:58px!important;right:14px!important}
+
+.system-star .mini-orbit,.destination-system .mini-orbit{position:absolute;z-index:4;left:50%;top:50%;border:1px solid #c7e7f16b;border-radius:50%;transform:translate(-50%,-50%) rotate(-14deg);pointer-events:none;animation:miniOrbitSpin 5.5s linear infinite}
+.system-star .mini-orbit.orbit-a{width:210%;height:128%}.system-star .mini-orbit.orbit-b{width:288%;height:182%;animation-duration:8s;animation-direction:reverse}
+.mini-orbit>i{position:absolute!important;left:auto!important;right:-3px!important;top:50%!important;width:6px!important;height:6px!important;transform:translateY(-50%)!important;border:0!important;border-radius:50%!important;background:#e9f4f5!important;box-shadow:0 0 7px #c6edff!important}
+.mini-orbit.orbit-b>i{right:auto!important;left:13%!important;top:3%!important;width:4px!important;height:4px!important;background:#c7926a!important;box-shadow:0 0 5px #e8af7e!important}
+
+.destination-planet.destination-system{top:4px;width:78px;height:60px;background:transparent;box-shadow:none;filter:none}
+.destination-planet.destination-system::before{content:none}
+.destination-planet.destination-system>.destination-sun{position:absolute;z-index:5;left:50%;right:auto;top:50%;width:calc(25px * var(--planet-size));height:calc(25px * var(--planet-size));transform:translate(-50%,-50%);border:0;border-radius:50%;background:radial-gradient(circle,#fff 0 9%,#f5d690 20%,#c97a3d 48%,#642719 70%,transparent 73%);box-shadow:0 0 7px #fff,0 0 17px #eeae5d,0 0 31px #d45f3870}
+.destination-system .mini-orbit.orbit-a{width:76%;height:47%;animation-duration:4.3s}.destination-system .mini-orbit.orbit-b{width:112%;height:72%;animation-duration:7.1s;animation-direction:reverse}
+.destination-system.tone-ice>.destination-sun{filter:hue-rotate(151deg) saturate(.65) brightness(1.18)}.destination-system.tone-crimson>.destination-sun{filter:hue-rotate(324deg) saturate(1.6)}
+#map-screen .area-galaxy .route-node.system-destination:hover .destination-system,#map-screen .area-galaxy .route-node.system-destination:focus-visible .destination-system{filter:brightness(1.28);box-shadow:none}
+
+@keyframes miniOrbitSpin{to{transform:translate(-50%,-50%) rotate(346deg)}}
+@media(max-width:390px){.galaxy-stage{width:175%}.galaxy-stage.system-stage{width:168%}.galaxy-instrument>span{font-size:5.5px}}
+@media(prefers-reduced-motion:reduce){.mini-orbit{animation:none!important}}

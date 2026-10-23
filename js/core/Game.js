@@ -173,6 +173,7 @@ export class Game {
     this.loadoutReturn = 'hub';
     this.introTimer = null;
     this.introComplete = false;
+    this.galaxyGestureController = null;
     this.setupChoice = {tier:null,faction:null};
     this.bindUI();
     document.body.classList.toggle('reduced-motion', Boolean(this.meta.settings?.reducedMotion));
@@ -660,18 +661,20 @@ export class Game {
 
   renderSectors() {
     const map = $('#sector-map');
+    map.className = 'sector-map';
     const activeIndex = Number.isInteger(this.run.region) ? this.run.region : null;
     if (activeIndex !== null && this.run.sectors[activeIndex]) this.run.sectors[activeIndex].status = 'available';
     if (!this.run.sectors.some(sector => sector.status === 'available')) {
       const nextSector = this.run.sectors.find(sector => sector.status !== 'complete');
       if (nextSector) nextSector.status = 'available';
     }
-    map.innerHTML = '<div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div><div class="rift-label" aria-hidden="true">CICATRIX MALEDICTUM</div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
+    map.innerHTML = '<div class="galaxy-stage"><div class="galaxy-nebula"></div><div class="galaxy-disc" aria-hidden="true"></div><div class="chart-grid"></div><div class="galaxy-core-label" aria-hidden="true">GALACTIC CORE</div><div class="rift-label" aria-hidden="true">CICATRIX MALEDICTUM</div></div><div class="galaxy-instrument"><span>DRAG TO NAVIGATE · PINCH TO ZOOM</span><button type="button" data-galaxy-zoom="out" aria-label="Zoom out">−</button><button type="button" data-galaxy-zoom="reset" aria-label="Reset galaxy view">◎</button><button type="button" data-galaxy-zoom="in" aria-label="Zoom in">+</button></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>';
+    const stage = map.querySelector('.galaxy-stage');
     for (let index = 0; index < 72; index++) {
       const star = document.createElement('i');
       star.className = 'distant-star';
       star.style.cssText = `--sx:${(index * 47) % 97}%;--sy:${(index * 71) % 93}%;--sd:${(index % 9) * -.23}s;--ss:${index % 7 === 0 ? 2 : 1}px`;
-      map.append(star);
+      stage.append(star);
     }
     this.run.sectors.forEach((sector,index) => {
       sector.name = SECTOR_NAMES[index] || sector.name;
@@ -684,10 +687,89 @@ export class Game {
       button.style.setProperty('--sector-delay',`${index * 90}ms`);
       button.disabled = sector.status === 'locked' && activeIndex !== index;
       const status = sector.status === 'complete' ? `${sector.stars} ★ CLEARED` : this.run.region === index ? 'ACTIVE OPERATION' : sector.status === 'available' ? 'TRAVEL AVAILABLE' : 'UNCHARTED';
-      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i></i></span><span class="system-copy"><b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
-      button.onclick = () => this.engageSector(button,index); map.append(button);
+      button.innerHTML = `<span class="system-star tone-${layout.tone}" aria-hidden="true"><i class="star-flare"></i><span class="mini-orbit orbit-a"><i></i></span><span class="mini-orbit orbit-b"><i></i></span></span><span class="system-copy"><b>${sector.name}</b><small>${status}</small><em>0${index + 1}</em></span>`;
+      button.onclick = () => this.engageSector(button,index); stage.append(button);
     });
+    const focusIndex = activeIndex ?? this.run.sectors.findIndex(sector => sector.status === 'available');
+    const focus = GALAXY_SYSTEM_LAYOUT[Math.max(0,focusIndex)] || {x:50,y:50};
+    this.bindGalaxyNavigation(map,stage,1,focus.x,focus.y);
     this.save();
+  }
+
+  bindGalaxyNavigation(viewport,stage,initialScale = 1,focusX = 50,focusY = 50) {
+    this.galaxyGestureController?.abort();
+    const controller = new AbortController();
+    this.galaxyGestureController = controller;
+    const pointers = new Map();
+    const state = {x:0,y:0,scale:initialScale,startX:0,startY:0,baseX:0,baseY:0,startDistance:0,startScale:initialScale,moved:false,suppressUntil:0};
+    const clampView = () => {
+      const viewportRect = viewport.getBoundingClientRect();
+      const width = stage.offsetWidth * state.scale;
+      const height = stage.offsetHeight * state.scale;
+      const minX = Math.min(0,viewportRect.width - width), minY = Math.min(0,viewportRect.height - height);
+      state.x = clamp(state.x,minX,0); state.y = clamp(state.y,minY,0);
+    };
+    const paint = () => { clampView(); stage.style.transform = `translate3d(${state.x}px,${state.y}px,0) scale(${state.scale})`; };
+    const centerView = (scale = initialScale) => {
+      state.scale = scale;
+      state.x = viewport.clientWidth / 2 - stage.offsetWidth * scale * focusX / 100;
+      state.y = viewport.clientHeight / 2 - stage.offsetHeight * scale * focusY / 100;
+      paint();
+    };
+    const zoomAt = (nextScale,clientX,clientY) => {
+      const rect = viewport.getBoundingClientRect();
+      const px = clientX - rect.left, py = clientY - rect.top;
+      const scale = clamp(nextScale,.72,2.5);
+      state.x = px - (px - state.x) * scale / state.scale;
+      state.y = py - (py - state.y) * scale / state.scale;
+      state.scale = scale; paint();
+    };
+    requestAnimationFrame(() => centerView(initialScale));
+    viewport.addEventListener('wheel',event => { event.preventDefault(); zoomAt(state.scale * (event.deltaY > 0 ? .9 : 1.1),event.clientX,event.clientY); },{passive:false,signal:controller.signal});
+    viewport.addEventListener('pointerdown',event => {
+      if (event.target.closest('.galaxy-instrument')) return;
+      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+      if (pointers.size === 1) {
+        state.startX = event.clientX; state.startY = event.clientY;
+        state.baseX = state.x; state.baseY = state.y; state.moved = false;
+      }
+      if (pointers.size === 2) { const [a,b] = [...pointers.values()]; state.startDistance = Math.hypot(a.x-b.x,a.y-b.y); state.startScale = state.scale; }
+      viewport.classList.add('navigating');
+    },{signal:controller.signal});
+    viewport.addEventListener('pointermove',event => {
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+      if (pointers.size === 1) {
+        const dx = event.clientX - state.startX, dy = event.clientY - state.startY;
+        if (Math.hypot(dx,dy) > 5) {
+          state.moved = true;
+          if (!viewport.hasPointerCapture(event.pointerId)) viewport.setPointerCapture(event.pointerId);
+        }
+        state.x = state.baseX + dx; state.y = state.baseY + dy; paint();
+      } else {
+        const [a,b] = [...pointers.values()]; const distance = Math.hypot(a.x-b.x,a.y-b.y);
+        if (Math.abs(distance-state.startDistance) > 4) {
+          state.moved = true;
+          if (!viewport.hasPointerCapture(event.pointerId)) viewport.setPointerCapture(event.pointerId);
+        }
+        zoomAt(state.startScale * distance / Math.max(1,state.startDistance),(a.x+b.x)/2,(a.y+b.y)/2);
+      }
+    },{signal:controller.signal});
+    const release = event => {
+      pointers.delete(event.pointerId);
+      if (pointers.size === 1) {
+        const [remaining] = pointers.values();
+        state.startX = remaining.x; state.startY = remaining.y; state.baseX = state.x; state.baseY = state.y;
+      } else if (!pointers.size) {
+        viewport.classList.remove('navigating');
+        if (state.moved) state.suppressUntil = Date.now() + 180;
+      }
+    };
+    viewport.addEventListener('pointerup',release,{signal:controller.signal}); viewport.addEventListener('pointercancel',release,{signal:controller.signal});
+    viewport.addEventListener('click',event => { if (Date.now() < state.suppressUntil) { event.preventDefault(); event.stopPropagation(); } },{capture:true,signal:controller.signal});
+    viewport.querySelector('[data-galaxy-zoom="in"]').onclick = () => zoomAt(state.scale * 1.22,viewport.getBoundingClientRect().left + viewport.clientWidth/2,viewport.getBoundingClientRect().top + viewport.clientHeight/2);
+    viewport.querySelector('[data-galaxy-zoom="out"]').onclick = () => zoomAt(state.scale / 1.22,viewport.getBoundingClientRect().left + viewport.clientWidth/2,viewport.getBoundingClientRect().top + viewport.clientHeight/2);
+    viewport.querySelector('[data-galaxy-zoom="reset"]').onclick = () => centerView(initialScale);
   }
 
   engageSector(button,index) {
@@ -733,6 +815,7 @@ export class Game {
     if (!$('#mission-dialog').open) return;
     $('#mission-dialog').close();
     if (this.run?.story) this.run.story.pendingBriefing = null;
+    if ($('#sector-screen').classList.contains('active')) this.renderSectors();
     this.save();
   }
 
@@ -790,16 +873,18 @@ export class Game {
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
     map.className = 'route-map area-galaxy star-system-map';
-    map.innerHTML = `<div class="galaxy-nebula"></div><div class="system-dust" aria-hidden="true"></div><div class="chart-grid"></div><div class="orbit-ring orbit-one" aria-hidden="true"></div><div class="orbit-ring orbit-two" aria-hidden="true"></div><div class="orbit-ring orbit-three" aria-hidden="true"></div><div class="primary-star" aria-hidden="true"><i></i><span>${sector.name.replace(' SECTOR','')}</span></div><div class="system-ship" aria-label="Grey Knights strike cruiser"><i></i><b>STRIKE CRUISER</b><small>IN SYSTEM</small></div><div class="system-planet decorative-planet planet-one" aria-hidden="true"></div><div class="system-planet decorative-planet planet-two" aria-hidden="true"></div>`;
+    map.innerHTML = `<div class="galaxy-stage system-stage"><div class="galaxy-nebula"></div><div class="system-dust" aria-hidden="true"></div><div class="chart-grid"></div><div class="orbit-ring orbit-one" aria-hidden="true"></div><div class="orbit-ring orbit-two" aria-hidden="true"></div><div class="orbit-ring orbit-three" aria-hidden="true"></div><div class="primary-star" aria-hidden="true"><i></i><span>${sector.name.replace(' SECTOR','')}</span></div><div class="system-ship" aria-label="Grey Knights strike cruiser"><i></i><b>STRIKE CRUISER</b><small>IN SYSTEM</small></div><div class="system-planet decorative-planet planet-one" aria-hidden="true"></div><div class="system-planet decorative-planet planet-two" aria-hidden="true"></div></div><div class="galaxy-instrument"><span>DRAG TO NAVIGATE · PINCH TO ZOOM</span><button type="button" data-galaxy-zoom="out" aria-label="Zoom out">−</button><button type="button" data-galaxy-zoom="reset" aria-label="Reset system view">◎</button><button type="button" data-galaxy-zoom="in" aria-label="Zoom in">+</button></div>`;
+    const stage = map.querySelector('.galaxy-stage');
     this.run.offers.forEach((node,offerIndex) => {
       const layout = SYSTEM_DESTINATION_LAYOUT[offerIndex];
       const choice = this.makeNodeButton(node,`available system-destination ${node.type}`,true);
       choice.style.setProperty('--system-x',`${layout.x}%`); choice.style.setProperty('--system-y',`${layout.y}%`);
       choice.style.setProperty('--planet-size',layout.size);
       choice.style.setProperty('--zone-delay',`${offerIndex * 110}ms`);
-      choice.insertAdjacentHTML('afterbegin',`<span class="destination-planet tone-${layout.tone}" aria-hidden="true"><i></i></span>`);
-      map.append(choice);
+      choice.insertAdjacentHTML('afterbegin',`<span class="destination-planet destination-system tone-${layout.tone}" aria-hidden="true"><i class="destination-sun"></i><span class="mini-orbit orbit-a"><i></i></span><span class="mini-orbit orbit-b"><i></i></span></span>`);
+      stage.append(choice);
     });
+    this.bindGalaxyNavigation(map,stage,1);
     this.save();
   }
 
