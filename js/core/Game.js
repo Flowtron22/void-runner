@@ -31,6 +31,10 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const pick = list => list[Math.floor(Math.random() * list.length)];
 const shuffle = list => [...list].sort(() => Math.random() - .5);
 const d6 = () => 1 + Math.floor(Math.random() * 6);
+const playerD6 = () => {
+  const first = d6();
+  return first <= 2 && Math.random() < .4 ? d6() : first;
+};
 const RULE_SYMBOLS = [
   [/Blast/i,'✹'], [/Rapid Fire/i,'»'], [/Melta/i,'◈'], [/Torrent/i,'≋'],
   [/Devastating/i,'☠'], [/Twin-?linked/i,'⟳'], [/Sustained/i,'✦'], [/Lethal/i,'†'],
@@ -127,7 +131,7 @@ function weaponRules(weapon, halfRange = false) {
   return rules;
 }
 
-function rollExpression(value) {
+function rollExpression(value, favored = false) {
   const text = String(value).replace(/\s/g, '').toUpperCase();
   if (/^\d+$/.test(text)) return { total: Number(text), rolls: [], flat: Number(text) };
   const match = text.match(/^(\d*)D(3|6)(?:\+(\d+))?$/);
@@ -135,7 +139,10 @@ function rollExpression(value) {
   const count = Number(match[1] || 1);
   const sides = Number(match[2]);
   const flat = Number(match[3] || 0);
-  const rolls = Array.from({length:count}, () => 1 + Math.floor(Math.random() * sides));
+  const rolls = Array.from({length:count}, () => {
+    const first = 1 + Math.floor(Math.random() * sides);
+    return favored && first <= Math.ceil(sides / 3) && Math.random() < .4 ? 1 + Math.floor(Math.random() * sides) : first;
+  });
   return { total: rolls.reduce((sum, roll) => sum + roll, flat), rolls, flat };
 }
 
@@ -415,11 +422,18 @@ export class Game {
       this.renderSectors(); this.show('sector'); return this.openMissionBriefing(this.run.story.pendingBriefing);
     }
     if (this.run.rewardContext) {
-      this.renderRewardSegments(this.rewardSegmentOptions(this.run.rewardContext));
+      this.ensureRewardState(this.run.rewardContext);
+      this.renderRewardSegments();
       const node = this.run.rewardContext.node;
       $('#reward-data').textContent = `+${node.stars || 0} ★`;
       $('#reward-gear-line').textContent = `${node.type === 'boss' ? 90 * (node.bossTier || 1) : 20 + node.stars * 10} CAMPAIGN SCORE`;
       return this.show('reward');
+    }
+    if (this.run.pendingPostWar) {
+      const event = this.run.pendingPostWar.node?.event;
+      if (event === 'recruit') return this.openRecruitEvent();
+      if (event === 'store') return this.openStoreEvent();
+      return this.finishPostWarEvent();
     }
     if (this.run.pendingNode) return this.openLoadout('map');
     this.renderHub(); this.show('hub');
@@ -1138,7 +1152,7 @@ export class Game {
 
   testBattleShock(unit, forced = false) {
     const synapse = unit.keywords?.includes('Synapse');
-    const dice = Array.from({length:synapse ? 3 : 2}, d6);
+    const dice = Array.from({length:synapse ? 3 : 2}, unit.side === 'player' ? playerD6 : d6);
     const total = dice.reduce((sum,value) => sum + value, 0);
     const failed = total < (unit.leadership || 7);
     if (!failed) return;
@@ -1161,11 +1175,11 @@ export class Game {
     const attackDice = [];
     let attacks = 0;
     for (let model = 0; model < models; model++) {
-      const roll = rollExpression(actor.weapon.attacks);
+      const roll = rollExpression(actor.weapon.attacks, actor.side === 'player');
       attackDice.push(...roll.rolls);
       attacks += roll.total + actor.attacksBonus;
       if (rules.rapidFire) {
-        const rapid = rollExpression(rules.rapidFire);
+        const rapid = rollExpression(rules.rapidFire, actor.side === 'player');
         attackDice.push(...rapid.rolls);
         attacks += rapid.total;
       }
@@ -1174,9 +1188,11 @@ export class Game {
     const effects = actor.side === 'player' ? this.protocolEffects() : {};
     const tactics = actor.side === 'player' && this.battle.round === 1 ? this.stratagemEffects() : {};
     const hitTarget = clamp(actor.weapon.hit - actor.hitBonus - (tactics.openingHit || 0), 2, 6);
-    let hitRolls = rules.torrent ? [] : Array.from({length:attacks}, () => d6());
+    const attackDie = actor.side === 'player' ? playerD6 : d6;
+    const saveDie = target.side === 'player' ? playerD6 : d6;
+    let hitRolls = rules.torrent ? [] : Array.from({length:attacks}, attackDie);
     const oathReroll = target.instanceId === this.battle.oathTarget[actor.side];
-    if (!rules.torrent && (oathReroll || leader.hitReroll === 'failed')) hitRolls = hitRolls.map(roll => roll !== 1 && roll >= hitTarget ? roll : d6());
+    if (!rules.torrent && (oathReroll || leader.hitReroll === 'failed')) hitRolls = hitRolls.map(roll => roll !== 1 && roll >= hitTarget ? roll : attackDie());
     if (!rules.torrent && !oathReroll && leader.hitReroll !== 'failed') hitRolls = this.commandReroll(actor, hitRolls, hitTarget, 'Hit');
     let hits = rules.torrent ? attacks : hitRolls.filter(roll => roll !== 1 && roll >= hitTarget).length;
     const criticalHits = hitRolls.filter(roll => roll === 6).length;
@@ -1186,8 +1202,8 @@ export class Game {
     const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness) - actor.woundBonus - (tactics.openingWound || 0), 2, 6);
     const antiNeeded = target.keywords?.includes('Infantry') ? rules.antiInfantry : target.keywords?.includes('Monster') ? rules.antiMonster : target.keywords?.includes('Vehicle') ? rules.antiVehicle : null;
     const effectiveWoundNeeded = Math.min(woundNeeded, antiNeeded || 7);
-    let woundRolls = Array.from({length:Math.max(0,hits-autoWounds)}, () => d6());
-    if (rules.woundReroll === 'failed') woundRolls = woundRolls.map(roll => roll !== 1 && roll >= effectiveWoundNeeded ? roll : d6());
+    let woundRolls = Array.from({length:Math.max(0,hits-autoWounds)}, attackDie);
+    if (rules.woundReroll === 'failed') woundRolls = woundRolls.map(roll => roll !== 1 && roll >= effectiveWoundNeeded ? roll : attackDie());
     if (rules.woundReroll !== 'failed') woundRolls = this.commandReroll(actor, woundRolls, effectiveWoundNeeded, 'Wound');
     const rolledWounds = woundRolls.filter(roll => roll !== 1 && roll >= effectiveWoundNeeded).length;
     const wounds = rolledWounds + autoWounds;
@@ -1195,7 +1211,7 @@ export class Game {
     const devastating = rules.devastatingWounds ? woundRolls.filter(roll => roll !== 1 && roll >= criticalWoundNeeded).length : 0;
     const armourTarget = clamp(target.save - actor.weapon.ap - target.saveBonus, 2, 7);
     const saveTarget = Math.min(armourTarget, target.invuln || 7);
-    let saveRolls = Array.from({length:Math.max(0,wounds-devastating)}, () => d6());
+    let saveRolls = Array.from({length:Math.max(0,wounds-devastating)}, saveDie);
     saveRolls = this.commandReroll(target, saveRolls, saveTarget, 'Save');
     const saves = saveRolls.filter(roll => saveTarget <= 6 && roll >= saveTarget).length;
     const unsaved = wounds - saves;
@@ -1203,12 +1219,12 @@ export class Game {
     let damageLost = 0;
     const remainingHp = [...target.hp];
     for (let i = 0; i < unsaved && remainingHp.length; i++) {
-      const result = rollExpression(actor.weapon.damage);
+      const result = rollExpression(actor.weapon.damage, actor.side === 'player');
       damageRolls.push(...(result.rolls.length ? result.rolls : [result.total]));
       let damage = result.total;
       if (rules.melta) damage += rules.melta;
       if (target.fnp <= 6) {
-        const ignored = Array.from({length:damage}, () => d6()).filter(roll => roll >= target.fnp).length;
+        const ignored = Array.from({length:damage}, saveDie).filter(roll => roll >= target.fnp).length;
         damage -= ignored;
       }
       const lost = Math.min(remainingHp[0], damage);
@@ -1225,7 +1241,7 @@ export class Game {
     const index = rolls.findIndex(roll => roll === 1 || roll < target);
     if (index < 0) return rolls;
     const next = [...rolls];
-    next[index] = d6();
+    next[index] = unit.side === 'player' ? playerD6() : d6();
     this.battle.cp[unit.side]--;
     this.battle.stratagemUsed[unit.side] = true;
     this.addLog(`↻ ${label.toUpperCase()} · ${unit.name} · −1CP`);
@@ -1355,54 +1371,90 @@ export class Game {
     this.run.battles++;
     if (node.type === 'boss') this.run.bosses++;
     const req = Math.round((18 + (node.stars || 1) * 8) * (1 + (this.meta.research.salvage || 0) * .15));
-    this.run.rewardContext = {
-      node, req,
-      honours:shuffle(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))).slice(0,3).map(item => item.id),
-      stratagems:shuffle(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))).slice(0,3).map(item => item.id)
-    };
-    const options = this.rewardSegmentOptions(this.run.rewardContext);
-    this.renderRewardSegments(options);
+    this.run.rewardContext = {node, req};
+    this.ensureRewardState(this.run.rewardContext);
+    this.renderRewardSegments();
     $('#reward-data').textContent = `+${node.stars || 0} ★`;
     $('#reward-gear-line').textContent = `${score} CAMPAIGN SCORE`;
     this.save();
     this.show('reward');
   }
 
-  rewardSegmentOptions(context) {
+  ensureRewardState(context) {
     const node = context.node;
-    const options = [
-      {kind:'currency',icon:'◆',name:'REQUISITION',tag:`CLAIM ${context.req}`,desc:'Take campaign currency for a future field store.'},
-      {kind:'honour',icon:'✦',name:'BATTLE HONOURS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of passive army rules.'},
-      {kind:'stratagem',icon:'⌖',name:'STRATAGEMS',tag:'CHOOSE 1 OF 3',desc:'Open a selection of automatic command tactics.'}
-    ];
-    if (node.event === 'recruit') options.push({kind:'recruit',icon:'▦',name:'REINFORCEMENTS',tag:'CHOOSE A UNIT',desc:'Answer a recovered command signal.'});
-    if (node.event === 'store') options.push({kind:'store',icon:'⚙',name:'FIELD STORE',tag:`◆ ${this.run.currency}`,desc:'Spend campaign Requisition on Wargear.'});
-    return options;
+    const stars = clamp(node.stars || 1, 1, 3);
+    const total = clamp(2 + stars + (node.type === 'boss' || node.event ? 1 : 0), 3, 5);
+    context.claims ||= {currency:1, honour:1 + (total >= 4 ? 1 : 0), stratagem:1 + (total >= 5 ? 1 : 0)};
+    context.claimed ||= {currency:0, honour:0, stratagem:0};
+    context.honours ||= shuffle(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))).map(item => item.id);
+    context.stratagems ||= shuffle(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))).map(item => item.id);
+    context.totalClaims ||= Object.values(context.claims).reduce((sum,value) => sum + value, 0);
+    return context;
   }
 
-  renderRewardSegments(options) {
+  rewardRemaining(kind) {
+    const context = this.ensureRewardState(this.run.rewardContext);
+    return Math.max(0, (context.claims[kind] || 0) - (context.claimed[kind] || 0));
+  }
+
+  rewardClaimsRemaining() {
+    return ['currency','honour','stratagem'].reduce((sum,kind) => sum + this.rewardRemaining(kind), 0);
+  }
+
+  rewardSegmentOptions(context) {
+    return [
+      {kind:'currency',icon:'◆',name:'REQUISITION',tag:`CLAIM ${context.req}`,desc:'Secure campaign currency for a future field store.'},
+      {kind:'honour',icon:'✦',name:'ENHANCEMENTS',tag:'CHOOSE 1 OF 3',desc:'Select a permanent enhancement for this campaign.'},
+      {kind:'stratagem',icon:'⌖',name:'STRATAGEMS',tag:'CHOOSE 1 OF 3',desc:'Select an automatic command tactic.'}
+    ];
+  }
+
+  renderRewardSegments() {
+    const context = this.ensureRewardState(this.run.rewardContext);
+    const options = this.rewardSegmentOptions(context);
+    const remaining = this.rewardClaimsRemaining();
+    const resolved = context.totalClaims - remaining;
     $('#reward-title').textContent = 'POST-WAR AFFAIRS';
+    $('#reward-copy').textContent = remaining ? `${resolved} / ${context.totalClaims} AFFAIRS RESOLVED · CLEAR ALL LOOT TO CONTINUE` : 'ALL LOOT SECURED · THE ROUTE IS OPEN';
     const list = $('#reward-options'); list.innerHTML = '';
     for (const option of options) {
+      const left = this.rewardRemaining(option.kind);
       const button = document.createElement('button');
-      button.className = 'reward-option pixel-panel';
+      button.className = `reward-option pixel-panel ${left ? '' : 'claimed'}`;
+      button.disabled = !left;
       button.title = option.desc;
       button.setAttribute('aria-label', `${option.name}: ${option.desc}`);
-      button.innerHTML = `<b>${option.icon} ${option.name}</b><span>${option.tag}</span>`;
+      button.innerHTML = `<b>${option.icon} ${option.name}</b><small>${option.desc}</small><span>${left ? `${left} CLAIM${left === 1 ? '' : 'S'} REMAINING · ${option.tag}` : 'SECURED'}</span>`;
       button.onclick = () => this.selectPostWarSegment(option.kind);
       list.append(button);
     }
+    $('#reward-continue-button').hidden = remaining !== 0;
+    $('#reward-continue-button').onclick = () => this.completePostWarSegment();
+    this.save();
   }
 
   selectPostWarSegment(kind) {
     const context = this.run.rewardContext; if (!context) return;
-    if (kind === 'currency') { this.run.currency += context.req; return this.completePostWarSegment(); }
-    if (kind === 'recruit') return this.openRecruitEvent();
-    if (kind === 'store') return this.openStoreEvent();
+    if (!this.rewardRemaining(kind)) return;
+    if (kind === 'currency') {
+      this.run.currency += context.req;
+      context.claimed.currency++;
+      this.save();
+      return this.renderRewardSegments();
+    }
     const source = kind === 'honour' ? BATTLE_HONOURS : STRATAGEMS;
-    let ids = context[kind === 'honour' ? 'honours' : 'stratagems'];
-    if (!ids.length) ids = shuffle(source).slice(0,3).map(item => item.id);
-    $('#reward-title').textContent = kind === 'honour' ? 'CHOOSE 1 HONOUR' : 'CHOOSE 1 STRATAGEM';
+    const owned = kind === 'honour' ? this.run.protocols : this.run.stratagems;
+    const key = kind === 'honour' ? 'honours' : 'stratagems';
+    let ids = context[key].filter(id => !owned.includes(id));
+    if (!ids.length) {
+      this.run.currency += 10;
+      context.claimed[kind]++;
+      return this.renderRewardSegments();
+    }
+    context[key] = ids;
+    ids = ids.slice(0,3);
+    $('#reward-title').textContent = kind === 'honour' ? 'CHOOSE AN ENHANCEMENT' : 'CHOOSE A STRATAGEM';
+    $('#reward-copy').textContent = `${this.rewardRemaining(kind)} ${kind === 'honour' ? 'ENHANCEMENT' : 'STRATAGEM'} CLAIM${this.rewardRemaining(kind) === 1 ? '' : 'S'} REMAINING`;
     const list = $('#reward-options'); list.innerHTML = '';
     ids.forEach(id => {
       const item = source.find(entry => entry.id === id); const button = document.createElement('button');
@@ -1410,6 +1462,10 @@ export class Game {
       button.innerHTML = `<b>${kind === 'honour' ? ruleSymbol(`${item.name} ${item.tag}`) : '⌖'} ${item.name}</b><small>${item.desc}</small><span>${item.tag}</span>`;
       button.onclick = () => this.claimPostWarChoice(kind,id); list.append(button);
     });
+    const back = document.createElement('button');
+    back.className = 'reward-back'; back.textContent = '← POST-WAR AFFAIRS';
+    back.onclick = () => this.renderRewardSegments(); list.append(back);
+    $('#reward-continue-button').hidden = true;
   }
 
   claimPostWarChoice(kind,id) {
@@ -1418,16 +1474,21 @@ export class Game {
       this.run.stratagems.push(id);
       this.run.currency += STRATAGEMS.find(item => item.id === id)?.effect.currency || 0;
     }
-    this.completePostWarSegment();
+    this.run.rewardContext.claimed[kind]++;
+    this.save();
+    this.renderRewardSegments();
   }
 
   completePostWarSegment() {
     const node = this.run.rewardContext?.node; if (!node) return;
+    if (this.rewardClaimsRemaining()) return this.renderRewardSegments();
     this.run.history.push({...node,region:this.run.region,step:this.run.step});
     this.run.pendingNode = null;
     this.run.pendingPostWar = {node,wasBoss:node.type === 'boss'};
     this.run.rewardContext = null;
     this.save();
+    if (node.event === 'recruit') return this.openRecruitEvent();
+    if (node.event === 'store') return this.openStoreEvent();
     this.finishPostWarEvent();
   }
 
@@ -1440,7 +1501,7 @@ export class Game {
     locked.forEach(unit => {
       const button = document.createElement('button'); button.className = 'event-card';
       button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id)}"></span><b>${unit.name}</b><small>${unit.points} PTS · ${unit.role}</small>`;
-      button.onclick = () => { this.run.unlockedUnits.push(unit.id); this.save(); $('#event-dialog').close(); this.completePostWarSegment(); }; list.append(button);
+      button.onclick = () => { this.run.unlockedUnits.push(unit.id); this.save(); $('#event-dialog').close(); this.finishPostWarEvent(); }; list.append(button);
     });
     $('#event-continue-button').hidden = true; $('#event-dialog').showModal();
   }
@@ -1452,14 +1513,14 @@ export class Game {
     shuffle(WARGEAR).slice(0,3).forEach((gear,index) => {
       const price = 20 + index * 10; const button = document.createElement('button'); button.className = 'event-card'; button.disabled = this.run.currency < price;
       button.innerHTML = `<span>⚙</span><b>${gear.name}</b><small>◆ ${price} · ${gear.desc}</small>`;
-      button.onclick = () => { this.run.currency -= price; this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`}); this.save(); $('#event-dialog').close(); this.completePostWarSegment(); }; list.append(button);
+      button.onclick = () => { this.run.currency -= price; this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`}); this.save(); $('#event-dialog').close(); this.finishPostWarEvent(); }; list.append(button);
     });
     $('#event-continue-button').hidden = false; $('#event-dialog').showModal();
   }
 
   finishPostWarEvent() {
     if ($('#event-dialog').open) $('#event-dialog').close();
-    if (this.run?.rewardContext) return this.completePostWarSegment();
+    if (this.run?.rewardContext) return;
     const pending = this.run?.pendingPostWar; if (!pending) return;
     this.run.pendingPostWar = null; this.advanceRoute(pending.wasBoss, pending.node);
   }
@@ -1509,7 +1570,7 @@ export class Game {
     this.save();
     $('#run-end-kicker').textContent = victory ? '// CAMPAIGN COMPLETE' : '// CAMPAIGN LOST';
     $('#run-end-title').textContent = victory ? 'VICTORY.' : 'THE OFFENSIVE ENDS.';
-    $('#run-end-copy').textContent = victory ? 'Every sector is secured. Run-only Honours, Stratagems and Wargear are cleared; permanent Requisition remains.' : 'The army is lost, but secured boss rewards reached command.';
+    $('#run-end-copy').textContent = victory ? 'Every sector is secured. Run-only Enhancements, Stratagems and Wargear are cleared; permanent Requisition remains.' : 'The army is lost, but secured boss rewards reached command.';
     $('#run-end-stats').innerHTML = `<span>BATTLES WON<b>${snapshot.battles}</b></span><span>SECTORS CLEARED<b>${snapshot.bosses}</b></span><span>STARS<b>${snapshot.stars}</b></span><span>PERMANENT REQ<b>+${snapshot.chests}</b></span>`;
     $('#run-end-button').textContent = 'RETURN TO COMMAND';
     $('#run-end-button').dataset.action = 'home';

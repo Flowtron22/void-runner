@@ -86,7 +86,7 @@
         <div class="cap-badge"><small>POINTS LIMIT</small><b id="map-cap">500</b><span>PTS</span></div>
       </div>
       <div class="run-stats pixel-panel">
-        <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Sector stars"><small>★</small><b id="run-data">0</b></span><span title="Campaign Requisition"><small>◆</small><b id="run-currency">0</b></span><span title="Battle Honours"><small>✦</small><b id="run-protocol-count">0</b></span>
+        <span title="Attempts"><small>♥</small><b id="run-hull">3/3</b></span><span title="Sector stars"><small>★</small><b id="run-data">0</b></span><span title="Campaign Requisition"><small>◆</small><b id="run-currency">0</b></span><span title="Enhancements"><small>✦</small><b id="run-protocol-count">0</b></span>
       </div>
       <button id="mission-log-button" class="mission-strip" aria-label="Review current Inquisitorial directive">
         <img src="assets/chapter-grey-knight.jpg" alt="Grey Knights strike force" />
@@ -106,7 +106,7 @@
       <div class="loadout-tip pixel-panel" hidden><b>① UNIT</b><span>→</span><b>② GRID</b></div>
       <div class="case-wrap"><div class="case-axis"><span>FRONT LINE</span><span>REAR LINE</span></div><div id="formation-grid" class="formation-grid" aria-label="Six by five deployment grid"></div></div>
       <div class="prep-actions"><button id="remove-button" class="danger" aria-label="Remove selected unit">✕ REMOVE</button><button id="clear-button" aria-label="Clear formation">⌫</button></div>
-      <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">▦ UNITS</button><button data-prep-tab="gear">⚙ <span id="gear-count">0</span></button><button data-prep-tab="protocols">✦ HONOURS</button></nav>
+      <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">▦ UNITS</button><button data-prep-tab="gear">⚙ <span id="gear-count">0</span></button><button data-prep-tab="protocols">✦ ENHANCEMENTS</button></nav>
       <div id="unit-roster" class="prep-list active"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
       <div class="station-footer pixel-panel"><div hidden><small id="prep-status-label">▦</small><b id="prep-status">SELECT A UNIT</b></div><button id="deploy-button" disabled>← RETURN TO COMMAND DECK</button></div>
     </section>
@@ -124,7 +124,8 @@
 
     <section id="reward-screen" class="screen" aria-labelledby="reward-title">
       <div class="reward-sigil">◆</div><p class="eyebrow">// AREA SECURED</p><h2 id="reward-title">POST-WAR AFFAIRS</h2>
-      <div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>SCORE GAINED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO WARGEAR FOUND</span></div>
+      <p id="reward-copy" class="reward-copy"></p><div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>SCORE GAINED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO WARGEAR FOUND</span></div>
+      <button id="reward-continue-button" class="primary-button reward-continue" hidden>CONTINUE THE PATH →</button>
     </section>
 
     <section id="research-screen" class="screen" aria-labelledby="research-title">
