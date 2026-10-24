@@ -59,34 +59,25 @@ body.star-chart-open .app-shell {
   box-shadow: 0 0 90px #000, 0 0 34px #66715324;
 }
 
-.app-shell::before {
-  content: "";
-  position: absolute;
-  z-index: 60;
-  inset: var(--terminal-screen-top) var(--terminal-screen-right) var(--terminal-screen-bottom) var(--terminal-screen-left);
-  pointer-events: none;
-  opacity: .22;
-  border-radius: 5% / 3%;
-  background:
-    linear-gradient(90deg, #b7d8a40c, transparent 7%, transparent 89%, #b7d8a40b),
-    repeating-linear-gradient(0deg, transparent 0 3px, #a5c5940a 3px 4px);
-  box-shadow: inset 0 0 34px #000b, inset 0 0 2px #9eb78c5c;
-}
+.app-shell.webgl-terminal-active { background: #020503 !important; }
 
-.app-shell::after {
-  content: "";
+.app-shell::before,
+.app-shell::after { content: none; }
+
+.terminal-webgl {
   position: absolute;
-  z-index: -1;
-  inset: var(--terminal-screen-top) var(--terminal-screen-right) var(--terminal-screen-bottom) var(--terminal-screen-left);
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  border-radius: 5% / 3%;
-  background: #050a07;
-  box-shadow: inset 0 0 54px #000;
 }
 
 .screen,
 .screen.active {
   position: relative;
+  z-index: 2;
   inset: auto;
   width: 100%;
   height: 100%;
@@ -116,17 +107,25 @@ body.star-chart-open .app-shell {
   overflow: hidden;
 }
 
-#home-screen.active {
+.webgl-terminal-active #home-screen.active {
   padding: clamp(16px, 4dvh, 34px) clamp(13px, 4vw, 24px);
-  background-position: center top;
+  background: transparent;
 }
 
-#intro-screen.active,
-#hub-screen.active {
+.webgl-terminal-active #intro-screen.active,
+.webgl-terminal-active #hub-screen.active {
   padding-left: clamp(10px, 3vw, 18px);
   padding-right: clamp(10px, 3vw, 18px);
-  background-position: center;
+  background: transparent;
 }
+
+.webgl-terminal-active #home-screen::before,
+.webgl-terminal-active #intro-screen::before,
+.webgl-terminal-active #hub-screen::before { background: linear-gradient(180deg, transparent 32%, #02040342 60%, #020302d9 100%); }
+
+.webgl-terminal-active #home-screen::after,
+.webgl-terminal-active #intro-screen::after,
+.webgl-terminal-active #hub-screen::after { box-shadow: inset 0 0 46px #0009; }
 
 #intro-screen.active { padding-bottom: clamp(14px, 3dvh, 28px); }
 #hub-screen.active { padding-top: clamp(20px, 6dvh, 54px); padding-bottom: clamp(12px, 2.5dvh, 20px); }
@@ -137,6 +136,25 @@ body.star-chart-open .app-shell {
   letter-spacing: .035em;
 }
 #home-screen .home-actions { width: min(100%, 310px); }
+
+#home-screen .home-actions button,
+.hub-station {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-shadow: 0 2px 3px #000;
+}
+
+#home-screen .home-actions .menu-primary { color: #fff0bd; text-shadow: 0 2px 3px #251b08; }
+#home-screen .home-actions button:hover,
+#home-screen .home-actions button:focus-visible,
+.hub-station:hover,
+.hub-station:focus-visible {
+  border-color: transparent !important;
+  background: transparent !important;
+  outline: 1px solid #d4b86a;
+  outline-offset: -4px;
+}
 
 .station-footer,
 body.star-chart-open .station-footer,
@@ -215,5 +233,5 @@ dialog.modal::backdrop {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell::before { opacity: .14; }
+  .terminal-webgl { opacity: .96; }
 }
