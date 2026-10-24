@@ -100,6 +100,7 @@ export class GalaxyMap3D {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(viewport);
     this.resize();
+    this.render();
     this.renderer.setAnimationLoop(() => this.render());
   }
 

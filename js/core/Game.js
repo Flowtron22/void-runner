@@ -182,6 +182,7 @@ export class Game {
     this.introComplete = false;
     this.galaxyScene = null;
     this.galaxyMountId = 0;
+    this.galaxyModulePromise = import('../render/GalaxyMap3D.js');
     this.setupChoice = {tier:null,faction:null};
     this.bindUI();
     document.body.classList.toggle('reduced-motion', Boolean(this.meta.settings?.reducedMotion));
@@ -726,7 +727,7 @@ export class Game {
   async mountGalaxyScene(options,map) {
     const mountId=++this.galaxyMountId;
     try {
-      const { GalaxyMap3D }=await import('../render/GalaxyMap3D.js');
+      const { GalaxyMap3D }=await this.galaxyModulePromise;
       if (mountId!==this.galaxyMountId || !map.isConnected) return;
       this.galaxyScene?.destroy();
       this.galaxyScene=new GalaxyMap3D(options);
