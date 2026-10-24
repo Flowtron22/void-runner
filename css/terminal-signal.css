@@ -1,0 +1,217 @@
+/*
+ * One emitted image behind one piece of glass.
+ * Geometry belongs to terminal-frame.css; these rules govern the display signal.
+ * Keep the optical pass above BOTH the WebGL image and semantic HTML, below no
+ * interactive layer, and outside the scroll regions. The metal stays untouched.
+ */
+:root {
+  --crt-ink: #b9ceb0;
+  --crt-dim: #8b9e85;
+  --crt-amber: #c5b681;
+  --crt-alert: #d08d72;
+  --crt-line: #8ba37c52;
+  --crt-title: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --crt-data: "Lucida Console", "Courier New", monospace;
+  --crt-glow: 0 0 2px #bbdf9e42, 0 0 7px #92c67824;
+}
+
+/* The glass is fixed to the opening, never to an individual card or map. */
+.app-shell::after {
+  content: "";
+  position: absolute;
+  z-index: 60;
+  inset: var(--terminal-screen-top) var(--terminal-screen-right)
+    var(--terminal-screen-bottom) var(--terminal-screen-left);
+  border-radius: 4% / 2.5%;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, #bbd0a909, transparent 32%, transparent 78%, #0002),
+    repeating-linear-gradient(0deg, #01090130 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, #a8dc8e02 0 1px, #00000003 1px 2px, transparent 2px 3px),
+    radial-gradient(ellipse at 50% 46%, transparent 45%, #01070124 76%, #0009 100%);
+  box-shadow: inset 0 0 15px 4px #0009, inset 0 1px 2px #c3d7ae22;
+}
+
+.screen {
+  --ink: var(--crt-ink);
+  --muted: var(--crt-dim);
+  --cyan: var(--crt-ink);
+  --amber: var(--crt-amber);
+  --red: var(--crt-alert);
+  --line: var(--crt-line);
+  color: var(--crt-ink);
+  font-family: var(--crt-data);
+  font-variant-numeric: tabular-nums;
+  text-shadow: var(--crt-glow);
+  /* Add light to the existing smoked screen instead of covering it with a page. */
+  mix-blend-mode: screen;
+  animation: none;
+}
+
+.screen :is(h1, h2, h3, b, strong, p, small, span, em, i, button) {
+  text-shadow: inherit;
+}
+
+.screen :is(h1, h2, h3),
+#mission-screen .mission-transmission h2,
+.hub-heading h2 {
+  color: var(--crt-ink);
+  font-family: var(--crt-title);
+  font-weight: 400;
+  letter-spacing: .12em;
+  line-height: 1.12;
+  text-shadow: var(--crt-glow);
+}
+
+.section-head h2 { font-size: clamp(19px, 2.8dvh, 25px); }
+.screen .eyebrow {
+  color: var(--crt-dim);
+  font: 400 9px/1.5 var(--crt-data);
+  letter-spacing: .12em;
+}
+
+.screen button {
+  min-height: 44px;
+  border-width: 1px;
+  border-color: var(--crt-line);
+  border-radius: 0;
+  background: #263c2526;
+  color: var(--crt-ink);
+  box-shadow: none;
+  clip-path: none;
+  font-family: var(--crt-data);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: .08em;
+  text-shadow: var(--crt-glow);
+}
+
+.screen button:hover,
+.screen button:focus-visible {
+  color: #d6e5bc;
+  border-color: #bdce9b;
+  background: #75905a20;
+  outline: 1px solid #bdce9b;
+  outline-offset: -4px;
+}
+.screen button:active { transform: none; box-shadow: inset 0 0 12px #afc58e20; }
+.screen button:disabled { opacity: .45; }
+.screen :is(.primary, .primary-button) { color: var(--crt-amber); border-color: #b2ab7580; background: #8e89561a; }
+.screen .danger { color: var(--crt-alert); }
+
+/* Lines and readouts, without the extruded panels of the old web interface. */
+.app-shell .screen :is(.pixel-panel, .setup-card, .research-card, .unit-card,
+  .gear-card, .protocol-card, .case-wrap, .army-banner, .battle-log, .mission-objective) {
+  border-color: var(--crt-line);
+  background: #1a2d1c32 !important;
+  box-shadow: none;
+  clip-path: none;
+}
+.screen :is(.cap-badge, .round-badge) { background: transparent; border-color: var(--crt-line); }
+.screen :is(.cap-badge, .round-badge) b { color: var(--crt-amber); font-family: var(--crt-data); font-weight: 400; }
+.screen :is(.cap-badge, .round-badge) small { color: var(--crt-dim); font-size: 8px; }
+.screen :is(.station-footer, .sticky-action) { background: transparent !important; }
+.screen .station-footer button,
+.screen .station-footer button:hover,
+.screen .station-footer button:focus-visible {
+  color: var(--crt-ink);
+  border: 0;
+  border-top: 1px solid var(--crt-line);
+  border-bottom: 1px solid var(--crt-line);
+  background: #49614314;
+  box-shadow: none;
+  font: 400 10px/1.4 var(--crt-data);
+  letter-spacing: .05em;
+}
+
+/* Gothic display lettering is a signal too, never a white printed title. */
+#hub-screen.active { padding-top: clamp(22px, 3.7dvh, 36px) !important; }
+.hub-heading { text-shadow: var(--crt-glow); }
+.hub-heading h2 { margin: 0; font-size: clamp(19px, 3.1dvh, 27px); letter-spacing: .16em; }
+.hub-heading::after {
+  content: "";
+  display: block;
+  width: 44%;
+  height: 1px;
+  margin: 10px auto 0;
+  background: linear-gradient(90deg, transparent, #9fb78b80, transparent);
+}
+.screen .hub-status { border-width: 1px 0; padding-block: 10px; }
+.hub-status small { color: var(--crt-dim); font: 400 8px/1.3 var(--crt-data); }
+.hub-status b { color: var(--crt-amber); font: 400 10px/1.5 var(--crt-data); }
+.hub-status span { border-color: var(--crt-line); }
+.hub-stations { gap: 0; margin-top: 6px; }
+.screen .hub-station {
+  min-height: 56px;
+  border: 0;
+  border-bottom: 1px solid #8ba37c2b !important;
+  text-shadow: var(--crt-glow);
+}
+.hub-station b { color: var(--crt-ink); font: 400 12px/1.4 var(--crt-data); letter-spacing: .18em; }
+.hub-station b::before { content: "> "; color: var(--crt-dim); }
+.hub-ambient { opacity: .55; }
+
+#home-screen .home-actions button { text-shadow: var(--crt-glow); }
+#home-screen .home-actions .menu-primary { color: var(--crt-amber); text-shadow: var(--crt-glow); }
+.menu-title h1 { font-weight: 400; }
+.menu-title h1 strong { color: var(--crt-ink); font-weight: 400; }
+.menu-title > span { color: var(--crt-dim); font-family: var(--crt-data); }
+
+/* Navigation labels use the same character generator as status and controls. */
+.screen .webgl-label-copy { text-shadow: var(--crt-glow); }
+.screen .webgl-map-label b,
+.screen .webgl-label-copy b {
+  color: var(--crt-ink) !important;
+  font: 400 10px/1.3 var(--crt-data) !important;
+  letter-spacing: .025em;
+}
+.screen .webgl-map-label small,
+.screen .webgl-label-copy small {
+  color: var(--crt-dim) !important;
+  font: 400 8px/1.35 var(--crt-data) !important;
+  letter-spacing: 0;
+}
+.screen .webgl-map-label > span:not(.webgl-label-copy),
+.screen .webgl-label-copy em {
+  color: var(--crt-amber) !important;
+  font: 400 8px/1.3 var(--crt-data) !important;
+  letter-spacing: 0;
+}
+.screen .webgl-map-label.available:not(:disabled) b,
+.screen .webgl-map-label.active-system b { color: #ccdbb5 !important; }
+.screen .webgl-map-label:hover:not(:disabled) b,
+.screen .webgl-map-label:focus-visible:not(:disabled) b { text-shadow: 0 0 4px #c3dc9f80; }
+.screen .webgl-map-readout { border-color: var(--crt-line); background: transparent; text-shadow: var(--crt-glow); }
+.screen .webgl-map-readout span { color: var(--crt-dim); font: 400 8px/1.35 var(--crt-data); letter-spacing: .04em; }
+.screen .webgl-map-readout b { color: var(--crt-ink); font: 400 9px/1.35 var(--crt-data); }
+/* Scanlines belong to the whole tube, not a rectangular patch inside the chart. */
+.screen .webgl-map-vignette { background: none; box-shadow: none; }
+
+#map-screen > .run-stats { display: grid; width: 100%; }
+#map-screen > .run-stats small { color: var(--crt-dim); font-size: 10px; }
+#map-screen > .run-stats b { color: var(--crt-ink); font-size: 10px; font-weight: 400; }
+#map-screen > .mission-strip { border-color: var(--crt-alert); }
+.screen .mission-strip small { color: var(--crt-alert); font: 400 8px/1.4 var(--crt-data); }
+.screen .mission-strip b { color: var(--crt-ink); font: 400 10px/1.35 var(--crt-data); }
+.screen .mission-strip i { color: var(--crt-dim); font: 400 8px/1.3 var(--crt-data); }
+.screen :is(.mission-speaker, .mission-objective small, .mission-objective b, .mission-objective span) {
+  font-family: var(--crt-data);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.screen .mission-speaker, .screen .mission-objective span { color: var(--crt-amber); }
+.screen .mission-objective b { color: var(--crt-ink); }
+#mission-screen .mission-transmission > p:not(.eyebrow),
+.intro-copy p { color: var(--crt-ink); font: 400 11px/1.6 var(--crt-data); }
+
+/* Transmission copy can grow without cutting off the second response. */
+#mission-screen .mission-card { overflow-y: auto; scrollbar-width: none; }
+#mission-screen .mission-card::-webkit-scrollbar { display: none; }
+#mission-screen .mission-portrait { height: min(23dvh, 196px); }
+#mission-screen .mission-transmission h2 { font-size: 22px; letter-spacing: .06em; }
+#mission-screen .mission-transmission > p:not(.eyebrow) { font-size: 10px; line-height: 1.5; }
+
+@media (max-width: 390px) {
+  .hub-heading h2 { font-size: 18px; letter-spacing: .12em; }
+  .screen .station-footer button { font-size: 9px; letter-spacing: 0; }
+}

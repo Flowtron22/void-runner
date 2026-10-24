@@ -1,10 +1,5 @@
 import * as THREE from 'three';
 
-const BUTTON_SELECTOR = [
-  '#home-screen .home-actions button',
-  '#hub-screen .hub-station'
-].join(',');
-
 const SCREEN_TEXTURES = {
   home: new URL('../../assets/combat-patrol-menu-portrait.png', import.meta.url).href,
   intro: new URL('../../assets/ordo-malleus-intro.webp', import.meta.url).href,
@@ -28,12 +23,6 @@ const screenFragmentShader = `
   uniform float uReveal;
   uniform vec2 uCropScale;
   uniform vec2 uCropOffset;
-  uniform vec2 uResolution;
-  uniform vec3 uTint;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
 
   void main() {
     vec2 sampleUv = uCropOffset + vUv * uCropScale;
@@ -42,75 +31,18 @@ const screenFragmentShader = `
     vec3 image = texture2D(uTexture, sampleUv).rgb;
     vec3 color = mix(procedural, image, uHasTexture);
 
-    float scan = 0.93 + 0.07 * sin(vUv.y * uResolution.y * 2.55);
-    float noise = (hash(floor(vUv * uResolution + uTime * 13.0)) - 0.5) * 0.035;
     float vignette = smoothstep(0.0, 0.17, vUv.x) * smoothstep(0.0, 0.17, 1.0 - vUv.x)
       * smoothstep(0.0, 0.11, vUv.y) * smoothstep(0.0, 0.11, 1.0 - vUv.y);
-    float sweep = smoothstep(0.12, 0.0, abs(fract(vUv.y - uTime * 0.035) - 0.5));
 
-    color = color * scan + noise + uTint * sweep * 0.09;
+    // This is the environmental signal only. The shared CSS glass pass covers
+    // this image, map canvas AND HTML so lettering receives the same scanlines.
+    float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    color = mix(vec3(luminance) * vec3(0.80, 1.0, 0.67), color, 0.62);
     color *= mix(0.53, 1.0, vignette);
     color *= mix(0.16, 1.0, smoothstep(0.0, 1.0, uReveal));
     gl_FragColor = vec4(color, 1.0);
   }
 `;
-
-const glassFragmentShader = `
-  precision highp float;
-  varying vec2 vUv;
-  uniform float uTime;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(41.31, 289.17))) * 15731.743);
-  }
-
-  void main() {
-    float edge = 1.0 - smoothstep(0.22, 0.49, distance(vUv, vec2(0.5)));
-    float interference = sin(vUv.y * 760.0 + uTime * 1.7) * 0.5 + 0.5;
-    float dust = step(0.9975, hash(floor(vUv * vec2(510.0, 790.0))));
-    vec3 color = vec3(0.18, 0.31, 0.19) * (0.018 + interference * 0.018);
-    color += vec3(0.46, 0.58, 0.38) * dust * 0.12;
-    gl_FragColor = vec4(color, 0.09 + edge * 0.025);
-  }
-`;
-
-const buttonFragmentShader = `
-  precision highp float;
-  varying vec2 vUv;
-  uniform float uTime;
-  uniform float uState;
-  uniform float uPrimary;
-  uniform float uDanger;
-  uniform float uDisabled;
-  uniform vec2 uSize;
-
-  void main() {
-    float px = 1.0 / max(min(uSize.x, uSize.y), 1.0);
-    float edge = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
-    float border = 1.0 - smoothstep(px, px * 2.2, edge);
-    float inner = smoothstep(px * 2.0, px * 5.0, edge);
-    vec3 iron = mix(vec3(0.035, 0.047, 0.039), vec3(0.13, 0.14, 0.105), vUv.y);
-    vec3 brass = mix(vec3(0.27, 0.19, 0.07), vec3(0.84, 0.67, 0.27), vUv.y);
-    vec3 red = mix(vec3(0.20, 0.035, 0.025), vec3(0.61, 0.13, 0.07), vUv.y);
-    vec3 base = mix(iron, brass, uPrimary);
-    base = mix(base, red, uDanger);
-    base *= 1.0 + uState * 0.38;
-    float shine = smoothstep(0.10, 0.0, abs(vUv.x - fract(uTime * 0.14))) * uState;
-    base += vec3(0.65, 0.52, 0.23) * shine * 0.22;
-    vec3 rim = mix(vec3(0.31, 0.29, 0.21), vec3(0.95, 0.78, 0.34), max(uPrimary, uState));
-    base = mix(base, rim, border * 0.72);
-    base *= mix(1.0, 0.32, uDisabled);
-    float alpha = mix(0.90, 0.98, inner);
-    gl_FragColor = vec4(base, alpha);
-  }
-`;
-
-function buttonState(button) {
-  if (button.disabled) return 0;
-  if (button.matches(':active')) return 1;
-  if (button.matches(':hover, :focus-visible')) return 0.72;
-  return 0;
-}
 
 export class TerminalRenderer {
   constructor(root) {
@@ -132,7 +64,6 @@ export class TerminalRenderer {
     this.clock = new THREE.Clock();
     this.loader = new THREE.TextureLoader();
     this.textures = new Map();
-    this.buttonMeshes = new Map();
     this.activeScreen = '';
     this.reveal = 0;
     this.lastRenderTime = 0;
@@ -178,26 +109,12 @@ export class TerminalRenderer {
         uTime: { value: 0 },
         uReveal: { value: 0 },
         uCropScale: { value: new THREE.Vector2(1, 1) },
-        uCropOffset: { value: new THREE.Vector2(0, 0) },
-        uResolution: { value: new THREE.Vector2(400, 700) },
-        uTint: { value: new THREE.Color(0x6f9b65) }
+        uCropOffset: { value: new THREE.Vector2(0, 0) }
       }
     });
     this.screen = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.screenMaterial);
     this.screen.position.z = 1;
     this.scene.add(this.screen);
-
-    this.glassMaterial = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader: glassFragmentShader,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      uniforms: { uTime: { value: 0 } }
-    });
-    this.glass = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.glassMaterial);
-    this.glass.position.z = 4;
-    this.scene.add(this.glass);
 
     for (const [name, url] of Object.entries(SCREEN_TEXTURES)) {
       this.loader.load(url, texture => {
@@ -273,63 +190,7 @@ export class TerminalRenderer {
     this.screenHeight = height * 0.743;
     this.screen.scale.set(this.screenWidth, this.screenHeight, 1);
     this.screen.position.set(0, height * 0.003, 1);
-    this.glass.scale.copy(this.screen.scale);
-    this.glass.position.set(0, height * 0.003, 4);
-    this.screenMaterial.uniforms.uResolution.value.set(this.screenWidth, this.screenHeight);
     this.updateTextureCrop(this.screenMaterial.uniforms.uTexture.value);
-  }
-
-  makeButtonMesh(button) {
-    const material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader: buttonFragmentShader,
-      transparent: true,
-      depthWrite: false,
-      uniforms: {
-        uTime: { value: 0 },
-        uState: { value: 0 },
-        uPrimary: { value: button.matches('.menu-primary, .primary, .primary-button') ? 1 : 0 },
-        uDanger: { value: button.matches('.danger, .command-return') ? 1 : 0 },
-        uDisabled: { value: button.disabled ? 1 : 0 },
-        uSize: { value: new THREE.Vector2(100, 44) }
-      }
-    });
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
-    mesh.position.z = 3;
-    this.scene.add(mesh);
-    this.buttonMeshes.set(button, mesh);
-    return mesh;
-  }
-
-  syncButtons(time) {
-    const rootRect = this.root.getBoundingClientRect();
-    const visible = new Set();
-    for (const button of this.root.querySelectorAll(BUTTON_SELECTOR)) {
-      const rect = button.getBoundingClientRect();
-      const isVisible = rect.width > 0 && rect.height > 0 && rect.bottom > rootRect.top && rect.top < rootRect.bottom;
-      if (!isVisible) continue;
-      visible.add(button);
-      const mesh = this.buttonMeshes.get(button) || this.makeButtonMesh(button);
-      const x = rect.left - rootRect.left + rect.width / 2 - this.width / 2;
-      const y = this.height / 2 - (rect.top - rootRect.top + rect.height / 2);
-      mesh.visible = true;
-      mesh.position.x = x;
-      mesh.position.y = y;
-      mesh.scale.set(rect.width, rect.height, 1);
-      mesh.material.uniforms.uTime.value = time;
-      mesh.material.uniforms.uState.value = THREE.MathUtils.lerp(mesh.material.uniforms.uState.value, buttonState(button), 0.18);
-      mesh.material.uniforms.uDisabled.value = button.disabled ? 1 : 0;
-      mesh.material.uniforms.uSize.value.set(rect.width, rect.height);
-    }
-    for (const [button, mesh] of this.buttonMeshes) {
-      if (!visible.has(button)) mesh.visible = false;
-      if (!button.isConnected) {
-        mesh.geometry.dispose();
-        mesh.material.dispose();
-        this.scene.remove(mesh);
-        this.buttonMeshes.delete(button);
-      }
-    }
   }
 
   render() {
@@ -340,8 +201,6 @@ export class TerminalRenderer {
     this.reveal = reducedMotion ? 1 : Math.min(1, this.reveal + 0.045);
     this.screenMaterial.uniforms.uTime.value = shaderTime;
     this.screenMaterial.uniforms.uReveal.value = this.reveal;
-    this.glassMaterial.uniforms.uTime.value = shaderTime;
-    this.syncButtons(shaderTime);
     this.renderer.render(this.scene, this.camera);
   }
 
