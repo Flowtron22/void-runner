@@ -15,7 +15,7 @@ Main Menu: Start / Resume / Settings / Credits
     ↓
 Choose unit size: Combat Patrol 500 / Incursion 1000 / Strike Force 2000 / Onslaught 3000
     ↓
-Choose chapter: Grey Knight available / Ultramarine locked / Imperial Fist locked
+Take Your Oath: Grey Knight available / Ultramarine locked / Imperial Fist locked
     ↓
 Ordo Malleus command transmission
     ↓
@@ -374,6 +374,8 @@ The active run also stores its directive briefing state, completed sector direct
 Each sector is framed as a sealed Ordo Malleus directive. Selecting a new sector opens a scripted briefing with an objective and authority reward, the area map carries an active-directive tracker, and completed directives are recorded in `run.story`. Portraits and briefing machinery follow `artstyle.md`: painterly environmental character art inside a physical shipboard transmission terminal.
 
 The directive is a dedicated CRT screen, not a modal over the sector map. Accept or Belay replaces the directive screen with its destination; no sector-map footer or previous-page control remains visible behind it. The briefing is centered within the shared CRT safe area, uses the Inquisitorial officer portrait, has no freestanding outer card border, and blends its portrait and transmission field into the same smoked-glass surface.
+
+Accepting a new directive briefly returns to the galaxy with an `ENTERING [SECTOR]` readout and a 1.1-second camera zoom into the selected stellar signal, then opens the local-system chart. Input is blocked during entry. Reduced-motion preferences and unavailable WebGL skip this travel and open the chart immediately. Reviewing an existing directive returns directly to its chart. The faction selection screen is titled `TAKE YOUR OATH` and preserves three tall portrait banners inside the CRT opening.
 
 Git transfers source and assets, not browser saves. Another PC, browser profile or origin starts with its own progress. Localhost and the production domain also have separate saves. No cloud save or save export/import UI exists yet. Old v2 active-run saves are not loaded by the current v3 campaign.
 

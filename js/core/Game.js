@@ -296,6 +296,11 @@ export class Game {
   }
 
   show(name) {
+    if (name !== 'sector') {
+      $('#sector-screen').classList.remove('sector-entering');
+      $('#sector-screen').removeAttribute('aria-busy');
+      $('#sector-map').inert = false;
+    }
     if (name !== 'sector' && name !== 'map') {
       this.galaxyMountId++;
       this.galaxyScene?.destroy();
@@ -410,7 +415,7 @@ export class Game {
   renderSetup(stage) {
     this.setupStage = stage;
     const list = $('#setup-options'); list.innerHTML = '';
-    $('#setup-title').textContent = stage === 'tier' ? 'CHOOSE UNIT SIZE' : 'CHOOSE YOUR CHAPTER';
+    $('#setup-title').textContent = stage === 'tier' ? 'CHOOSE UNIT SIZE' : 'TAKE YOUR OATH';
     list.classList.toggle('chapter-grid',stage === 'faction');
     if (stage === 'tier') UNIT_SIZES.forEach(({tierIndex,label}) => {
       const tier = CAMPAIGN_TIERS[tierIndex];
@@ -704,10 +709,11 @@ export class Game {
     return pick(this.factions.filter(faction => faction.id !== this.run.faction));
   }
 
-  renderSectors() {
+  renderSectors({onSelect = id => this.enterSector(Number(id))} = {}) {
     this.galaxyScene?.destroy();
     this.galaxyScene = null;
     const map = $('#sector-map');
+    $('#sector-title').textContent = 'CHOOSE A SECTOR';
     map.className = 'sector-map webgl-star-map';
     const activeIndex = Number.isInteger(this.run.region) ? this.run.region : null;
     if (activeIndex !== null && this.run.sectors[activeIndex]) this.run.sectors[activeIndex].status = 'available';
@@ -733,12 +739,13 @@ export class Game {
         locked:button.disabled,available:sector.status==='available'||activeIndex===index,button
       });
     });
-    this.mountGalaxyScene({
+    const mounted = this.mountGalaxyScene({
         viewport:map,canvas:map.querySelector('.galaxy-webgl'),labelLayer,mode:'galaxy',systems,
         reducedMotion:Boolean(this.meta.settings?.reducedMotion),
-        onSelect:id => this.enterSector(Number(id))
+        onSelect
       },map);
     this.save();
+    return mounted;
   }
 
   async mountGalaxyScene(options,map) {
@@ -748,6 +755,7 @@ export class Game {
       if (mountId!==this.galaxyMountId || !map.isConnected) return;
       this.galaxyScene?.destroy();
       this.galaxyScene=new GalaxyMap3D(options);
+      return this.galaxyScene;
     } catch (error) {
       if (mountId!==this.galaxyMountId) return;
       console.error('Unable to initialize the stellar chart',error);
@@ -793,7 +801,7 @@ export class Game {
     this.show('sector');
   }
 
-  acceptMission() {
+  async acceptMission() {
     if ($('#mission-accept-button').dataset.review === 'true') {
       this.renderMap();
       return this.show(this.missionReturnScreen || 'map');
@@ -804,7 +812,26 @@ export class Game {
     if (!this.run.story.briefed.includes(index)) this.run.story.briefed.push(index);
     this.run.region = index; this.run.step = 0; this.run.sectorStars = 0; this.run.offers = null;
     this.run.history = this.run.history.filter(node => node.region !== index);
-    this.save(); this.renderMap(); this.show('map');
+    this.save();
+    const reducedMotion = this.meta.settings?.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) { this.renderMap(); return this.show('map'); }
+
+    const enteringRun = this.run;
+    const finishEntry = () => {
+      if (this.run !== enteringRun || this.currentScreen !== 'sector') return;
+      this.renderMap();
+      this.show('map');
+    };
+    const mounted = this.renderSectors({onSelect: finishEntry});
+    this.show('sector');
+    $('#sector-title').textContent = `ENTERING ${this.run.sectors[index].name}`;
+    $('#sector-screen').classList.add('sector-entering');
+    $('#sector-screen').setAttribute('aria-busy', 'true');
+    $('#sector-map').inert = true;
+    const scene = await mounted;
+    if (this.run !== enteringRun || this.currentScreen !== 'sector') return;
+    if (!scene) return finishEntry();
+    scene.flyTo(String(index), {duration: 1100, arrivalDistance: 2.8});
   }
 
   makeOffers() {

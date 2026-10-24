@@ -304,7 +304,7 @@ export class GalaxyMap3D {
     if (hit && !hit.object.userData.locked) this.flyTo(hit.object.userData.id);
   }
 
-  flyTo(id) {
+  flyTo(id, {duration = 620, arrivalDistance = null} = {}) {
     if (this.travel) return;
     const entry=this.systemGroups.get(id);
     if (!entry || entry.system.locked) return;
@@ -312,8 +312,8 @@ export class GalaxyMap3D {
     this.viewport.classList.add('webgl-travelling');
     const startTarget=this.target.clone(),startCamera=this.camera.position.clone();
     const endTarget=entry.group.position.clone();
-    const endCamera=new THREE.Vector3(endTarget.x,endTarget.y,10.5);
-    this.travel={id,start:performance.now(),duration:620,startTarget,startCamera,endTarget,endCamera};
+    const endCamera=new THREE.Vector3(endTarget.x,endTarget.y,arrivalDistance === null ? 10.5 : endTarget.z + arrivalDistance);
+    this.travel={id,start:performance.now(),duration,startTarget,startCamera,endTarget,endCamera};
   }
 
   resize() {

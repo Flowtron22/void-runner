@@ -99,6 +99,26 @@
 .screen :is(.primary, .primary-button) { color: var(--crt-amber); border-color: #b2ab7580; background: #8e89561a; }
 .screen .danger { color: var(--crt-alert); }
 
+/* Let the three chapter paintings fill the display as tall portrait banners.
+ * Their height must win over the shared 44px button minimum above. */
+#setup-screen.active:has(.chapter-grid) { display: flex; flex-direction: column; }
+#setup-screen .chapter-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 14px 0 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+#setup-screen .chapter-card { height: 100%; min-height: 0; padding: 0; }
+#setup-screen .chapter-card img { object-fit: cover; object-position: center top; }
+#setup-screen .chapter-card b { padding-inline: 3px; font-size: 10px; }
+
+#sector-screen.sector-entering { display: flex; flex-direction: column; overflow: hidden; }
+#sector-screen.sector-entering .section-head { flex: 0 0 auto; }
+#sector-screen.sector-entering .sector-map { flex: 1 1 auto; height: auto; min-height: 0; pointer-events: none; }
+#sector-screen.sector-entering .station-footer { display: none; }
+#sector-screen.sector-entering .chart-compass,
+#sector-screen.sector-entering .webgl-map-readout { visibility: hidden; }
+
 /* The active phase is already identified by its reveal and background wash. */
 .dice-stage.current { box-shadow: none; }
 
