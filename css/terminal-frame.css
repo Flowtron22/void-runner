@@ -13,6 +13,7 @@
   --terminal-screen-right: 9.6%;
   --terminal-screen-top: 13.1dvh;
   --terminal-screen-bottom: 12.6dvh;
+  --terminal-screen-width: min(80.8vw, 48.7dvh, 461px);
   --terminal-content-pad: clamp(14px, 3.4vw, 22px);
 }
 
@@ -233,8 +234,8 @@ body.star-chart-open .station-footer,
 .desktop-battle-stage { pointer-events: none; }
 
 dialog.modal {
-  width: min(78vw, 440px);
-  max-width: 440px;
+  width: min(calc(var(--terminal-screen-width) - 24px), 410px);
+  max-width: calc(100vw - 32px);
   max-height: 72dvh;
   margin: auto;
   overflow: auto;
@@ -248,6 +249,14 @@ dialog.modal::backdrop {
 .mission-dialog { max-height: 72dvh; }
 .mission-portrait { height: min(26dvh, 230px); }
 
+#loadout-screen .prep-list { padding-bottom: 0; }
+#loadout-screen .unit-card.locked { display: none; }
+#loadout-screen .station-footer {
+  position: relative;
+  bottom: auto;
+  margin-top: 9px;
+}
+
 @media (max-width: 390px) {
   :root {
     --terminal-screen-left: 9%;
@@ -259,7 +268,7 @@ dialog.modal::backdrop {
   .menu-title h1 { font-size: clamp(34px, 8dvh, 52px); }
   .chapter-grid { gap: 4px; }
   .chapter-card { min-height: 280px; }
-  dialog.modal { width: 78vw; }
+  dialog.modal { width: min(calc(var(--terminal-screen-width) - 18px), calc(100vw - 28px)); }
 }
 
 @media (max-height: 700px) {
