@@ -53,11 +53,11 @@ body.star-chart-open .app-shell {
   margin: 0;
   padding: 0 !important;
   overflow: hidden;
-  background: #020503 url("../assets/command-terminal-chassis.png") center / 100% 100% no-repeat !important;
-  box-shadow: 0 0 90px #000, 0 0 34px #66715324;
+  background: transparent url("../assets/command-terminal-chassis.png") center / 100% 100% no-repeat !important;
+  box-shadow: none;
 }
 
-.app-shell.webgl-terminal-active { background: #020503 !important; }
+.app-shell.webgl-terminal-active { background: transparent !important; }
 
 .app-shell::before,
 .app-shell::after { content: none; }

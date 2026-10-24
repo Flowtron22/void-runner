@@ -99,6 +99,9 @@
 .screen :is(.primary, .primary-button) { color: var(--crt-amber); border-color: #b2ab7580; background: #8e89561a; }
 .screen .danger { color: var(--crt-alert); }
 
+/* The active phase is already identified by its reveal and background wash. */
+.dice-stage.current { box-shadow: none; }
+
 /* Lines and readouts, without the extruded panels of the old web interface. */
 .app-shell .screen :is(.pixel-panel, .setup-card, .research-card, .unit-card,
   .gear-card, .protocol-card, .case-wrap, .army-banner, .battle-log, .mission-objective) {

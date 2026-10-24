@@ -55,7 +55,7 @@ export class TerminalRenderer {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.setClearColor(0x000000, 1);
+    this.renderer.setClearColor(0x000000, 0);
     root.classList.add('webgl-terminal-active');
 
     this.scene = new THREE.Scene();
