@@ -17,7 +17,18 @@ export function constellationPositions(chart, seed = 1) {
       }
     });
   });
-  return positions;
+  return spreadConstellation(positions);
+}
+
+function spreadConstellation(positions,scaleX=2.5,scaleY=1.3) {
+  return Object.fromEntries(Object.entries(positions).map(([id,[x,y,z]]) => [id,[x*scaleX,y*scaleY,z]]));
+}
+
+export function ensureConstellationPositions(chart,seed) {
+  if (!chart.positions) chart.positions=constellationPositions(chart,seed);
+  else if (chart.positionVersion !== 3) chart.positions=spreadConstellation(chart.positions,chart.positionVersion === 2 ? 5/3 : 2.5,chart.positionVersion === 2 ? 1 : 1.3);
+  chart.positionVersion=3;
+  return chart.positions;
 }
 
 export function constellationFraming(systems, aspect) {
@@ -28,8 +39,10 @@ export function constellationFraming(systems, aspect) {
     return {center:[(minX+maxX)/2,(minY+maxY)/2],
       distance:Math.max(12,(maxY-minY+paddingY)/(2*tan),(maxX-minX+paddingX)/(2*tan*aspect))};
   };
-  const nearby=systems.filter(system=>system.current || system.available);
-  return {full:fit(systems,8,7),near:fit(nearby.length?nearby:systems.slice(0,4),4,5),
+  const current=systems.find(system=>system.current) || systems[0];
+  const distance=system=>Math.hypot(system.position[0]-current.position[0],system.position[1]-current.position[1]);
+  const nearby=[current,...systems.filter(system=>system.available && system!==current).sort((a,b)=>distance(a)-distance(b)).slice(0,2)];
+  return {full:fit(systems,6,5),near:fit(nearby.length?nearby:systems.slice(0,4),4,5),
     bounds:{minX:Math.min(...systems.map(s=>s.position[0]))-5,maxX:Math.max(...systems.map(s=>s.position[0]))+5,
       minY:Math.min(...systems.map(s=>s.position[1]))-5,maxY:Math.max(...systems.map(s=>s.position[1]))+5}};
 }

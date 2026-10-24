@@ -1,6 +1,6 @@
 import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATAGEMS } from '../data/units.js';
 import { buildSectorChart, chartState } from './CampaignChart.js';
-import { constellationPositions } from '../render/ChartLayout.js';
+import { ensureConstellationPositions } from '../render/ChartLayout.js';
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
@@ -933,7 +933,7 @@ export class Game {
     map.className = 'route-map area-galaxy star-system-map webgl-star-map local-webgl-map sector-route-chart';
     map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout local" aria-hidden="true"><span>LOCAL CARTOGRAPHY</span><b>${sector.name}</b></div><div class="chart-view-controls" role="group" aria-label="Chart zoom"><button data-chart-zoom="in" aria-label="Zoom in">+</button><button data-chart-zoom="out" aria-label="Zoom out">−</button><button data-chart-zoom="all" aria-label="Show full system chart">ALL</button></div>`;
     const labelLayer = map.querySelector('.webgl-map-labels');
-    chart.positions ||= constellationPositions(chart,this.run.seed + this.run.region * 9173);
+    ensureConstellationPositions(chart,this.run.seed + this.run.region * 9173);
     const start = document.createElement('button');
     start.className = 'webgl-map-label route-start'; start.disabled = true;
     start.innerHTML = '<b>START POINT</b><small>VIGILANT</small>';

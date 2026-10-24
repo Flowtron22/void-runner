@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {buildSectorChart, chartState} from '../js/core/CampaignChart.js';
 import {Game} from '../js/core/Game.js';
 import {CAMPAIGN_TIERS} from '../js/data/units.js';
-import {constellationPositions, constellationFraming} from '../js/render/ChartLayout.js';
+import {constellationPositions, constellationFraming, ensureConstellationPositions} from '../js/render/ChartLayout.js';
 import {GalaxyMap3D} from '../js/render/GalaxyMap3D.js';
 import {Vector3} from 'three';
 
@@ -41,12 +41,19 @@ for (const tierIndex of [0,1,3,4]) {
     const framing=constellationFraming(systems,aspect);
     const visible=frame=>systems.filter(system=>{
       const halfHeight=frame.distance*Math.tan(42*Math.PI/360);
-      return Math.abs(system.position[0]-frame.center[0])<=halfHeight*aspect*1.16 && Math.abs(system.position[1]-frame.center[1])<=halfHeight*1.16;
+      return Math.abs(system.position[0]-frame.center[0])<=halfHeight*aspect && Math.abs(system.position[1]-frame.center[1])<=halfHeight;
     });
-    assert.equal(visible(framing.near).length,4);
+    assert(visible(framing.near).length>=3 && visible(framing.near).length<=4);
     assert.equal(visible(framing.full).length,systems.length);
   }
   assert(new Set(chart.layers[0].map(node=>positions[node.id][1].toFixed(1))).size===3);
+  const legacyLayout={positions:{start:[-10,-14,0],signal:[0,-4,0]}};
+  ensureConstellationPositions(legacyLayout,1);
+  assert.equal(legacyLayout.positions.start[0],-25);
+  assert.equal(legacyLayout.positions.start[1],-18.2);
+  const savedLayout=JSON.stringify(legacyLayout);
+  ensureConstellationPositions(legacyLayout,1);
+  assert.equal(JSON.stringify(legacyLayout),savedLayout); // Reopening never spreads it twice.
   assert(chart.layers.flat().some(node => node.event === 'distress'));
   const initial = chartState(chart, [], 0, 0, 0);
   assert.equal(initial.nodes.filter(node => !node.locked).length, 3);
