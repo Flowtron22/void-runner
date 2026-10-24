@@ -3,6 +3,9 @@ import fs from 'node:fs';
 import {buildSectorChart, chartState} from '../js/core/CampaignChart.js';
 import {Game} from '../js/core/Game.js';
 import {CAMPAIGN_TIERS} from '../js/data/units.js';
+import {constellationPositions, constellationFraming} from '../js/render/ChartLayout.js';
+import {GalaxyMap3D} from '../js/render/GalaxyMap3D.js';
+import {Vector3} from 'three';
 
 const roster = JSON.parse(fs.readFileSync(new URL('../public/data/warhammer-roster.json', import.meta.url)));
 const game = Object.create(Game.prototype);
@@ -12,6 +15,15 @@ game.meta = {research:{}};
 game.save = () => {};
 game.finishPostWarEvent = () => {};
 
+const navigation=Object.create(GalaxyMap3D.prototype);
+Object.assign(navigation,{routeChart:true,nearDistance:30,chartDistance:90,zoomFocusDistance:30,
+  cameraGoal:new Vector3(),target:new Vector3(),zoomFocus:new Vector3(-8,-9,0),chartCenter:new Vector3(4,18,0),
+  viewport:{classList:{remove(){}}}});
+navigation.setZoom(90); assert.deepEqual(navigation.target.toArray(),[4,18,0]);
+navigation.setZoom(30); assert.deepEqual(navigation.target.toArray(),[-8,-9,0]);
+navigation.setZoom(999); assert(navigation.cameraGoal.z<=97.2);
+navigation.setZoom(1); assert(navigation.cameraGoal.z>=21);
+
 for (const tierIndex of [0,1,3,4]) {
   game.run = {tierIndex,region:0,step:0,sectorStars:0,protocols:[],history:[],faction:'grey-knights'};
   const depth = CAMPAIGN_TIERS[tierIndex].depth;
@@ -19,6 +31,22 @@ for (const tierIndex of [0,1,3,4]) {
   assert.equal(chart.layers.flat().length, depth*3 + 1);
   assert.equal(chart.layers.at(-1).length,1);
   assert.equal(chart.layers.at(-1)[0].type,'boss-system');
+  const positions=constellationPositions(chart,203 + tierIndex);
+  assert.deepEqual(constellationPositions(chart,203 + tierIndex),positions);
+  assert.notDeepEqual(constellationPositions(chart,999),positions);
+  const systems=Object.entries(positions).map(([id,position])=>({id,position,current:id===chart.start,
+    available:chart.layers[0].some(node=>node.id===id)}));
+  // Phone and desktop start near four beacons; full framing includes the entire route.
+  for (const aspect of [.52,.72,1]) {
+    const framing=constellationFraming(systems,aspect);
+    const visible=frame=>systems.filter(system=>{
+      const halfHeight=frame.distance*Math.tan(42*Math.PI/360);
+      return Math.abs(system.position[0]-frame.center[0])<=halfHeight*aspect*1.16 && Math.abs(system.position[1]-frame.center[1])<=halfHeight*1.16;
+    });
+    assert.equal(visible(framing.near).length,4);
+    assert.equal(visible(framing.full).length,systems.length);
+  }
+  assert(new Set(chart.layers[0].map(node=>positions[node.id][1].toFixed(1))).size===3);
   assert(chart.layers.flat().some(node => node.event === 'distress'));
   const initial = chartState(chart, [], 0, 0, 0);
   assert.equal(initial.nodes.filter(node => !node.locked).length, 3);

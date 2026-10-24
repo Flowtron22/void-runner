@@ -1,5 +1,6 @@
 import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATAGEMS } from '../data/units.js';
 import { buildSectorChart, chartState } from './CampaignChart.js';
+import { constellationPositions } from '../render/ChartLayout.js';
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
@@ -532,7 +533,7 @@ export class Game {
     $('#deploy-button').disabled = Boolean(this.run.pendingNode) && !legal;
     $('#cancel-encounter-button').hidden = !this.run.pendingNode;
     $('#cancel-encounter-button').parentElement.classList.toggle('encounter-actions',Boolean(this.run.pendingNode));
-    $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : this.loadoutReturn === 'map' ? '⌖ RETURN TO CHART' : '← RETURN TO COMMAND DECK';
+    $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : this.loadoutReturn === 'map' ? 'SYSTEM CHART' : '← RETURN TO COMMAND DECK';
     const chosen = this.unit(this.selectedBlueprint);
     $('#prep-status').textContent = legal ? `▦ ${this.run.deployed.length} · ${this.run.cap - used} FREE` : chosen ? `▸ ${chosen.name.toUpperCase()}` : '▦ SELECT';
   }
@@ -820,7 +821,7 @@ export class Game {
     $('#mission-copy').textContent = `“${mission.quote}”`;
     $('#mission-objective').textContent = mission.objective;
     $('#mission-reward').textContent = mission.reward;
-    $('#mission-accept-button').textContent = review ? 'RETURN TO CHART' : 'ACCEPT DIRECTIVE';
+    $('#mission-accept-button').textContent = review ? 'SYSTEM CHART' : 'ACCEPT DIRECTIVE';
     $('#mission-accept-button').dataset.review = review ? 'true' : 'false';
     $('#mission-belay-button').hidden = review;
     this.missionReturnScreen = review ? 'map' : 'sector';
@@ -930,22 +931,22 @@ export class Game {
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, depth)} / ${depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
     map.className = 'route-map area-galaxy star-system-map webgl-star-map local-webgl-map sector-route-chart';
-    map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout local" aria-hidden="true"><span>LOCAL CARTOGRAPHY</span><b>${sector.name}</b></div>`;
+    map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout local" aria-hidden="true"><span>LOCAL CARTOGRAPHY</span><b>${sector.name}</b></div><div class="chart-view-controls" role="group" aria-label="Chart zoom"><button data-chart-zoom="in" aria-label="Zoom in">+</button><button data-chart-zoom="out" aria-label="Zoom out">−</button><button data-chart-zoom="all" aria-label="Show full system chart">ALL</button></div>`;
     const labelLayer = map.querySelector('.webgl-map-labels');
-    const rowY = row => -9 + (row + 1) * 18 / (depth + 1);
+    chart.positions ||= constellationPositions(chart,this.run.seed + this.run.region * 9173);
     const start = document.createElement('button');
     start.className = 'webgl-map-label route-start'; start.disabled = true;
     start.innerHTML = '<b>START POINT</b><small>VIGILANT</small>';
     labelLayer.append(start);
     const systems = [{id:sector.chart.start, name:'START POINT', tone:'ice', size:.65,
-      position:[0,-9,0], locked:true, current:state.currentId === sector.chart.start, button:start}];
+      position:chart.positions[chart.start], locked:true, current:state.currentId === sector.chart.start, button:start}];
     state.nodes.forEach(node => {
       const choice = this.makeNodeButton(node,`webgl-map-label ${node.status} ${node.type}`,!node.locked,true);
       if (node.id === state.currentId) choice.classList.add('current-position');
       labelLayer.append(choice);
       systems.push({
         id:node.id,name:node.name,tone:node.type === 'boss-system' ? 'crimson' : node.event === 'distress' ? 'ice' : 'amber',size:node.type === 'boss-system' ? 1.1 : .85,
-        position:[(node.lane - 1)*8.5 + Math.sin((node.step + 1)*1.7 + node.lane)*.8,rowY(node.step) + Math.sin(node.step*2 + node.lane)*.25,0],
+        position:chart.positions[node.id],
         locked:node.locked,available:!node.locked,complete:node.status === 'complete',current:node.id === state.currentId,button:choice
       });
     });

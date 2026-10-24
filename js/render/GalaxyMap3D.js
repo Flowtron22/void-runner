@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { constellationFraming } from './ChartLayout.js';
 
 const TONES = {
   gold: {core:0xffe5a0, light:0xe69645},
@@ -77,27 +78,31 @@ function nebulaTexture(colors,size = 512) {
   const context = canvas.getContext('2d');
   context.clearRect(0,0,size,size);
   const random = seededRandom(4021);
-  context.globalCompositeOperation = 'screen';
-  context.filter = `blur(${Math.round(size*.025)}px)`;
+  context.globalCompositeOperation = 'source-over';
   for (let index=0; index<28; index++) {
     const progress = index / 27;
     const x = size * (.02 + progress * .96) + (random()-.5)*size*.12;
     const y = size * (.2 + progress*.58 + Math.sin(progress*Math.PI*2.2)*.11) + (random()-.5)*size*.12;
     const radius = size*(.07+random()*.11);
     const color = colors[index % colors.length];
-    const gradient = context.createRadialGradient(x,y,0,x,y,radius);
-    gradient.addColorStop(0,`${color}a0`);
-    gradient.addColorStop(.38,`${color}48`);
+    // Soft before rasterisation: no Canvas filter or ellipse clipping dependency.
+    context.save();
+    context.translate(x,y); context.rotate(-.7+random()*.5);
+    context.scale(radius,radius*(.36+random()*.3));
+    const gradient = context.createRadialGradient(0,0,0,0,0,1);
+    gradient.addColorStop(0,`${color}60`);
+    gradient.addColorStop(.28,`${color}32`);
+    gradient.addColorStop(.65,`${color}0c`);
     gradient.addColorStop(1,`${color}00`);
     context.fillStyle = gradient;
-    context.beginPath();
-    context.ellipse(x,y,radius,radius*(.26+random()*.28),-.7+random()*.5,0,Math.PI*2);
-    context.fill();
+    context.fillRect(-1,-1,2,2);
+    context.restore();
   }
-  context.filter = 'none';
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.generateMipmaps = false;
+  texture.minFilter = texture.magFilter = THREE.LinearFilter;
   return texture;
 }
 
@@ -127,10 +132,10 @@ export class GalaxyMap3D {
     this.scene = new THREE.Scene();
     const spaceColor = new THREE.Color(mode === 'galaxy' ? 0x020307 : 0x01060a);
     this.scene.fog = new THREE.FogExp2(spaceColor,this.routeChart ? .009 : mode === 'galaxy' ? .018 : .025);
-    this.camera = new THREE.PerspectiveCamera(42,1,.1,120);
+    this.camera = new THREE.PerspectiveCamera(42,1,.1,400);
     this.camera.position.copy(this.cameraGoal);
     this.camera.lookAt(this.target);
-    this.compactGpu = window.matchMedia('(max-width: 640px)').matches;
+    this.compactGpu = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
     this.renderer = new THREE.WebGLRenderer({canvas,alpha:true,premultipliedAlpha:false,antialias:!this.compactGpu,powerPreference:'high-performance'});
     this.renderer.setClearColor(0x000000,0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -156,8 +161,8 @@ export class GalaxyMap3D {
       const positions = new Float32Array(count*3);
       const colors = new Float32Array(count*3);
       for (let index=0; index<count; index++) {
-        positions[index*3] = (starRandom()-.5)*(34+layer*20);
-        positions[index*3+1] = (starRandom()-.5)*(46+layer*18);
+        positions[index*3] = (starRandom()-.5)*(this.routeChart ? 100 : 34+layer*20);
+        positions[index*3+1] = (starRandom()-.5)*(this.routeChart ? 160 : 46+layer*18)+(this.routeChart ? 25 : 0);
         positions[index*3+2] = -8-layer*8-starRandom()*12;
         const warmth = starRandom();
         colors[index*3] = warmth > .86 ? 1 : .58+starRandom()*.28;
@@ -174,8 +179,8 @@ export class GalaxyMap3D {
     }
 
     const nebula = nebulaTexture(galaxy ? ['#4e3968','#793c68','#2d5275'] : ['#18506b','#2c7180','#394d77']);
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(galaxy ? 52 : 42,galaxy ? 66 : 58),new THREE.MeshBasicMaterial({map:nebula,transparent:true,opacity:galaxy?.88:.82,blending:THREE.AdditiveBlending,depthWrite:false}));
-    plane.position.z = -15;
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(this.routeChart ? 220 : galaxy ? 52 : 42,this.routeChart ? 320 : galaxy ? 66 : 58),new THREE.MeshBasicMaterial({map:nebula,transparent:true,opacity:galaxy?.88:.82,blending:THREE.AdditiveBlending,depthWrite:false}));
+    plane.position.set(this.routeChart ? 8 : 0,this.routeChart ? 35 : 0,this.routeChart ? -35 : -15);
     plane.rotation.z = galaxy ? -.14 : .08;
     this.scene.add(plane);
     this.nebulaPlane = plane;
@@ -232,9 +237,10 @@ export class GalaxyMap3D {
       const group = new THREE.Group();
       group.position.set(...system.position);
       group.userData = {id:system.id,locked:system.locked};
-      const starColor = system.current ? 0x94d6b0 : system.complete ? 0x8da87b : system.locked ? 0x9ca7aa : tone.light;
-      const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:starTexture,color:starColor,transparent:true,opacity:system.locked?.5:.96,blending:THREE.AdditiveBlending,depthWrite:false}));
-      const scale = (system.size || 1)*(system.primary ? 1.9 : 1.3);
+      const starColor = system.current ? new THREE.Color(0xa6e5be) : system.complete ? new THREE.Color(0x9eb98c) : system.locked ? new THREE.Color(0xb0b9bb) : new THREE.Color(tone.light).lerp(new THREE.Color(tone.core),.28);
+      const opacity = system.locked ? .66 : 1;
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:starTexture,color:starColor,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));
+      const scale = (system.size || 1)*(system.primary ? 1.9 : 1.3)*1.2;
       halo.scale.set(scale,scale,1);
       halo.userData = group.userData;
       group.add(halo);
@@ -244,7 +250,7 @@ export class GalaxyMap3D {
       group.add(pick);
       this.pickables.push(pick);
       this.scene.add(group);
-      this.systemGroups.set(system.id,{group,halo,baseScale:scale,baseOpacity:system.locked?.5:.96,system});
+      this.systemGroups.set(system.id,{group,halo,baseScale:scale,baseOpacity:opacity,system});
     }
   }
 
@@ -264,15 +270,31 @@ export class GalaxyMap3D {
     }
   }
 
-  zoomBounds() { return this.routeChart ? [this.chartDistance * .45, this.chartDistance * 1.45] : [12,38]; }
+  zoomBounds() { return this.routeChart ? [Math.max(10,this.nearDistance * .7), this.chartDistance * 1.08] : [12,38]; }
+
+  setZoom(distance) {
+    this.travel = null;
+    this.viewport.classList.remove('webgl-travelling');
+    this.cameraGoal.z = clamp(distance,...this.zoomBounds());
+    if (this.routeChart) {
+      const amount = clamp((this.cameraGoal.z-this.zoomFocusDistance)/Math.max(1,this.chartDistance-this.zoomFocusDistance),0,1);
+      this.target.lerpVectors(this.zoomFocus,this.chartCenter,amount);
+      this.cameraGoal.x=this.target.x; this.cameraGoal.y=this.target.y;
+    }
+  }
 
   bindEvents() {
     const signal = this.abortController.signal;
+    for (const button of this.viewport.querySelectorAll('[data-chart-zoom]')) {
+      button.addEventListener('click',() => this.setZoom(button.dataset.chartZoom === 'all' ? this.chartDistance :
+        this.cameraGoal.z * (button.dataset.chartZoom === 'in' ? .8 : 1.25)),{signal});
+    }
     this.canvas.addEventListener('wheel',event => {
       event.preventDefault();
-      this.cameraGoal.z = clamp(this.cameraGoal.z + Math.sign(event.deltaY)*1.8,...this.zoomBounds());
+      this.setZoom(this.cameraGoal.z + Math.sign(event.deltaY)*Math.max(1.8,this.cameraGoal.z*.09));
     },{passive:false,signal});
     this.canvas.addEventListener('pointerdown',event => {
+      this.travel = null; this.viewport.classList.remove('webgl-travelling');
       this.pointerMap.set(event.pointerId,{x:event.clientX,y:event.clientY});
       this.canvas.setPointerCapture(event.pointerId);
       if (this.pointerMap.size === 1) this.drag = {x:event.clientX,y:event.clientY,target:this.target.clone(),moved:false};
@@ -288,15 +310,16 @@ export class GalaxyMap3D {
       if (this.pointerMap.size === 2 && this.pinch) {
         const [a,b] = [...this.pointerMap.values()];
         const distance = Math.hypot(a.x-b.x,a.y-b.y);
-        this.cameraGoal.z = clamp(this.pinch.z*this.pinch.distance/Math.max(distance,1),...this.zoomBounds());
+        this.setZoom(this.pinch.z*this.pinch.distance/Math.max(distance,1));
         return;
       }
       if (!this.drag) return;
       const dx=event.clientX-this.drag.x,dy=event.clientY-this.drag.y;
       if (Math.hypot(dx,dy)>5) this.drag.moved=true;
       const units=this.cameraGoal.z/Math.max(this.viewport.clientHeight,1)*1.8;
-      this.target.x=clamp(this.drag.target.x-dx*units,-11,11);
-      this.target.y=clamp(this.drag.target.y+dy*units,-14,14);
+      this.target.x=clamp(this.drag.target.x-dx*units,this.chartBounds?.minX ?? -11,this.chartBounds?.maxX ?? 11);
+      this.target.y=clamp(this.drag.target.y+dy*units,this.chartBounds?.minY ?? -14,this.chartBounds?.maxY ?? 14);
+      if (this.routeChart && this.drag.moved) { this.zoomFocus.copy(this.target); this.zoomFocusDistance=this.cameraGoal.z; }
     },{signal});
     const release = event => {
       const moved=this.drag?.moved;
@@ -345,22 +368,27 @@ export class GalaxyMap3D {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width,height,false);
     if (this.routeChart) {
-      const verticalSpread = clamp(1.2 / this.camera.aspect,1,2.8);
-      for (const {group,system} of this.systemGroups.values()) group.position.set(system.position[0],system.position[1]*verticalSpread,system.position[2]);
-      for (const {line,route} of this.routeLines) {
-        line.geometry.setFromPoints([this.systemGroups.get(route.from).group.position,this.systemGroups.get(route.to).group.position]);
-        line.computeLineDistances();
-      }
       const current = [...this.systemGroups.values()].find(entry => entry.system.current);
       if (current && this.ship) this.ship.position.set(current.group.position.x-.7,current.group.position.y+.45,1.5);
-      const bounds = new THREE.Box3().setFromPoints([...this.systemGroups.values()].map(entry => entry.group.position));
-      const size = bounds.getSize(new THREE.Vector3());
-      const center = bounds.getCenter(new THREE.Vector3());
-      const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-      this.chartDistance = Math.max((size.y + 5) / (2*tan), (size.x + 8) / (2*tan*this.camera.aspect));
-      this.target.copy(center); this.cameraGoal.set(center.x,center.y,this.chartDistance);
-      this.camera.position.copy(this.cameraGoal);
-      this.camera.lookAt(center);
+      const previousDistance=this.chartDistance;
+      const framing=constellationFraming(this.systems,this.camera.aspect);
+      this.chartDistance=framing.full.distance;
+      this.nearDistance=framing.near.distance;
+      this.chartBounds=framing.bounds;
+      this.chartCenter=new THREE.Vector3(...framing.full.center,0);
+      if (!previousDistance) {
+        this.zoomFocus=new THREE.Vector3(...framing.near.center,0);
+        this.zoomFocusDistance=this.nearDistance;
+        this.target.copy(this.zoomFocus);
+        this.cameraGoal.set(this.target.x,this.target.y,this.nearDistance);
+        this.camera.position.copy(this.cameraGoal);
+      } else {
+        const ratio=this.cameraGoal.z/previousDistance;
+        this.zoomFocusDistance=this.nearDistance;
+        this.setZoom(this.chartDistance*ratio);
+        this.camera.position.copy(this.cameraGoal);
+      }
+      this.camera.lookAt(this.target);
     }
   }
 
@@ -370,10 +398,11 @@ export class GalaxyMap3D {
       if (!system.button) continue;
       const point=group.position.clone().project(this.camera);
       const visible=point.z>-1&&point.z<1&&Math.abs(point.x)<1.16&&Math.abs(point.y)<1.16;
-      system.button.hidden=!visible;
+      if (system.button.hidden !== !visible) system.button.hidden=!visible;
       if (!visible) continue;
-      system.button.style.transform=`translate3d(${(point.x*.5+.5)*width}px,${(-point.y*.5+.5)*height}px,0) translate(-50%,-20%)`;
       const distance=this.camera.position.distanceTo(group.position);
+      const labelScale=this.routeChart ? clamp(this.nearDistance/distance,.6,1.1) : 1;
+      system.button.style.transform=`translate3d(${(point.x*.5+.5)*width}px,${(-point.y*.5+.5)*height}px,0) translate(-50%,-20%) scale(${labelScale})`;
       system.button.style.setProperty('--depth-scale',clamp(25/distance,.78,1.16).toFixed(3));
     }
   }
@@ -397,6 +426,10 @@ export class GalaxyMap3D {
       this.camera.position.lerp(this.cameraGoal,1-Math.pow(.001,delta));
     }
     this.camera.lookAt(this.target.x,this.target.y,-1.2);
+    if (this.routeChart) {
+      const overview=this.camera.position.z>this.chartDistance*.72;
+      if (this.viewport.classList.contains('chart-overview') !== overview) this.viewport.classList.toggle('chart-overview',overview);
+    }
     if (!this.reducedMotion) {
       for (const points of this.starLayers || []) {
         points.position.x=(this.camera.position.x-this.target.x)*-points.userData.parallax;
@@ -429,6 +462,6 @@ export class GalaxyMap3D {
       }
     });
     this.renderer.dispose();
-    this.viewport.classList.remove('navigating','webgl-travelling');
+    this.viewport.classList.remove('navigating','webgl-travelling','chart-overview');
   }
 }
