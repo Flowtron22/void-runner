@@ -1,0 +1,219 @@
+/*
+ * Persistent command-terminal chassis.
+ *
+ * The reference artwork is opaque through the glass, so it sits behind the UI.
+ * Every interactive screen is constrained to the physical CRT opening while the
+ * chassis remains fixed. Long views scroll inside the glass instead of moving
+ * the instrument itself.
+ */
+
+:root {
+  --terminal-width: min(100vw, calc(100dvh * .603), 570px);
+  --terminal-screen-left: 9.6%;
+  --terminal-screen-right: 9.6%;
+  --terminal-screen-top: 13.1dvh;
+  --terminal-screen-bottom: 12.6dvh;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+body,
+body.star-chart-open,
+body.main-menu-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 44%, #243326 0, #0c110e 27%, #030504 66%, #000 100%);
+}
+
+body::before,
+body::after,
+body.star-chart-open::before,
+body.star-chart-open::after {
+  content: none !important;
+}
+
+.app-shell,
+body.main-menu-open .app-shell,
+body.star-chart-open .app-shell {
+  position: relative;
+  isolation: isolate;
+  width: var(--terminal-width);
+  height: 100dvh;
+  min-height: 0;
+  margin: 0;
+  padding:
+    var(--terminal-screen-top)
+    var(--terminal-screen-right)
+    var(--terminal-screen-bottom)
+    var(--terminal-screen-left) !important;
+  overflow: hidden;
+  background: #020503 url("../assets/command-terminal-chassis.png") center / 100% 100% no-repeat !important;
+  box-shadow: 0 0 90px #000, 0 0 34px #66715324;
+}
+
+.app-shell::before {
+  content: "";
+  position: absolute;
+  z-index: 60;
+  inset: var(--terminal-screen-top) var(--terminal-screen-right) var(--terminal-screen-bottom) var(--terminal-screen-left);
+  pointer-events: none;
+  opacity: .22;
+  border-radius: 5% / 3%;
+  background:
+    linear-gradient(90deg, #b7d8a40c, transparent 7%, transparent 89%, #b7d8a40b),
+    repeating-linear-gradient(0deg, transparent 0 3px, #a5c5940a 3px 4px);
+  box-shadow: inset 0 0 34px #000b, inset 0 0 2px #9eb78c5c;
+}
+
+.app-shell::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: var(--terminal-screen-top) var(--terminal-screen-right) var(--terminal-screen-bottom) var(--terminal-screen-left);
+  pointer-events: none;
+  border-radius: 5% / 3%;
+  background: #050a07;
+  box-shadow: inset 0 0 54px #000;
+}
+
+.screen,
+.screen.active {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #756548 #101613;
+  scrollbar-width: thin;
+}
+
+.screen::-webkit-scrollbar { width: 5px; }
+.screen::-webkit-scrollbar-track { background: #101613; }
+.screen::-webkit-scrollbar-thumb { background: #756548; }
+
+#home-screen.active,
+#intro-screen.active,
+#hub-screen.active {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  border-radius: 4% / 2%;
+  overflow: hidden;
+}
+
+#home-screen.active {
+  padding: clamp(16px, 4dvh, 34px) clamp(13px, 4vw, 24px);
+  background-position: center top;
+}
+
+#intro-screen.active,
+#hub-screen.active {
+  padding-left: clamp(10px, 3vw, 18px);
+  padding-right: clamp(10px, 3vw, 18px);
+  background-position: center;
+}
+
+#intro-screen.active { padding-bottom: clamp(14px, 3dvh, 28px); }
+#hub-screen.active { padding-top: clamp(20px, 6dvh, 54px); padding-bottom: clamp(12px, 2.5dvh, 20px); }
+
+.menu-title h1 {
+  max-width: 100%;
+  font-size: clamp(36px, 7dvh, 54px);
+  letter-spacing: .035em;
+}
+#home-screen .home-actions { width: min(100%, 310px); }
+
+.station-footer,
+body.star-chart-open .station-footer,
+.sticky-action {
+  position: sticky;
+  z-index: 30;
+  left: auto;
+  right: auto;
+  bottom: 0;
+  width: 100%;
+  margin: 12px 0 0;
+  transform: none;
+}
+
+#sector-screen .sector-map,
+#map-screen .area-galaxy.star-system-map {
+  height: max(510px, calc(74dvh - 92px));
+  min-height: 510px;
+}
+
+#map-screen .area-galaxy.star-system-map {
+  height: max(470px, calc(74dvh - 228px));
+  min-height: 470px;
+}
+
+.desktop-battle-stage { pointer-events: none; }
+
+dialog.modal {
+  width: min(78vw, 440px);
+  max-width: 440px;
+  max-height: 72dvh;
+  margin: auto;
+  overflow: auto;
+}
+
+dialog.modal::backdrop {
+  background: #000b;
+  backdrop-filter: blur(2px);
+}
+
+.mission-dialog { max-height: 72dvh; }
+.mission-portrait { height: min(26dvh, 230px); }
+
+@media (max-width: 390px) {
+  :root {
+    --terminal-screen-left: 9%;
+    --terminal-screen-right: 9%;
+  }
+
+  .app-shell,
+  body.main-menu-open .app-shell,
+  body.star-chart-open .app-shell {
+    padding-left: var(--terminal-screen-left) !important;
+    padding-right: var(--terminal-screen-right) !important;
+  }
+
+  button { min-height: 38px; padding-inline: 8px; }
+  .section-head h2 { font-size: 19px; }
+  .menu-title h1 { font-size: clamp(34px, 8dvh, 52px); }
+  .chapter-grid { gap: 4px; }
+  .chapter-card { min-height: 280px; }
+  dialog.modal { width: 78vw; }
+}
+
+@media (max-height: 700px) {
+  :root {
+    --terminal-screen-top: 12.7dvh;
+    --terminal-screen-bottom: 11.8dvh;
+  }
+
+  #home-screen.active { padding-top: 14px; padding-bottom: 14px; }
+  .menu-title { margin-bottom: 10px; }
+  .menu-title > i { margin-top: 10px; }
+  #home-screen .home-actions { gap: 5px; }
+  #home-screen .home-actions button { min-height: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell::before { opacity: .14; }
+}
