@@ -246,15 +246,45 @@ dialog.modal::backdrop {
   backdrop-filter: blur(2px);
 }
 
-.mission-dialog { max-height: 72dvh; }
+#mission-dialog.mission-dialog {
+  position: absolute;
+  z-index: 60;
+  top: calc(var(--terminal-screen-top) + 14px);
+  left: 50%;
+  width: min(calc(var(--terminal-screen-width) - 32px), 400px);
+  max-width: none;
+  max-height: calc(100dvh - var(--terminal-screen-top) - var(--terminal-screen-bottom) - 28px);
+  margin: 0;
+  transform: translateX(-50%);
+  overflow: auto;
+  background: linear-gradient(180deg, #1a211ee8, #0a0f0ded);
+  box-shadow: inset 0 1px #f3df9f18, 0 8px 24px #0009;
+}
+
+#mission-dialog::backdrop { background: transparent; backdrop-filter: none; }
+.app-shell:has(#mission-dialog[open]) .screen.active { filter: brightness(.36) blur(1px); pointer-events: none; }
 .mission-portrait { height: min(26dvh, 230px); }
 
-#loadout-screen .prep-list { padding-bottom: 0; }
+#loadout-screen.active {
+  --cell: clamp(34px, 4.55dvh, 42px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#loadout-screen .case-wrap,
+#loadout-screen .prep-actions,
+#loadout-screen .subtabs,
+#loadout-screen .station-footer { flex: 0 0 auto; }
+#loadout-screen .prep-list { min-height: 0; padding-bottom: 0; overflow-y: auto; scrollbar-width: none; }
+#loadout-screen .prep-list::-webkit-scrollbar { display: none; }
+#loadout-screen .unit-card { min-height: 68px; padding-block: 6px; }
 #loadout-screen .unit-card.locked { display: none; }
 #loadout-screen .station-footer {
   position: relative;
   bottom: auto;
-  margin-top: 9px;
+  margin-top: auto;
+  padding-top: 8px;
 }
 
 @media (max-width: 390px) {
@@ -269,6 +299,7 @@ dialog.modal::backdrop {
   .chapter-grid { gap: 4px; }
   .chapter-card { min-height: 280px; }
   dialog.modal { width: min(calc(var(--terminal-screen-width) - 18px), calc(100vw - 28px)); }
+  #mission-dialog.mission-dialog { width: calc(var(--terminal-screen-width) - 28px); }
 }
 
 @media (max-height: 700px) {

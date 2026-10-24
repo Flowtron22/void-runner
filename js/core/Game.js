@@ -318,6 +318,10 @@ export class Game {
     if (activeScreen) {
       activeScreen.scrollTop = 0;
       activeScreen.scrollLeft = 0;
+      requestAnimationFrame(() => {
+        activeScreen.scrollTop = 0;
+        activeScreen.scrollLeft = 0;
+      });
     }
     window.scrollTo(0, 0);
     this.renderHeader();
@@ -774,7 +778,8 @@ export class Game {
     $('#mission-accept-button').textContent = review ? 'RETURN TO CHART' : 'ACCEPT DIRECTIVE';
     $('#mission-accept-button').dataset.review = review ? 'true' : 'false';
     $('#mission-belay-button').hidden = review;
-    $('#mission-dialog').showModal();
+    const dialog = $('#mission-dialog');
+    if (!dialog.open) dialog.show();
   }
 
   closeMissionBriefing() {
