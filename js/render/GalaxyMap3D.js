@@ -102,12 +102,14 @@ function nebulaTexture(colors,size = 512) {
 }
 
 export class GalaxyMap3D {
-  constructor({viewport,canvas,labelLayer,mode='galaxy',systems=[],onSelect,reducedMotion=false}) {
+  constructor({viewport,canvas,labelLayer,mode='galaxy',systems=[],routes=[],onSelect,reducedMotion=false}) {
     this.viewport = viewport;
     this.canvas = canvas;
     this.labelLayer = labelLayer;
     this.mode = mode;
     this.systems = systems;
+    this.routes = routes;
+    this.routeChart = routes.length > 0;
     this.onSelect = onSelect;
     this.reducedMotion = reducedMotion;
     this.abortController = new AbortController();
@@ -124,7 +126,7 @@ export class GalaxyMap3D {
     this.drag = null;
     this.scene = new THREE.Scene();
     const spaceColor = new THREE.Color(mode === 'galaxy' ? 0x020307 : 0x01060a);
-    this.scene.fog = new THREE.FogExp2(spaceColor,mode === 'galaxy' ? .018 : .025);
+    this.scene.fog = new THREE.FogExp2(spaceColor,this.routeChart ? .009 : mode === 'galaxy' ? .018 : .025);
     this.camera = new THREE.PerspectiveCamera(42,1,.1,120);
     this.camera.position.copy(this.cameraGoal);
     this.camera.lookAt(this.target);
@@ -137,6 +139,7 @@ export class GalaxyMap3D {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,this.compactGpu ? 1 : 1.35));
     this.createEnvironment();
     this.createSystems();
+    this.createRoutes();
     this.bindEvents();
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(viewport);
@@ -192,7 +195,8 @@ export class GalaxyMap3D {
     const core = new THREE.Sprite(new THREE.SpriteMaterial({map:starTexture,color:0xffcf75,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
     core.scale.set(5.6,5.6,1);
     core.position.set(-1.2,.2,-2.5);
-    this.scene.add(core);
+    if (!this.routeChart) this.scene.add(core);
+    else { core.material.map.dispose(); core.material.dispose(); }
     this.localCore = core;
 
     const dustRandom = seededRandom(913);
@@ -214,7 +218,8 @@ export class GalaxyMap3D {
     ship.add(hull);
     const engine = new THREE.Sprite(new THREE.SpriteMaterial({map:radialTexture('rgba(101,220,190,1)'),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
     engine.scale.set(.8,.8,1); engine.position.x = -.58; ship.add(engine);
-    ship.position.set(-6.4,-6.8,1.5);
+    const current = this.systems.find(system => system.current);
+    ship.position.set(...(current ? [current.position[0] - .7,current.position[1] + .45,1.5] : [-6.4,-6.8,1.5]));
     ship.rotation.z = .15;
     this.scene.add(ship);
     this.ship = ship;
@@ -227,7 +232,7 @@ export class GalaxyMap3D {
       const group = new THREE.Group();
       group.position.set(...system.position);
       group.userData = {id:system.id,locked:system.locked};
-      const starColor = system.locked ? 0x879197 : tone.light;
+      const starColor = system.current ? 0x94d6b0 : system.complete ? 0x8da87b : system.locked ? 0x9ca7aa : tone.light;
       const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:starTexture,color:starColor,transparent:true,opacity:system.locked?.5:.96,blending:THREE.AdditiveBlending,depthWrite:false}));
       const scale = (system.size || 1)*(system.primary ? 1.9 : 1.3);
       halo.scale.set(scale,scale,1);
@@ -243,11 +248,29 @@ export class GalaxyMap3D {
     }
   }
 
+  createRoutes() {
+    this.routeLines = [];
+    for (const route of this.routes) {
+      const from = this.systemGroups.get(route.from)?.group.position;
+      const to = this.systemGroups.get(route.to)?.group.position;
+      if (!from || !to) continue;
+      const geometry = new THREE.BufferGeometry().setFromPoints([from, to]);
+      const material = new THREE.LineDashedMaterial({color:route.travelled ? 0xc4b57c : route.available ? 0x95bb8d : 0x8a9290,
+        transparent:true, opacity:route.travelled ? .85 : route.available ? .8 : .4,
+        dashSize:.16, gapSize:.13, depthWrite:false});
+      const line = new THREE.Line(geometry, material);
+      line.computeLineDistances(); this.scene.add(line);
+      this.routeLines.push({line, route});
+    }
+  }
+
+  zoomBounds() { return this.routeChart ? [this.chartDistance * .45, this.chartDistance * 1.45] : [12,38]; }
+
   bindEvents() {
     const signal = this.abortController.signal;
     this.canvas.addEventListener('wheel',event => {
       event.preventDefault();
-      this.cameraGoal.z = clamp(this.cameraGoal.z + Math.sign(event.deltaY)*1.8,12,38);
+      this.cameraGoal.z = clamp(this.cameraGoal.z + Math.sign(event.deltaY)*1.8,...this.zoomBounds());
     },{passive:false,signal});
     this.canvas.addEventListener('pointerdown',event => {
       this.pointerMap.set(event.pointerId,{x:event.clientX,y:event.clientY});
@@ -265,7 +288,7 @@ export class GalaxyMap3D {
       if (this.pointerMap.size === 2 && this.pinch) {
         const [a,b] = [...this.pointerMap.values()];
         const distance = Math.hypot(a.x-b.x,a.y-b.y);
-        this.cameraGoal.z = clamp(this.pinch.z*this.pinch.distance/Math.max(distance,1),12,38);
+        this.cameraGoal.z = clamp(this.pinch.z*this.pinch.distance/Math.max(distance,1),...this.zoomBounds());
         return;
       }
       if (!this.drag) return;
@@ -321,6 +344,24 @@ export class GalaxyMap3D {
     this.camera.aspect=width/height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width,height,false);
+    if (this.routeChart) {
+      const verticalSpread = clamp(1.2 / this.camera.aspect,1,2.8);
+      for (const {group,system} of this.systemGroups.values()) group.position.set(system.position[0],system.position[1]*verticalSpread,system.position[2]);
+      for (const {line,route} of this.routeLines) {
+        line.geometry.setFromPoints([this.systemGroups.get(route.from).group.position,this.systemGroups.get(route.to).group.position]);
+        line.computeLineDistances();
+      }
+      const current = [...this.systemGroups.values()].find(entry => entry.system.current);
+      if (current && this.ship) this.ship.position.set(current.group.position.x-.7,current.group.position.y+.45,1.5);
+      const bounds = new THREE.Box3().setFromPoints([...this.systemGroups.values()].map(entry => entry.group.position));
+      const size = bounds.getSize(new THREE.Vector3());
+      const center = bounds.getCenter(new THREE.Vector3());
+      const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+      this.chartDistance = Math.max((size.y + 5) / (2*tan), (size.x + 8) / (2*tan*this.camera.aspect));
+      this.target.copy(center); this.cameraGoal.set(center.x,center.y,this.chartDistance);
+      this.camera.position.copy(this.cameraGoal);
+      this.camera.lookAt(center);
+    }
   }
 
   projectLabels() {

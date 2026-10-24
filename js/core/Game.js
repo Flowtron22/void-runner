@@ -1,4 +1,5 @@
 import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATAGEMS } from '../data/units.js';
+import { buildSectorChart, chartState } from './CampaignChart.js';
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
@@ -73,9 +74,7 @@ const GALAXY_SYSTEM_LAYOUT = [
   {x:75,y:56,size:.78,tone:'red'},{x:30,y:56,size:.94,tone:'blue'},{x:55,y:73,size:.7,tone:'white'},
   {x:25,y:85,size:.68,tone:'red'},{x:77,y:86,size:.62,tone:'gold'}
 ];
-const SYSTEM_DESTINATION_LAYOUT = [
-  {x:27,y:31,size:1.05,tone:'amber'},{x:73,y:34,size:.86,tone:'ice'},{x:59,y:74,size:1.16,tone:'crimson'}
-];
+const EPIC_HERO_IDS = ['imperial-fists-darnath-lysander', 'space-wolves-bjorn-the-fell-handed', 'space-wolves-ragnar-blackmane'];
 const GREY_KNIGHT_UNIT_ART = {
   'grey-knight-strike-squad':[
     new URL('../../assets/units/grey-knights/strike-squad.png',import.meta.url).href,
@@ -101,6 +100,7 @@ const UNIT_SPRITES = {
   'grey-knight-strike-squad':[0,0], 'grey-knight-terminators':[1,0], 'nemesis-dreadknight':[2,0], 'brotherhood-librarian':[3,0]
 };
 const unitSpriteStyle = (id, variant = 0) => {
+  id = id.split('--rescued-')[0];
   const unitArt = GREY_KNIGHT_UNIT_ART[id];
   if (unitArt) {
     const src = unitArt[variant % unitArt.length];
@@ -245,7 +245,7 @@ export class Game {
   }
 
   faction(id) { return this.factions.find(faction => faction.id === id); }
-  unit(id) { return this.units.find(unit => unit.id === id); }
+  unit(id) { return this.units.find(unit => unit.id === id) || this.run?.rescuedUnits?.find(unit => unit.id === id); }
 
   setupBattleStage(enemyFaction) {
     if (!window.matchMedia('(min-width:1100px)').matches) return;
@@ -466,6 +466,7 @@ export class Game {
     }
     if (this.run.pendingPostWar) {
       const event = this.run.pendingPostWar.node?.event;
+      if (event === 'distress') return this.openDistressEvent();
       if (event === 'recruit') return this.openRecruitEvent();
       if (event === 'store') return this.openStoreEvent();
       return this.finishPostWarEvent();
@@ -566,17 +567,17 @@ export class Game {
   renderRoster() {
     const roster = $('#unit-roster');
     roster.innerHTML = '';
-    for (const unit of this.units.filter(item => item.faction === this.run.faction)) {
+    for (const unit of [...this.units.filter(item => item.faction === this.run.faction), ...(this.run.rescuedUnits || [])]) {
       const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
       const out = deployedCount >= unit.stock;
       const tooLarge = unit.points > this.run.cap;
-      const unrecovered = !this.run.unlockedUnits.includes(unit.id);
+      const unrecovered = !unit.rescueKind && !this.run.unlockedUnits.includes(unit.id);
       const button = document.createElement('button');
       button.className = `unit-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${out || tooLarge || unrecovered ? 'locked' : ''}`;
       button.style.setProperty('--unit-color', unit.color);
       button.disabled = out || tooLarge || unrecovered;
       const weapon = unit.weapon;
-      const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.leader ? `${unit.size[0]}×${unit.size[1]} · ♛ GRID OR BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
+      const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.rescueKind ? `${unit.rescueKind} · ${this.faction(unit.faction).name} · MISSION ONLY · ×${unit.stock - deployedCount}` : unit.leader ? `${unit.size[0]}×${unit.size[1]} · ♛ GRID OR BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
       button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id,deployedCount)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
       button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
@@ -760,6 +761,32 @@ export class Game {
       if (mountId!==this.galaxyMountId) return;
       console.error('Unable to initialize the stellar chart',error);
       map.classList.add('webgl-fallback');
+      const positions = options.systems.map(system => system.position);
+      const minX = Math.min(...positions.map(p => p[0])) - 2;
+      const maxX = Math.max(...positions.map(p => p[0])) + 2;
+      const minY = Math.min(...positions.map(p => p[1])) - 2;
+      const maxY = Math.max(...positions.map(p => p[1])) + 2;
+      const anchors = new Map();
+      for (const system of options.systems) {
+        const point = [(system.position[0]-minX)/(maxX-minX)*100, (maxY-system.position[1])/(maxY-minY)*100];
+        anchors.set(system.id, point);
+        if (!system.button) continue;
+        system.button.hidden = false;
+        system.button.style.setProperty('--fallback-x', `${point[0]}%`);
+        system.button.style.setProperty('--fallback-y', `${point[1]}%`);
+        system.button.onclick = system.locked ? null : () => options.onSelect(system.id);
+      }
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.classList.add('webgl-route-fallback'); svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+      for (const route of options.routes || []) {
+        const from = anchors.get(route.from), to = anchors.get(route.to);
+        if (!from || !to) continue;
+        const line = document.createElementNS(svg.namespaceURI, 'line');
+        for (const [key,value] of Object.entries({x1:from[0],y1:from[1],x2:to[0],y2:to[1],stroke:route.available?'#95bb8d':'#67726c','stroke-width':.2,'stroke-dasharray':'.7 .6'})) line.setAttribute(key,value);
+        svg.append(line);
+      }
+      map.prepend(svg);
     }
   }
 
@@ -834,9 +861,7 @@ export class Game {
     scene.flyTo(String(index), {duration: 1100, arrivalDistance: 2.8});
   }
 
-  makeOffers() {
-    const r = this.run.region;
-    const s = this.run.step;
+  makeOffers(s = this.run.step, r = this.run.region) {
     const tier = CAMPAIGN_TIERS[this.run.tierIndex];
     if (s === tier.depth) {
       const enemy = this.enemyFaction();
@@ -852,10 +877,10 @@ export class Game {
     const names = ['PATROL CLASH','SUPPLY RAID','LINE ENGAGEMENT','ARMOURED COLUMN','BREAKTHROUGH','VOID AMBUSH','RELIC DEFENCE'];
     return [1,2,3].map((stars,index) => {
       const eventRoll = (r * 7 + s * 3 + index) % 7;
-      const event = eventRoll === 2 ? 'recruit' : eventRoll === 5 ? 'store' : null;
+      const event = eventRoll === 2 ? 'distress' : eventRoll === 5 ? 'store' : null;
       const type = stars === 3 ? 'elite' : event === 'store' ? 'salvage' : 'skirmish';
       return {id:`r${r}s${s}n${index}`,type,name:names[(r+s+index)%names.length],stars,event,lane:index,
-        reward:event === 'recruit' ? 'RECRUIT SIGNAL' : event === 'store' ? 'FIELD STORE' : 'POST-WAR CHOICE',
+        reward:event === 'distress' ? 'DISTRESS' : event === 'store' ? 'FIELD STORE' : '',
         difficulty:(.62 + stars * .14 + s * .035) * tier.enemyScale,enemyFaction:this.enemyFaction().id};
     });
   }
@@ -863,9 +888,13 @@ export class Game {
   renderMap() {
     this.galaxyScene?.destroy();
     this.galaxyScene = null;
-    if (!this.run.offers) this.run.offers = this.makeOffers();
     const tier = CAMPAIGN_TIERS[this.run.tierIndex];
     const sector = this.run.sectors[this.run.region];
+    sector.chart ||= buildSectorChart({region: this.run.region, depth: tier.depth,
+      makeLayer: step => this.makeOffers(step), offers: this.run.offers,
+      history: this.run.history, step: this.run.step});
+    const state = chartState(sector.chart, this.run.history, this.run.region, this.run.step, this.run.sectorStars);
+    this.run.offers = state.nodes.filter(node => node.step === this.run.step);
     $('#region-kicker').textContent = `SECTOR ${this.run.region + 1} / ${this.run.sectors.length} · AREA ${Math.min(this.run.step + 1,tier.depth + 1)} / ${tier.depth + 1}`;
     $('#map-title').textContent = sector.name;
     $('#map-cap').textContent = this.run.cap;
@@ -877,22 +906,31 @@ export class Game {
     $('#mission-strip-title').textContent = mission.title;
     $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
-    map.className = 'route-map area-galaxy star-system-map webgl-star-map local-webgl-map';
+    map.className = 'route-map area-galaxy star-system-map webgl-star-map local-webgl-map sector-route-chart';
     map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout local" aria-hidden="true"><span>LOCAL CARTOGRAPHY</span><b>${sector.name}</b></div>`;
     const labelLayer = map.querySelector('.webgl-map-labels');
-    const systems = [{id:'__core',name:sector.name,tone:'gold',size:1.25,position:[-1.2,.2,-2.5],locked:true,primary:true}];
-    this.run.offers.forEach((node,offerIndex) => {
-      const layout = SYSTEM_DESTINATION_LAYOUT[offerIndex];
-      const choice = this.makeNodeButton(node,`webgl-map-label available ${node.type}`,true,true);
+    const rowY = row => -9 + (row + 1) * 18 / (tier.depth + 1);
+    const start = document.createElement('button');
+    start.className = 'webgl-map-label route-start'; start.disabled = true;
+    start.innerHTML = '<b>START POINT</b><small>VIGILANT</small>';
+    labelLayer.append(start);
+    const systems = [{id:sector.chart.start, name:'START POINT', tone:'ice', size:.65,
+      position:[0,-9,0], locked:true, current:state.currentId === sector.chart.start, button:start}];
+    state.nodes.forEach(node => {
+      const choice = this.makeNodeButton(node,`webgl-map-label ${node.status} ${node.type}`,!node.locked,true);
+      if (node.id === state.currentId) choice.classList.add('current-position');
       labelLayer.append(choice);
       systems.push({
-        id:node.id,name:node.name,tone:layout.tone,size:layout.size,
-        position:[(layout.x-50)*.15,(50-layout.y)*.18,(offerIndex-1)*1.5],
-        locked:Boolean(node.locked),available:!node.locked,button:choice
+        id:node.id,name:node.name,tone:node.type === 'boss' ? 'crimson' : node.event === 'distress' ? 'ice' : 'amber',size:.85,
+        position:[(node.lane - 1)*8.5 + Math.sin((node.step + 1)*1.7 + node.lane)*.8,rowY(node.step) + Math.sin(node.step*2 + node.lane)*.25,0],
+        locked:node.locked,available:!node.locked,complete:node.status === 'complete',current:node.id === state.currentId,button:choice
       });
     });
+    const routes = sector.chart.links.map(link => ({...link,
+      travelled:state.cleared.has(link.to) && (state.cleared.has(link.from) || link.from === sector.chart.start),
+      available:link.from === state.currentId && state.nodes.some(node => node.id === link.to && !node.locked)}));
     this.mountGalaxyScene({
-        viewport:map,canvas:map.querySelector('.galaxy-webgl'),labelLayer,mode:'local',systems,
+        viewport:map,canvas:map.querySelector('.galaxy-webgl'),labelLayer,mode:'local',systems,routes,
         reducedMotion:Boolean(this.meta.settings?.reducedMotion),
         onSelect:id => {
           const node=this.run.offers.find(offer=>offer.id===id);
@@ -908,7 +946,11 @@ export class Game {
     const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'SECTOR BOSS',closed:'UNKNOWN'};
     const faction = node.enemyFaction ? this.faction(node.enemyFaction).name : labels[node.type];
     const rewardIcon = node.type === 'boss' ? '♜' : node.type === 'repair' ? '♥' : node.type === 'elite' ? '✦' : node.type === 'salvage' ? '⚙' : '◆';
-    button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}${node.stars ? ` · ${'★'.repeat(node.stars)}` : ''}</small><span>${node.locked ? `NEEDS ${node.threshold} ★` : node.reward || ''}</span>`;
+    const signal = node.event === 'distress' ? 'DISTRESS' : node.event === 'recruit' ? 'REINFORCEMENTS' : node.event === 'store' ? 'FIELD STORE' : '';
+    const status = node.status === 'complete' ? 'CLEARED' : node.status === 'bypassed' ? 'BYPASSED' : node.needsStars && node.step === this.run.step ? `NEEDS ${node.threshold} ★` : signal;
+    button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}</small><span class="system-difficulty" aria-label="Difficulty ${node.stars || 1} of 3">${'★'.repeat(node.stars || 1)}</span>${status ? `<span class="system-signal ${node.event === 'distress' ? 'distress-signal' : ''}">${status}</span>` : ''}`;
+    button.title = `${node.name} · Difficulty ${node.stars || 1}/3${node.locked ? ' · Not reachable yet' : ' · Reachable'}${signal ? ` · ${signal}` : ''}`;
+    button.setAttribute('aria-label', `${button.title} · ${faction}`);
     button.disabled = !active || node.locked;
     if (active && !node.locked && !deferToScene) button.onclick = () => {
       if (button.dataset.engaging) return;
@@ -921,6 +963,8 @@ export class Game {
   }
 
   chooseNode(node) {
+    if (!this.run || this.run.rewardContext || this.run.pendingPostWar || node.locked) return;
+    if (!this.run.offers?.some(offer => offer.id === node.id && !offer.locked)) return;
     this.run.pendingNode = node;
     this.save();
     this.openLoadout();
@@ -1509,6 +1553,7 @@ export class Game {
     this.run.rewardContext = null;
     this.save();
     if (node.event === 'recruit') return this.openRecruitEvent();
+    if (node.event === 'distress') return this.openDistressEvent();
     if (node.event === 'store') return this.openStoreEvent();
     this.finishPostWarEvent();
   }
@@ -1527,6 +1572,50 @@ export class Game {
     $('#event-continue-button').hidden = true; $('#event-dialog').showModal();
   }
 
+  distressOffer() {
+    const pending = this.run.pendingPostWar;
+    if (!pending || pending.node.event !== 'distress') return null;
+    if (pending.rescueOffer !== undefined) return pending.rescueOffer;
+    const recovered = new Set((this.run.rescuedUnits || []).map(unit => unit.sourceUnitId));
+    const pool = this.units.filter(unit => unit.keywords?.includes('Imperium') &&
+      unit.points <= this.getBaseCap() && !recovered.has(unit.id));
+    const heroes = pool.filter(unit => EPIC_HERO_IDS.includes(unit.id));
+    const unique = pool.filter(unit => !EPIC_HERO_IDS.includes(unit.id));
+    const base = pick(heroes.length && (Math.random() < .35 || !unique.length) ? heroes : unique.length ? unique : pool);
+    pending.rescueOffer = base ? {...structuredClone(base), id:`${base.id}--rescued-${pending.node.id}`,
+      sourceUnitId:base.id, stock:1, rescueKind:EPIC_HERO_IDS.includes(base.id) ? 'EPIC HERO' : 'UNIQUE UNIT'} : null;
+    this.save();
+    return pending.rescueOffer;
+  }
+
+  claimDistressRescue() {
+    const offer = this.distressOffer();
+    if (!offer) return;
+    this.run.rescuedUnits ||= [];
+    if (!this.run.rescuedUnits.some(unit => unit.id === offer.id)) this.run.rescuedUnits.push(offer);
+    this.save();
+    this.finishPostWarEvent();
+  }
+
+  openDistressEvent() {
+    const offer = this.distressOffer();
+    $('#event-kicker').textContent = '// DISTRESS · SURVIVORS RECOVERED';
+    $('#event-title').textContent = offer ? offer.rescueKind : 'SIGNAL RECOVERED';
+    $('#event-copy').textContent = offer ? 'Joins your roster until this mission ends, across every remaining sector. Deploy through Ordeal using normal army points.' : 'No further eligible detachments remain. Recover 25 Requisition instead.';
+    const list = $('#event-options'); list.innerHTML = '';
+    const button = document.createElement('button'); button.className = 'event-card';
+    if (offer) {
+      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(offer.id)}"></span><b>${offer.name}</b><small>${this.faction(offer.faction).name} · ${offer.points} PTS · MISSION ONLY · RECRUIT</small>`;
+      button.onclick = () => this.claimDistressRescue();
+    } else {
+      button.innerHTML = '<span>◆</span><b>RECOVER SUPPLIES</b><small>+25 MISSION REQUISITION</small>';
+      button.onclick = () => { if (!this.run.pendingPostWar) return; this.run.currency += 25; this.finishPostWarEvent(); };
+    }
+    list.append(button);
+    $('#event-continue-button').hidden = true;
+    if (!$('#event-dialog').open) $('#event-dialog').showModal();
+  }
+
   openStoreEvent() {
     $('#event-kicker').textContent = '// POST-WAR · FIELD STORE'; $('#event-title').textContent = `REQUISITION ${this.run.currency}`;
     $('#event-copy').textContent = 'Choose one recovered relic, or conserve Requisition.';
@@ -1543,6 +1632,8 @@ export class Game {
     if ($('#event-dialog').open) $('#event-dialog').close();
     if (this.run?.rewardContext) return;
     const pending = this.run?.pendingPostWar; if (!pending) return;
+    if (pending.node.event === 'distress' && pending.rescueOffer &&
+      !this.run.rescuedUnits?.some(unit => unit.id === pending.rescueOffer.id)) return this.openDistressEvent();
     this.run.pendingPostWar = null; this.advanceRoute(pending.wasBoss, pending.node);
   }
 

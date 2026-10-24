@@ -210,6 +210,48 @@
 /* Scanlines belong to the whole tube, not a rectangular patch inside the chart. */
 .screen .webgl-map-vignette { background: none; box-shadow: none; }
 
+/* More beacons on the existing chart; difficulty is its own readable signal. */
+#map-screen #route-map.sector-route-chart .webgl-map-label {
+  width: clamp(64px, calc(100% / 3 - 2px), 96px) !important;
+  height: 70px !important;
+  padding: 16px 1px 0 !important;
+}
+#map-screen .sector-route-chart .webgl-map-label b {
+  font-size: 8px !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0;
+}
+#map-screen .sector-route-chart .webgl-map-label small { font-size: 7px !important; line-height: 1.2 !important; }
+#map-screen .sector-route-chart .webgl-map-label .system-difficulty {
+  color: #e2cd8b !important;
+  font: 700 17px/1.1 var(--crt-data) !important;
+  letter-spacing: .1em;
+  margin-top: 3px;
+  text-shadow: 0 0 5px #d8bd6870;
+}
+#map-screen .sector-route-chart .webgl-map-label .system-signal { font-size: 7px !important; }
+#map-screen .sector-route-chart .webgl-map-label .distress-signal { color: #b4d3c6 !important; letter-spacing: .13em; }
+#map-screen .sector-route-chart .webgl-map-label:disabled { opacity: .68; }
+#map-screen .sector-route-chart .webgl-map-label:disabled :is(b, .system-difficulty, .system-signal) {
+  color: #a5ada9 !important;
+  text-shadow: 0 0 4px #b3cac03d;
+}
+#map-screen .sector-route-chart .webgl-map-label:disabled small { display: none; }
+#map-screen .sector-route-chart .webgl-map-label.locked b { display: none; }
+#map-screen .sector-route-chart .webgl-map-label.locked.boss b { display: block; font-size: 7px !important; }
+#map-screen .sector-route-chart .webgl-map-label.bypassed { opacity: .32; }
+#map-screen .sector-route-chart .webgl-map-label.complete b { color: #a4bd92 !important; }
+#map-screen .sector-route-chart .current-position b::before { content: '⌖ '; }
+.webgl-route-fallback { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.webgl-fallback .webgl-map-label { left: var(--fallback-x) !important; top: var(--fallback-y) !important; transform: translate(-50%, -20%) !important; }
+.webgl-fallback .webgl-map-label::before {
+  content: '' !important; position: absolute; top: 0; left: calc(50% - 6px);
+  width: 12px; height: 12px; border: 0; border-radius: 50%;
+  background: radial-gradient(circle, #e6c783 0, #b39f7055 28%, transparent 70%);
+  box-shadow: 0 0 8px #b3a17455;
+}
+.webgl-fallback .webgl-map-label:disabled::before { filter: grayscale(1); }
+
 #map-screen > .run-stats { display: grid; width: 100%; }
 #map-screen > .run-stats small { color: var(--crt-dim); font-size: 10px; }
 #map-screen > .run-stats b { color: var(--crt-ink); font-size: 10px; font-weight: 400; }

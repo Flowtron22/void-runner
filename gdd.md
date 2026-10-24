@@ -28,7 +28,7 @@ Patrol vessel VIGILANT — recurring command hub
               ↓
           Inquisitorial directive briefing
     ↓
-Connected area map: choose one of three star-rated battles
+Connected sector chart: travel to a reachable star-rated system
     ↓
 Manual deployment → automatic visible-dice battle
     ↓
@@ -45,9 +45,9 @@ Secure every sector; bank permanent Requisition
 
 Selectable campaign sizes are 500, 1000, 2000 and 3000 points. They contain 4, 5, 7 and 8 sectors respectively. Higher sizes also lengthen each sector, multiply enemy strength and increase permanent boss rewards. The selected size stays fixed; Expanded Supply research adds 50 deployable points per rank and Rapid Muster adds 100 points for that run. The older 1500-point tier remains in data only so existing saves can still load.
 
-Each normal area presents exactly three connected choices rated one, two and three stars. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
+Each sector reveals its entire saved route chart: three systems per battle layer, a starting beacon and three boss destinations. Systems carry one, two or three large difficulty stars. The first layer is reachable from the start; later travel follows links to the next layer, with the same or neighbouring lane reachable. Future systems glow grey until reachable. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
 
-Both navigation views are interactive Three.js charts, not vertical skill trees. The sector view places named stellar signals in a navigable three-dimensional star field. Selecting a signal performs a camera approach before opening its directive. The area view loads a visually distinct local-system scene with a central star, deeper dust field, strike-cruiser marker, and three reachable mission systems. DOM labels remain projected over the WebGL scene for crisp text, keyboard use, and screen-reader access.
+Both navigation views are interactive Three.js charts, not vertical skill trees. The sector view places named stellar signals in a navigable three-dimensional star field. Selecting a signal performs a camera approach before opening its directive. The area view loads a distinct local chart with deeper dust, a strike-cruiser marker, every sector system and dashed route links. Future beacons retain grey emission. DOM labels remain projected over the WebGL scene for crisp text, keyboard use, and screen-reader access.
 
 Post-War Affairs is a multi-claim interaction. Every victory generates three to five claim blocks according to threat, route, and mission type. Requisition, Enhancement, and Stratagem appear once. Richer rewards add Wargear Cache and Force Recovery. Requisition resolves immediately; choice blocks open three concrete options and accept one. Each block disappears after its single claim. The player must clear every generated claim and any special route event before continuing the path.
 
@@ -58,7 +58,7 @@ Post-War rewards are run-only unless explicitly labeled permanent:
 - **Stratagem:** distinct situational or opening-round command effect for the current run.
 - **Wargear Cache:** one item selected from three and assigned later during deployment.
 - **Force Recovery:** restores one campaign attempt, or grants temporary Requisition when already at full strength.
-- **Reinforcement signal:** occasionally unlocks one of the faction's two unrecovered unit patterns.
+- **Distress signal:** victory rescues a random Imperial unique unit or epic hero for the entire mission (the selected campaign across all sectors). Rescues enter Ordeal at one stock, use their existing roster profile and normal points/grid limits, survive sector changes and reloads, and disappear when the mission ends. Older saved reinforcement events still unlock faction patterns.
 - **Field store:** occasionally offers three Wargear items for campaign Requisition.
 
 Only the first two unit patterns in the chosen faction's JSON are available at campaign start. Reinforcement events can unlock the other two. Unit stock limits still apply, and the full 6×5 grid remains available from the start.
@@ -114,7 +114,7 @@ The player chooses one base points scale for the entire run. Clearing sectors do
 | 2,000 Strike Force | 7 | 5 + boss | 1.24× | 80 per tier |
 | 3,000 Onslaught | 8 | 6 + boss | 1.34× | 110 per tier |
 
-Every area layer exposes three connected battle choices worth 1–3 stars. Enemy faction and star rating are visible before deployment. Choosing one area closes the other two choices at that layer. Recruit/store signals are determined by sector, step and lane. Enemies and reward choices use random selection; the run's `seed` is stored but does not currently drive a seeded random generator.
+Every layer contains three systems worth 1–3 stars. All systems and route links are visible from the start. Choosing a system closes the other choices at that layer; only linked systems in the following layer become available. Boss links converge from every lane, retaining the existing star gates. Enemy faction and difficulty are visible before deployment. Distress/store signals are determined by sector, step and lane. Enemy factions are rolled once when the sector chart is created and saved with its topology; reward choices remain random. Existing runs preserve their current offers and visited battles when migrating to the saved chart.
 
 The area difficulty multiplier is `(0.62 + stars × 0.14 + step × 0.035) × enemyScale`, with a zero-based step. Enemy force generation targets at least 150 points, otherwise the deployed player army's points multiplied by difficulty. It fills toward 85% of that target, with discrete unit-cost overshoot and a 20-unit safety limit; this is not an exact opposing points budget.
 
@@ -128,7 +128,7 @@ Boss tiers use these unlock thresholds, where `depth` is the number of regular a
 
 Stars unlock choices; they are not spent. Boss victory also awards its tier in stars. The first enemy unit becomes the boss, gains an HP multiplier of `1.25 + tier × 0.2`, and gains one Attack per model. Finishing the boss's Post-War segment secures the sector and unlocks the next one. Finishing the last sector ends the campaign.
 
-The sector and local charts use fixed three-dimensional coordinates, perspective depth, raycast selection, constrained panning, wheel/pinch zoom, and a camera-travel confirmation. The current implementation still advances missions by layers; it is not yet a persistent free-form territory network with all adjacent systems visible at once.
+The sector and local charts use fixed three-dimensional coordinates, perspective depth, raycast selection, constrained panning, wheel/pinch zoom, and a camera-travel confirmation. The chart preserves the existing battle-layer pacing while displaying the complete saved network and enforcing its next-layer links; it does not allow backtracking or arbitrary free travel.
 
 ### 4.1 WebGL navigation contract
 
@@ -155,7 +155,7 @@ Navigation behavior is fixed:
 - Leaving Operation cancels animation and input listeners and disposes the WebGL scene. Returning constructs a fresh view from campaign state.
 - If WebGL initialization fails, the static chart treatment and DOM controls remain functional so campaign progress is never blocked by rendering support.
 
-The chart adds spatial presentation without changing route rules. The galaxy shows the sectors already defined by campaign size and completion state. The local view shows the current layer's three offers. Persistent adjacency, free-form travel and a fully visible sector territory network are future campaign features and require new saved topology rather than renderer-only work.
+The chart adds spatial presentation without changing route rules. The galaxy shows the sectors already defined by campaign size and completion state. The local view shows every system in the saved sector chart with dashed route links, a current ship marker, grey glowing future destinations, and larger difficulty stars. Free-form backtracking remains outside the current campaign rules.
 
 ## 5. Factions and JSON data
 
@@ -388,6 +388,7 @@ void-runner/
 ├── public/data/warhammer-roster.json  # Compact KS-derived data
 ├── js/main.js                         # Loads JSON, starts game
 ├── js/core/Game.js                    # Campaign, builder and D6 engine
+├── js/core/CampaignChart.js           # Saved sector topology, migration and reachability
 ├── js/render/TerminalRenderer.js      # Persistent WebGL chassis, CRT glass and screen compositing
 ├── js/render/GalaxyMap3D.js           # WebGL galaxy/local-system renderer and input
 ├── js/data/units.js                   # Campaign tiers, sectors, Enhancements, Stratagems, Wargear, research
@@ -413,7 +414,7 @@ Important methods for continued work:
 | Formation | `renderLoadout`, `placeUnit`, `attachLeader`, `equipGear` |
 | Dice and simulation | `startBattle`, `prepareDiceAttack`, `applyDiceAttack`, `commandPhase` |
 | Post-War segments | `openRewards`, `selectPostWarSegment`, `claimPostWarChoice`, `completePostWarSegment` |
-| Recruit/store | `openRecruitEvent`, `openStoreEvent`, `finishPostWarEvent` |
+| Rescue/recruit/store | `openDistressEvent`, `distressOffer`, `claimDistressRescue`, `openRecruitEvent`, `openStoreEvent`, `finishPostWarEvent` |
 
 ## 13. Development and validation
 
@@ -447,7 +448,7 @@ Required checks:
 - Pointer targets and projected DOM controls select each destination exactly once; keyboard activation follows the same route.
 - Reduced motion skips camera flight, WebGL fallback leaves navigation usable, and leaving Operation stops its animation loop and releases the renderer.
 - Post-War Affairs generates three to five single-claim blocks, removes each claimed block, and blocks travel until every claim and special event is resolved.
-- Recruitment unlocks a pattern and stores charge the shown temporary currency.
+- Distress victory grants one saved random Imperial rescue, deployable in Ordeal for this mission only; older recruitment events unlock a pattern. Stores charge the shown temporary currency.
 - Stars unlock boss tiers without being consumed; boss victory unlocks the next sector.
 - Requisition and permanent upgrades persist.
 - Active campaigns resume after reload.
@@ -473,7 +474,7 @@ The 4×4 silhouette atlas contains 16 archetypes. Many additional factions reuse
 Known follow-ups identified from the current source:
 
 1. **Terminal consistency audit:** the physical terminal, CRT compositing, dedicated directive screen, and shared safe area are implemented. Continue checking every remaining screen at 320, 390, and 480 CSS px for cropped headings, opaque panels, stacked card rhythm, misplaced footers, or content that appears in front of the glass.
-2. **Persistent route topology:** the WebGL charts now provide spatial navigation, but area progression still advances through generated layers. A persistent territory and adjacency map needs an explicit saved graph, route reveal rules, and migration for active campaigns.
+2. **Route expansion:** the sector chart now saves every layer and link, reveals future grey signals, and preserves existing saves. Further expansion may add non-layered branches or backtracking, but must explicitly define the new traversal and reward rules.
 3. **Cartography polish:** validate projected label size and collision at phone widths, add more sector-specific local-system landmarks, and tune gas, star density, and emission against the restrained gothic-terminal direction. Preserve the existing coverage, starting marker, gesture bounds, accessibility controls, and WebGL fallback.
 4. **Exhausted reward pools:** a partly exhausted Enhancement or Stratagem pool can show fewer than three choices. A fully exhausted pool converts the claim to 10 Requisition, but partial pools still need equivalent replacement options.
 5. **Higher-point army growth:** four patterns, stock limits, and the 6×5 grid can prevent using the full 2,000/3,000-point allowance. Expand the roster or define point-scale stock and grid rules before treating those scales as balanced.
@@ -502,3 +503,7 @@ Tell the next coding agent: "Read gdd.md, README.md and artstyle.md, inspect git
 All referenced runtime images, GIFs, source and the dependency lockfile belong in Git. `node_modules/`, `dist/`, `.env*` and `.vercel/` are intentionally ignored and must be regenerated or configured locally. Vercel CLI authentication/project linkage is machine-specific; do not commit tokens or copy `.vercel` as a substitute for relinking. Existing deployment configuration builds with `npm run build` and serves `dist/`.
 
 Production URL at handoff: `https://combatpatrol.vercel.app`. The interactive WebGL cartography was introduced in `972b2f2`; the persistent terminal and later CRT layout corrections culminate in the current `58c117a` baseline. The complete reference archive was added in `98d3398` and extended in `c246ebc`. The reference material informs future original production art and is not itself a runtime asset library.
+
+### Sector-chart and Distress handoff — 24 October 2026
+
+`sector.chart` stores the versioned layers, start beacon, links and legacy-offer compatibility. `CampaignChart.js` computes reachable, cleared and bypassed states. `run.rescuedUnits` stores complete mission-only profiles; `pendingPostWar.rescueOffer` locks the random survivor before claiming, so reopening or reloading cannot reroll or duplicate it. The initial pool uses all eligible `Imperium` profiles in the compact roster, with Darnath Lysander, Bjorn the Fell-Handed and Ragnar Blackmane as epic heroes. No invented tabletop statlines are added. Future data expansion can add more Imperial profiles to the pool. `npm run check` includes chart migration, adjacency, boss gating and rescue-lifetime checks.

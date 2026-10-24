@@ -267,3 +267,7 @@ A finished screen must pass these questions:
 - Official logos, traced character art, copied interface frames, or copied compositions.
 - Applying damage before the visible Damage stage.
 - Motion blur, constant screen shake, rapid flashes, or interactions that depend on hover.
+
+### Sector route-chart extension — 24 October 2026
+
+Preserve the existing CRT, star signals, pan/zoom and portrait composition. Reveal the entire saved sector network with thin dashed links, a clear start/current position, and future systems glowing neutral grey. Reachable signals retain their existing emission. Difficulty stars occupy their own larger line; keep destination names subordinate to the decision and avoid crowded faction text on locked systems. Do not label ordinary systems POST-WAR CHOICE. DISTRESS marks a survivor rescue, FIELD STORE a supply event. Every signal remains a projected semantic control; unavailable systems are visibly present and disabled.
