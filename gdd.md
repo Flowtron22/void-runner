@@ -6,7 +6,7 @@ This is the authoritative gameplay and implementation handoff. Read it with `art
 
 The game is now a portrait-first 40K-inspired army-building roguelike with automatic dice combat and a star-driven sector campaign.
 
-Last handoff update: 23 October 2026. The command deck is the campaign's stable navigation baseline.
+Last handoff update: 24 October 2026. The persistent WebGL command terminal and its CRT safe area are the presentation baseline; the command deck remains the campaign's stable navigation hub.
 
 This file describes the current code and records unfinished work explicitly. Start with section 15 when continuing on another PC. Do not restore the superseded spaceship game or the old campaign that increased points after each warzone.
 
@@ -73,8 +73,13 @@ The previous original unit roster and flat-damage combat are no longer active.
 
 - Portrait-first reference frame: 480×854.
 - Desktop keeps the game inside a centered portrait command board.
+- One persistent gothic terminal chassis frames every game state. Its physical bezel stays fixed while the active screen changes inside the recessed CRT opening.
+- Every `.screen` must use the shared CRT safe-area geometry. Headings, cards, maps, footer actions, dialogs presented as full screens, and scrollable content may never overlap the crest, bezel, grille, or lower hardware.
+- Scrolling happens inside the CRT opening. The chassis never scrolls, native scrollbar chrome remains hidden, and the primary return action sits at the bottom of the screen composition without leaving unexplained dead space beneath it.
+- Screen changes replace the previous screen completely. A directive, deployment view, or other destination must never reveal buttons or content from the preceding screen behind it.
 - The global visual direction follows `artstyle.md`: physical gothic shipboard terminals, blackened iron, aged brass, smoked CRT glass, parchment, wax, localized phosphor emission, painterly portraits, and original ecclesiastical-industrial motifs.
 - Major screens must feel installed inside the command vessel rather than arranged as flat webpage cards.
+- CRT content uses transparency, localized gradients, screen blending, scan texture, and edge falloff so imagery and controls share one glass plane. Do not place an opaque black canvas or freestanding web panel over the terminal artwork.
 - Green, amber, red, and rare cyan emission must come from a believable screen, lamp, lens, signal, or celestial source.
 - No interaction depends on hover.
 - Minimum touch target is 40 CSS px.
@@ -136,13 +141,17 @@ The sector and local charts use fixed three-dimensional coordinates, perspective
 
 The renderer is imported only when Operation opens so army building, combat and the command deck do not pay the Three.js bundle cost. `Game` remains authoritative for campaign state and supplies destinations, labels, status and selection callbacks. `GalaxyMap3D` owns the scene, camera, raycasting, projection, gestures, animation and cleanup. Camera position is presentation state and is not written to the campaign save.
 
+`TerminalRenderer` is separate from `GalaxyMap3D`. It renders the persistent chassis, screen surface, CRT scan/interference layer, per-screen environmental texture, and selected hardware-style menu controls. The HTML screens remain the semantic and interactive layer above it. The terminal renderer uses screen-style compositing so the display appears emitted through smoked glass rather than pasted onto the bezel. Content screens without a dedicated painting inherit the procedural green-black CRT field.
+
 Navigation behavior is fixed:
 
 - One-finger or mouse drag pans across the chart; wheel and two-finger pinch zoom within authored bounds.
 - The camera remains upright and constrained. The minimum zoom still covers the viewport, and no gesture may reveal an empty canvas edge.
+- The chart starts far enough below the upper bezel that its title and first navigation marker are never cropped. Its authored composition uses the available lower field instead of reserving a large empty band above the return control.
 - Selecting a raycast target or its projected HTML control begins the same destination action. The camera approaches the signal before `Game` opens the next view unless reduced motion is active.
 - Labels are DOM controls projected from the same world coordinates as their WebGL signals. They remain keyboard-focusable and readable by assistive technology.
-- The starting/current position has a persistent marker. Availability, focus, selected and locked states remain distinguishable without color alone.
+- The starting/current position has a persistent `START POINT` marker. Availability, focus, selected and locked states remain distinguishable without color alone. Locked destinations remain dim stellar signals, not grey spherical buttons.
+- Stellar nodes are compact emissive neutron-star-like signals with restrained pulses. Sparse layered gas clouds and dust prevent an empty void while remaining subordinate to labels and route choices.
 - Leaving Operation cancels animation and input listeners and disposes the WebGL scene. Returning constructs a fresh view from campaign state.
 - If WebGL initialization fails, the static chart treatment and DOM controls remain functional so campaign progress is never blocked by rendering support.
 
@@ -364,6 +373,8 @@ The active run also stores its directive briefing state, completed sector direct
 
 Each sector is framed as a sealed Ordo Malleus directive. Selecting a new sector opens a scripted briefing with an objective and authority reward, the area map carries an active-directive tracker, and completed directives are recorded in `run.story`. Portraits and briefing machinery follow `artstyle.md`: painterly environmental character art inside a physical shipboard transmission terminal.
 
+The directive is a dedicated CRT screen, not a modal over the sector map. Accept or Belay replaces the directive screen with its destination; no sector-map footer or previous-page control remains visible behind it. The briefing is centered within the shared CRT safe area, uses the Inquisitorial officer portrait, has no freestanding outer card border, and blends its portrait and transmission field into the same smoked-glass surface.
+
 Git transfers source and assets, not browser saves. Another PC, browser profile or origin starts with its own progress. Localhost and the production domain also have separate saves. No cloud save or save export/import UI exists yet. Old v2 active-run saves are not loaded by the current v3 campaign.
 
 ## 12. Source architecture
@@ -375,6 +386,7 @@ void-runner/
 ├── public/data/warhammer-roster.json  # Compact KS-derived data
 ├── js/main.js                         # Loads JSON, starts game
 ├── js/core/Game.js                    # Campaign, builder and D6 engine
+├── js/render/TerminalRenderer.js      # Persistent WebGL chassis, CRT glass and screen compositing
 ├── js/render/GalaxyMap3D.js           # WebGL galaxy/local-system renderer and input
 ├── js/data/units.js                   # Campaign tiers, sectors, Enhancements, Stratagems, Wargear, research
 ├── gif/                              # Active faction animations and unused future battle assets
@@ -426,6 +438,9 @@ Required checks:
 - Setup offers 500, 1,000, 2,000, and 3,000-point scales and the chosen base scale persists through every sector. The 1,500-point tier remains data-only for save compatibility.
 - Both maps use spatial WebGL scenes; pan, wheel/pinch zoom, raycasting, projected labels, and camera travel work without exposing empty space.
 - Galaxy and local-system views have visibly different fields and scale; entering a sector reads as travel inward rather than reuse of one background.
+- The local-system screen uses the same heading, status-strip, directive-strip, chart plane, and footer rhythm as sector selection; it does not become a bordered dashboard stacked over the CRT.
+- All full screens remain inside the shared CRT safe area at 320, 390, and 480 CSS px widths. Titles are not cropped by the upper bezel, return controls sit at the bottom of the usable composition, and the previous screen is fully absent after navigation.
+- The operation directive is a dedicated centered CRT state with the Inquisitorial portrait and no modal backdrop, outer card outline, or underlying sector controls.
 - At 320, 390 and 480 CSS px widths, labels stay anchored after pan, zoom, travel and resize, and the starting/current marker remains visible.
 - Pointer targets and projected DOM controls select each destination exactly once; keyboard activation follows the same route.
 - Reduced motion skips camera flight, WebGL fallback leaves navigation usable, and leaving Operation stops its animation loop and releases the renderer.
@@ -455,14 +470,13 @@ The 4×4 silhouette atlas contains 16 archetypes. Many additional factions reuse
 
 Known follow-ups identified from the current source:
 
-1. **Art-direction migration:** rebuild the current cyan/pixel and flat-card presentation around the physical gothic terminal, localized phosphor, painterly portrait, and environmental rules in `artstyle.md`. Existing gameplay behavior must remain stable during this migration.
+1. **Terminal consistency audit:** the physical terminal, CRT compositing, dedicated directive screen, and shared safe area are implemented. Continue checking every remaining screen at 320, 390, and 480 CSS px for cropped headings, opaque panels, stacked card rhythm, misplaced footers, or content that appears in front of the glass.
 2. **Persistent route topology:** the WebGL charts now provide spatial navigation, but area progression still advances through generated layers. A persistent territory and adjacency map needs an explicit saved graph, route reveal rules, and migration for active campaigns.
-3. **Cartography polish:** validate projected label size and collision at phone widths, add more sector-specific local-system landmarks, and tune star density and emission against the restrained gothic-terminal direction. Preserve the existing coverage, starting marker, gesture bounds, accessibility controls, and WebGL fallback.
+3. **Cartography polish:** validate projected label size and collision at phone widths, add more sector-specific local-system landmarks, and tune gas, star density, and emission against the restrained gothic-terminal direction. Preserve the existing coverage, starting marker, gesture bounds, accessibility controls, and WebGL fallback.
 4. **Exhausted reward pools:** a partly exhausted Enhancement or Stratagem pool can show fewer than three choices. A fully exhausted pool converts the claim to 10 Requisition, but partial pools still need equivalent replacement options.
 5. **Higher-point army growth:** four patterns, stock limits, and the 6×5 grid can prevent using the full 2,000/3,000-point allowance. Expand the roster or define point-scale stock and grid rules before treating those scales as balanced.
-6. **Help copy:** the current Help dialog still describes a single reward choice and uses the older Honour terminology. Update it to explain clearing all three to five claims.
-7. **Asset coverage:** many factions still reuse silhouette fallbacks. Create original readable unit art and painterly briefing portraits without shipping files from `ref/` directly.
-8. **CSS consolidation:** the stylesheet contains overlapping legacy galaxy, territory, pixel-panel, and later override blocks. Consolidate them as each screen is rebuilt so state ownership and responsive behavior remain understandable.
+6. **Asset coverage:** many factions still reuse silhouette fallbacks. Create original readable unit art and painterly briefing portraits without shipping files from `ref/` directly.
+7. **CSS consolidation:** `main.css` and `terminal-frame.css` intentionally overlap while the new terminal layer supersedes legacy screen styling. Consolidate obsolete galaxy, territory, pixel-panel, and responsive overrides only after visual parity is verified, so state ownership remains understandable.
 
 Further expansion can add multiple weapon loadouts, explicit shooting/melee phases, terrain/cover, objective scoring, faction-specific rewards and damage-contribution breakdowns. Supported dice rules listed in section 7 must not be re-added as if missing.
 
@@ -485,4 +499,4 @@ Tell the next coding agent: "Read gdd.md, README.md and artstyle.md, inspect git
 
 All referenced runtime images, GIFs, source and the dependency lockfile belong in Git. `node_modules/`, `dist/`, `.env*` and `.vercel/` are intentionally ignored and must be regenerated or configured locally. Vercel CLI authentication/project linkage is machine-specific; do not commit tokens or copy `.vercel` as a substitute for relinking. Existing deployment configuration builds with `npm run build` and serves `dist/`.
 
-Production URL at handoff: `https://combatpatrol.vercel.app`. The interactive WebGL cartography was introduced in `972b2f2`; the complete reference archive was added in `98d3398` and extended in `c246ebc`. The reference material informs future original production art and is not itself a runtime asset library.
+Production URL at handoff: `https://combatpatrol.vercel.app`. The interactive WebGL cartography was introduced in `972b2f2`; the persistent terminal and later CRT layout corrections culminate in the current `58c117a` baseline. The complete reference archive was added in `98d3398` and extended in `c246ebc`. The reference material informs future original production art and is not itself a runtime asset library.

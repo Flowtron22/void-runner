@@ -1,6 +1,6 @@
 # COMBAT PATROL — Art Style and Interface Direction
 
-This document is the visual source of truth for the game. Read it before changing UI, creating portraits, commissioning illustration, generating assets, or adding effects. The reference archive lives in `ref/`, with the primary interface and portrait study in `ref/GK/RT_UI/`.
+This document is the visual source of truth for the game. Read it before changing UI, creating portraits, commissioning illustration, generating assets, or adding effects. The reference archive lives in `ref/`, with the primary interface and portrait studies in `ref/GK/RT_UI/` and the current Photoshop composition targets in `ref/GK/GK_UI/`.
 
 The references establish a broad art direction rather than a library of production assets. New work must use original characters, symbols, compositions, frames, and illustrations while applying the material, lighting, hierarchy, and painting principles described here.
 
@@ -12,12 +12,15 @@ The player should feel that they are operating a dangerous physical instrument r
 
 The mood combines ecclesiastical authority, naval command, analogue computation, and restrained horror. It is solemn and functional. Ornament supports the hierarchy instead of filling every empty surface.
 
+The current production baseline is one persistent portrait command terminal. The chassis, crest, side pillars, lower grille, cables, and CRT glass form a single instrument. Screens change inside that glass; they do not replace, cover, or float in front of the instrument.
+
 ## 2. Principles extracted from the reference set
 
 ### The interface is a physical object
 
 - Major views sit inside substantial bezels with visible thickness, seams, bolts, vents, cables, grilles, lenses, and worn edges.
 - Screens are dark green-black glass with subtle curvature, reflections, scan texture, and localized phosphor emission.
+- The frame and CRT are composited as one continuous object. Screen content uses transparent darkening, edge falloff, and screen-style light blending so the chassis remains visible and the content appears beneath the glass.
 - Controls attach to a believable machine. Floating cards should appear only when the fiction supports projection or a removable dossier.
 - Different stations can have different hardware while sharing the same shipboard construction language.
 - Background environments remain visible around machinery so each station feels installed somewhere on the command deck.
@@ -106,12 +109,23 @@ Stable game symbols remain useful: `♥` attempts, `◆` Requisition, `★` camp
 - Minimum supported width: `320` CSS pixels.
 - Minimum touch target: `44 × 44` CSS pixels.
 - The physical frame may consume 8–14% of the canvas edge, but the playable display must still fit critical decisions without horizontal scrolling.
+- The shared CRT safe area is the only valid coordinate space for full-screen UI. No heading, map label, card, button, or scroll region may cross under the upper crest, side pillars, or bottom grille.
 - Use an 8 px rhythm for large structure and a 4 px rhythm inside dense instruments.
 - Consequential numbers and actions must remain readable above texture and scan effects.
 - Desktop may reveal more of the surrounding bridge or machinery while retaining the same portrait instrument at the center.
-- Safe-area padding must preserve hardware edges and the consistent return control at the bottom.
+- Safe-area padding must preserve hardware edges and the consistent return control at the bottom. Use the full vertical CRT field: do not crowd the heading against the bezel or leave a large unused band below the main content.
+- Long screens scroll internally with hidden native scrollbars. The fixed chassis never moves. Sticky actions may pin to the bottom of the CRT plane, but they must not sit halfway up the screen when useful space remains below.
+- A navigation transition leaves only one active screen. Previous-page controls must not remain visible beneath a briefing, map, or deployment state.
 
 Avoid stacking identical bordered rectangles. Establish one dominant machine, then organize content inside it with recesses, rails, physical tabs, dossier sheets, or connected sub-displays.
+
+### CRT compositing contract
+
+- The WebGL terminal renders the chassis, environmental display image, procedural green-black phosphor field, scan interference, glass dust, vignette, and restrained reveal.
+- HTML remains responsible for readable text, semantic structure, focus, and input. It should visually share the CRT image plane through translucent fields rather than opaque page backgrounds.
+- Full-screen imagery crops to cover the CRT opening without stretching. Preserve the important face, ship, or chart landmark across 320–480 px widths.
+- Use localized shadow or gradient backing only where text needs contrast. Large solid black rectangles, visible canvas bounds, generic modal backdrops, and bright outer card outlines break the illusion.
+- Menu and command-deck controls may receive WebGL material response because they represent physical terminal controls. Dense lists and tactical controls remain HTML for clarity and performance, styled as embedded readouts.
 
 ## 8. Interaction states
 
@@ -151,9 +165,9 @@ Treat Ordeal, Research, and Operation as three stations or command channels with
 
 ### Galaxy and sector navigation
 
-Show the galaxy on a dedicated cartographic display. The galaxy level communicates scale, labeled regions, and selectable stellar signals. Entering a sector changes to a deeper local chart with a distinct star field and system composition. Star systems are celestial signals with light, spectral character, coordinates, and labels; they are not circular menu buttons.
+Show the galaxy on a dedicated cartographic display. The galaxy level communicates scale, labeled regions, and selectable stellar signals. Entering a sector changes to a deeper local chart with a distinct star field and system composition. Star systems are compact emissive neutron-star-like signals with light, spectral character, coordinates, and labels; they are not spheres or circular menu buttons.
 
-Pan and zoom must feel like moving an instrument camera across a continuous chart. The background must cover the full navigable extent at every supported zoom. Starting position, current location, reachable systems, and locked signals require unmistakable states. Keep chart density low enough that labels and missions remain readable.
+Pan and zoom must feel like moving an instrument camera across a continuous chart. The background must cover the full navigable extent at every supported zoom. Starting position, current location, reachable systems, and locked signals require unmistakable states. Locked systems stay visible as low-energy blinking stars with grey labels. Keep star density controlled, then use sparse gas clouds and dust to give the void depth without competing with labels.
 
 #### WebGL cartography specification
 
@@ -174,6 +188,8 @@ Selection states use light and instrument response rather than animated planetar
 - **Locked:** dim signal, visible name, and explicit lock reason where needed.
 - **Current or starting position:** persistent navigation marker that remains visible at every allowed zoom.
 
+The local-system screen follows the same single-plane hierarchy as sector selection: heading, compact campaign status, slim active-directive strip, uninterrupted chart, then return control. Do not rebuild it as stacked bordered cards. Place the chart low enough to clear the upper bezel and let it occupy the available lower CRT field.
+
 Camera travel should take roughly 500–900 ms and settle cleanly. Direct manipulation stops the travel before accepting a new gesture. Reduced motion changes travel into an immediate camera placement and removes pulsing or drift that is not required for state recognition.
 
 Keep the renderer practical on mobile. Load the WebGL module only when Operation opens, cap device pixel ratio, avoid full-screen bloom and expensive post-processing, and dispose of controls, geometry, material, texture, renderer, observers, and animation frames when leaving the chart. Prefer a few deterministic particle layers over a dense generated galaxy. If WebGL fails, retain the authored chart background and fully usable HTML destination controls.
@@ -188,7 +204,9 @@ The battle instrument prioritizes attacker, defender, health, target thresholds,
 
 ### Briefings and contracts
 
-Present each Inquisitorial directive as an authenticated transmission or sealed dossier. The portrait is environmental painterly art. Objective, authority, and reward sit in a compact machine-readable block. Accept and Belay belong together at the bottom of the briefing.
+Present each Inquisitorial directive as an authenticated transmission taking over the CRT. It is a dedicated screen, never a popup over the sector chart. The Inquisitorial officer portrait is environmental painterly art, cropped into the upper display and blended through the smoked glass. Objective, authority, and reward sit in a compact machine-readable block. Accept and Belay belong together at the bottom of the briefing.
+
+Center the transmission within the CRT safe area. Remove the freestanding outer card border; use tonal separation, a restrained internal divider, and edge fade to bind portrait and text into the terminal. The previous page, its footer, and its buttons must be completely absent while the directive is active.
 
 ### Post-War Affairs
 
@@ -231,10 +249,14 @@ A finished screen must pass these questions:
 6. Does the screen remain functional with motion disabled and at 320 px width?
 7. Are all controls understandable by touch, keyboard, and screen reader?
 8. Is the result original rather than a traced frame, copied composition, or reused faction insignia?
+9. Is every visible element inside the CRT safe area, with no cropped title, floating card, leftover screen, or misplaced footer?
 
 ## 14. Avoid
 
 - Flat webpage cards arranged in repetitive stacks.
+- Opaque black canvases or rectangular overlays stamped onto the CRT frame.
+- Popup briefings that leave previous-page controls visible behind them.
+- Titles cropped by the upper bezel, return controls floating above unused space, or content crossing the terminal hardware.
 - Cyan-heavy cyberpunk styling or unrestricted rainbow accents.
 - Glassmorphism, generic HUD brackets, and decorative data that communicates nothing.
 - Uniform edge glow around every object.
