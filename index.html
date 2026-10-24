@@ -144,20 +144,22 @@
       <p class="eyebrow">// ARCHIVE</p><h2>COMBAT PATROL</h2><p>Original tactical roguelike prototype. Campaign design, interface and simulation created for this project. Unit data is adapted from the local KS roster.</p><button id="close-credits-button" class="primary large">BACK</button>
     </dialog>
 
-    <dialog id="mission-dialog" class="modal mission-dialog pixel-panel">
-      <div class="mission-portrait"><img src="assets/inquisitorial-officer.jpg" alt="Inquisitorial officer delivering an Ordo Malleus directive" /></div>
-      <div class="mission-transmission">
-        <p class="eyebrow" id="mission-kicker">// INQUISITORIAL DIRECTIVE</p>
-        <h2 id="mission-title">THE ASHEN TITHE</h2>
-        <b class="mission-speaker">ORDO MALLEUS · SEALED AUTHORITY</b>
-        <p id="mission-copy"></p>
-        <div class="mission-objective"><small>OBJECTIVE</small><b id="mission-objective"></b><span id="mission-reward"></span></div>
-        <div class="mission-actions">
-          <button id="mission-accept-button" class="primary large">ACCEPT DIRECTIVE</button>
-          <button id="mission-belay-button" class="large">BELAY</button>
+    <section id="mission-screen" class="screen mission-screen" aria-labelledby="mission-title">
+      <div class="mission-card mission-dialog pixel-panel">
+        <div class="mission-portrait"><img src="assets/inquisitorial-officer.jpg" alt="Inquisitorial officer delivering an Ordo Malleus directive" /></div>
+        <div class="mission-transmission">
+          <p class="eyebrow" id="mission-kicker">// INQUISITORIAL DIRECTIVE</p>
+          <h2 id="mission-title">THE ASHEN TITHE</h2>
+          <b class="mission-speaker">ORDO MALLEUS · SEALED AUTHORITY</b>
+          <p id="mission-copy"></p>
+          <div class="mission-objective"><small>OBJECTIVE</small><b id="mission-objective"></b><span id="mission-reward"></span></div>
+          <div class="mission-actions">
+            <button id="mission-accept-button" class="primary large">ACCEPT DIRECTIVE</button>
+            <button id="mission-belay-button" class="large">BELAY</button>
+          </div>
         </div>
       </div>
-    </dialog>
+    </section>
 
     <dialog id="event-dialog" class="modal pixel-panel">
       <p class="eyebrow" id="event-kicker">// FIELD EVENT</p><h2 id="event-title">REINFORCEMENTS</h2><p id="event-copy"></p><div id="event-options" class="event-options"></div><button id="event-continue-button" class="large">CONTINUE</button>

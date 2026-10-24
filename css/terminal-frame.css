@@ -246,35 +246,41 @@ dialog.modal::backdrop {
   backdrop-filter: blur(2px);
 }
 
-#mission-dialog.mission-dialog {
-  position: absolute;
-  z-index: 60;
-  top: calc(var(--terminal-screen-top) + 14px);
-  left: 50%;
-  width: min(calc(var(--terminal-screen-width) - 32px), 400px);
-  max-width: none;
-  max-height: calc(100dvh - var(--terminal-screen-top) - var(--terminal-screen-bottom) - 28px);
-  margin: 0;
-  transform: translateX(-50%);
-  overflow: auto;
+#mission-screen.active {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#mission-screen .mission-card {
+  width: 100%;
+  max-height: 100%;
+  margin: auto 0;
+  border: 1px solid #8b7448;
+  border-top-width: 3px;
+  overflow: hidden;
   background: linear-gradient(180deg, #1a211ee8, #0a0f0ded);
   box-shadow: inset 0 1px #f3df9f18, 0 8px 24px #0009;
 }
 
-#mission-dialog::backdrop { background: transparent; backdrop-filter: none; }
-.app-shell:has(#mission-dialog[open]) .screen.active { filter: brightness(.36) blur(1px); pointer-events: none; }
-#mission-dialog .mission-portrait { height: min(31.5dvh, 270px); }
-#mission-dialog .mission-portrait img { object-position: 50% 8%; filter: saturate(.82) contrast(1.08) brightness(.91); }
-#mission-dialog .mission-transmission { padding: 12px 14px 14px; }
-#mission-dialog .mission-transmission .eyebrow { margin-bottom: 4px; }
-#mission-dialog .mission-transmission h2 { margin: 0 0 5px; font-size: 25px; }
-#mission-dialog .mission-speaker { margin-bottom: 8px; }
-#mission-dialog .mission-transmission > p:not(.eyebrow) { margin-bottom: 10px; font-size: 9px; line-height: 1.42; }
-#mission-dialog .mission-objective { margin-bottom: 10px; padding: 8px 9px; }
-#mission-dialog .mission-objective b { margin-top: 3px; }
-#mission-dialog .mission-objective span { margin-top: 4px; }
-#mission-dialog .mission-actions { gap: 6px; }
-#mission-dialog .mission-actions button { min-height: 44px; }
+#mission-screen .mission-portrait { height: min(31.5dvh, 270px); }
+#mission-screen .mission-portrait img { object-position: 50% 8%; filter: saturate(.82) contrast(1.08) brightness(.91); }
+#mission-screen .mission-transmission { padding: 12px 14px 14px; }
+#mission-screen .mission-transmission .eyebrow { margin-bottom: 4px; }
+#mission-screen .mission-transmission h2 {
+  margin: 0 0 5px;
+  color: #eee9dc;
+  font: 700 25px/1 Georgia, "Times New Roman", serif;
+  letter-spacing: .02em;
+  text-shadow: 0 2px #000;
+}
+#mission-screen .mission-speaker { margin-bottom: 8px; }
+#mission-screen .mission-transmission > p:not(.eyebrow) { margin-bottom: 10px; font-size: 9px; line-height: 1.42; }
+#mission-screen .mission-objective { margin-bottom: 10px; padding: 8px 9px; }
+#mission-screen .mission-objective b { margin-top: 3px; }
+#mission-screen .mission-objective span { margin-top: 4px; }
+#mission-screen .mission-actions { gap: 6px; }
+#mission-screen .mission-actions button { min-height: 44px; }
 
 #loadout-screen.active {
   --cell: clamp(34px, 4.55dvh, 42px);
@@ -326,7 +332,6 @@ dialog.modal::backdrop {
   .chapter-grid { gap: 4px; }
   .chapter-card { min-height: 280px; }
   dialog.modal { width: min(calc(var(--terminal-screen-width) - 18px), calc(100vw - 28px)); }
-  #mission-dialog.mission-dialog { width: calc(var(--terminal-screen-width) - 28px); }
 }
 
 @media (max-height: 700px) {

@@ -329,6 +329,10 @@ export class Game {
 
   goBack() {
     if (this.battle) return;
+    if (this.currentScreen === 'mission') {
+      if ($('#mission-accept-button').dataset.review === 'true') { this.renderMap(); return this.show('map'); }
+      return this.closeMissionBriefing();
+    }
     if (this.currentScreen === 'intro') { this.stopIntro(); this.renderHome(); return this.show('home'); }
     if (this.currentScreen === 'hub') { this.renderHome(); return this.show('home'); }
     if (this.currentScreen === 'setup') {
@@ -778,23 +782,24 @@ export class Game {
     $('#mission-accept-button').textContent = review ? 'RETURN TO CHART' : 'ACCEPT DIRECTIVE';
     $('#mission-accept-button').dataset.review = review ? 'true' : 'false';
     $('#mission-belay-button').hidden = review;
-    const dialog = $('#mission-dialog');
-    if (!dialog.open) dialog.show();
+    this.missionReturnScreen = review ? 'map' : 'sector';
+    this.show('mission');
   }
 
   closeMissionBriefing() {
-    if (!$('#mission-dialog').open) return;
-    $('#mission-dialog').close();
     if (this.run?.story) this.run.story.pendingBriefing = null;
-    if ($('#sector-screen').classList.contains('active')) this.renderSectors();
     this.save();
+    this.renderSectors();
+    this.show('sector');
   }
 
   acceptMission() {
-    if ($('#mission-accept-button').dataset.review === 'true') return $('#mission-dialog').close();
+    if ($('#mission-accept-button').dataset.review === 'true') {
+      this.renderMap();
+      return this.show(this.missionReturnScreen || 'map');
+    }
     const index = this.run?.story?.pendingBriefing;
     if (index === null || index === undefined) return;
-    $('#mission-dialog').close();
     this.run.story.pendingBriefing = null;
     if (!this.run.story.briefed.includes(index)) this.run.story.briefed.push(index);
     this.run.region = index; this.run.step = 0; this.run.sectorStars = 0; this.run.offers = null;
