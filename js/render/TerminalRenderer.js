@@ -166,6 +166,12 @@ export class TerminalRenderer {
     this.screenMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader: screenFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneMinusDstColorFactor,
+      blendDst: THREE.OneFactor,
       uniforms: {
         uTexture: { value: chassisTexture },
         uHasTexture: { value: 0 },

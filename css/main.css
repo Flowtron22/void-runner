@@ -440,11 +440,11 @@ body.star-chart-open .station-footer{width:min(calc(100% - 16px),464px)}
 @media(prefers-reduced-motion:reduce){.mini-orbit{animation:none!important}}
 
 /* Three-dimensional cartography: WebGL owns celestial space; DOM owns readable labels and input. */
-#sector-screen .webgl-star-map,#map-screen .webgl-star-map{position:relative;isolation:isolate;overflow:hidden;padding:0;background:radial-gradient(circle at 24% 31%,#d8ecff 0 1px,transparent 1.7px),radial-gradient(circle at 71% 66%,#a9c9df 0 1px,transparent 1.6px),radial-gradient(ellipse at 52% 44%,#382b4638 0,transparent 48%),#020407;background-size:67px 73px,103px 97px,100% 100%;border:1px solid #59666a;box-shadow:inset 0 0 90px #000,0 12px 34px #000c;touch-action:none;cursor:grab}
-#map-screen .local-webgl-map{background:radial-gradient(circle at 18% 26%,#d9f4ff 0 1px,transparent 1.7px),radial-gradient(circle at 76% 62%,#7eb0c9 0 1px,transparent 1.5px),radial-gradient(ellipse at 48% 52%,#15394a52 0,transparent 54%),#02070a;background-size:61px 69px,97px 89px,100% 100%}
+#sector-screen .webgl-star-map,#map-screen .webgl-star-map{position:relative;isolation:auto;overflow:hidden;padding:0;background:transparent!important;border:0;box-shadow:none;touch-action:none;cursor:grab}
+#map-screen .local-webgl-map{background:transparent!important}
 #sector-screen .webgl-star-map::before,#sector-screen .webgl-star-map::after,#map-screen .webgl-star-map::before,#map-screen .webgl-star-map::after{content:none!important}
 .webgl-star-map.navigating{cursor:grabbing}
-.galaxy-webgl{position:absolute;z-index:1;inset:0;display:block;width:100%;height:100%;outline:0}
+.galaxy-webgl{position:absolute;z-index:1;inset:0;display:block;width:100%;height:100%;outline:0;mix-blend-mode:screen;opacity:.88}
 .webgl-map-labels{position:absolute;z-index:8;inset:0;overflow:hidden;pointer-events:none}
 .webgl-map-label{position:absolute!important;left:0!important;top:0!important;width:138px!important;height:78px!important;min-height:0!important;margin:0!important;padding:25px 4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;clip-path:none!important;color:#eee7d7!important;filter:none!important;overflow:visible!important;pointer-events:auto;transform-origin:50% 20%;text-align:center;will-change:transform,opacity}
 #sector-screen .webgl-star-map .sector-card.webgl-map-label,#map-screen .webgl-star-map .route-node.webgl-map-label,#map-screen .webgl-star-map .route-node.webgl-map-label.available,#map-screen .webgl-star-map .route-node.webgl-map-label.elite,#map-screen .webgl-star-map .route-node.webgl-map-label.boss{display:block!important;position:absolute!important;left:0!important;top:0!important;width:138px!important;height:78px!important;min-height:0!important;margin:0!important;padding:25px 4px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;clip-path:none!important;color:#eee7d7!important;filter:none!important;overflow:visible!important;text-align:center!important}
@@ -461,7 +461,7 @@ body.star-chart-open .station-footer{width:min(calc(100% - 16px),464px)}
 .webgl-map-label:hover:not(:disabled),.webgl-map-label:focus-visible:not(:disabled){outline:none!important;filter:none!important}
 .webgl-map-label:hover:not(:disabled) b,.webgl-map-label:focus-visible:not(:disabled) b{color:#fff!important;text-shadow:0 0 8px #e5bd70,0 2px 4px #000}
 .webgl-map-label:focus-visible:not(:disabled) .webgl-label-copy,.webgl-map-label.route-node:focus-visible:not(:disabled){outline:1px solid #d6b86d;outline-offset:4px}
-.webgl-map-vignette{position:absolute;z-index:12;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 48%,transparent 38%,#0103064f 76%,#000b 100%),repeating-linear-gradient(0deg,transparent 0 3px,#9fb6b505 3px 4px);box-shadow:inset 0 0 0 8px #10191baa,inset 0 0 0 9px #6a77785e}
+.webgl-map-vignette{position:absolute;z-index:12;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 3px,#b7d7c808 3px 4px);box-shadow:inset 0 0 28px #17332255}
 .webgl-map-readout{position:absolute;z-index:14;left:14px;top:14px;display:flex;flex-direction:column;gap:2px;padding:6px 8px;border-left:2px solid #a58c55;background:#05090bc7;pointer-events:none;text-shadow:0 2px 3px #000}
 .webgl-map-readout span{color:#7e9b9b;font:700 6px/1 Rajdhani,"Arial Narrow",sans-serif;letter-spacing:.13em}.webgl-map-readout b{color:#ded3bb;font:800 8px/1.1 Georgia,serif;letter-spacing:.07em}
 .webgl-map-readout.local{border-left-color:#5a8e90}.webgl-map-readout.local b{color:#c5dedd}

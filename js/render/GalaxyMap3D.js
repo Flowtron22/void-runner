@@ -122,13 +122,14 @@ export class GalaxyMap3D {
     this.travel = null;
     this.drag = null;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(mode === 'galaxy' ? 0x020307 : 0x01060a);
-    this.scene.fog = new THREE.FogExp2(this.scene.background,mode === 'galaxy' ? .018 : .025);
+    const spaceColor = new THREE.Color(mode === 'galaxy' ? 0x020307 : 0x01060a);
+    this.scene.fog = new THREE.FogExp2(spaceColor,mode === 'galaxy' ? .018 : .025);
     this.camera = new THREE.PerspectiveCamera(42,1,.1,120);
     this.camera.position.copy(this.cameraGoal);
     this.camera.lookAt(this.target);
     this.compactGpu = window.matchMedia('(max-width: 640px)').matches;
-    this.renderer = new THREE.WebGLRenderer({canvas,antialias:!this.compactGpu,powerPreference:'high-performance'});
+    this.renderer = new THREE.WebGLRenderer({canvas,alpha:true,premultipliedAlpha:false,antialias:!this.compactGpu,powerPreference:'high-performance'});
+    this.renderer.setClearColor(0x000000,0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
