@@ -43,9 +43,9 @@ Sector boss secured → return to the VIGILANT hub
 Secure every sector; bank permanent Requisition
 ```
 
-Selectable campaign sizes are 500, 1000, 2000 and 3000 points. They contain 4, 5, 7 and 8 sectors respectively. Higher sizes also lengthen each sector, multiply enemy strength and increase permanent boss rewards. The selected size stays fixed; Expanded Supply research adds 50 deployable points per rank and Rapid Muster adds 100 points for that run. The older 1500-point tier remains in data only so existing saves can still load.
+Selectable campaign sizes are 500, 1000, 2000 and 3000 points. They contain 4, 5, 7 and 8 sectors respectively. Higher sizes multiply enemy strength and increase permanent boss rewards. Every new sector now has three regular battles followed by one final system; point scale changes the number of sectors, not chart density. The selected size stays fixed; Expanded Supply research adds 50 deployable points per rank and Rapid Muster adds 100 points for that run. The older 1500-point tier remains in data only so existing saves can still load.
 
-Each sector reveals its entire saved route chart: three systems per battle layer, a starting beacon and three boss destinations. Systems carry one, two or three large difficulty stars. The first layer is reachable from the start; later travel follows links to the next layer, with the same or neighbouring lane reachable. Future systems glow grey until reachable. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
+Each sector reveals its entire saved route chart: three systems per battle layer, a starting beacon and one final destination. A new sector has eleven visible beacons in total. Systems carry one, two or three large difficulty stars. The first layer is reachable from the start; later travel follows links to the next layer, with the same or neighbouring lane reachable. Future systems glow grey until reachable. Victory adds that rating to both the current sector and total campaign star counts. At the end of a sector, boss tier 1 is always available; boss tiers 2 and 3 require progressively more sector stars. A boss tier multiplies both threat and permanent reward.
 
 Both navigation views are interactive Three.js charts, not vertical skill trees. The sector view places named stellar signals in a navigable three-dimensional star field. Selecting a signal performs a camera approach before opening its directive. The area view loads a distinct local chart with deeper dust, a strike-cruiser marker, every sector system and dashed route links. Future beacons retain grey emission. DOM labels remain projected over the WebGL scene for crisp text, keyboard use, and screen-reader access.
 
@@ -110,21 +110,21 @@ The player chooses one base points scale for the entire run. Clearing sectors do
 | Scale | Sectors | Areas per sector | Enemy multiplier | Boss permanent reward |
 |---|---:|---:|---:|---:|
 | 500 Combat Patrol | 4 | 3 + boss | 1.00× | 30 per tier |
-| 1,000 Incursion | 5 | 4 + boss | 1.08× | 45 per tier |
-| 2,000 Strike Force | 7 | 5 + boss | 1.24× | 80 per tier |
-| 3,000 Onslaught | 8 | 6 + boss | 1.34× | 110 per tier |
+| 1,000 Incursion | 5 | 3 + boss | 1.08× | 45 per tier |
+| 2,000 Strike Force | 7 | 3 + boss | 1.24× | 80 per tier |
+| 3,000 Onslaught | 8 | 3 + boss | 1.34× | 110 per tier |
 
-Every layer contains three systems worth 1–3 stars. All systems and route links are visible from the start. Choosing a system closes the other choices at that layer; only linked systems in the following layer become available. Boss links converge from every lane, retaining the existing star gates. Enemy faction and difficulty are visible before deployment. Distress/store signals are determined by sector, step and lane. Enemy factions are rolled once when the sector chart is created and saved with its topology; reward choices remain random. Existing runs preserve their current offers and visited battles when migrating to the saved chart.
+Every layer contains three systems worth 1–3 stars. All systems and route links are visible from the start. Choosing a system closes the other choices at that layer; only linked systems in the following layer become available. Links converge from every lane on one final system. Arriving there opens a separate boss-tier choice with the collected-star gates; the map never draws three separate bosses. Enemy faction and difficulty are visible before deployment. Distress/store signals are determined by sector, step and lane. Enemy factions are rolled once when the sector chart is created and saved with its topology; reward choices remain random. Existing runs preserve their current offers and visited battles when migrating to the saved chart.
 
 The area difficulty multiplier is `(0.62 + stars × 0.14 + step × 0.035) × enemyScale`, with a zero-based step. Enemy force generation targets at least 150 points, otherwise the deployed player army's points multiplied by difficulty. It fills toward 85% of that target, with discrete unit-cost overshoot and a 20-unit safety limit; this is not an exact opposing points budget.
 
-Boss tiers use these unlock thresholds, where `depth` is the number of regular areas in the sector:
+Entering the final system opens three boss options. Tier 1 is always available; the player may choose any unlocked lower tier even when stronger tiers are available. Three regular battles yield at most nine stars. Boss tiers use these fixed unlock thresholds:
 
 | Boss | Required sector stars | Difficulty multiplier | Permanent reward |
 |---|---:|---|---|
 | Warlord, tier 1 | 0 | `1.22 × enemyScale` | Base reward × 1 |
-| Champion, tier 2 | `depth + 1` | `1.44 × enemyScale` | Base reward × 2 |
-| Apex Commander, tier 3 | `depth × 2` | `1.66 × enemyScale` | Base reward × 3 |
+| Champion, tier 2 | 5 | `1.44 × enemyScale` | Base reward × 2 |
+| Apex Commander, tier 3 | 8 | `1.66 × enemyScale` | Base reward × 3 |
 
 Stars unlock choices; they are not spent. Boss victory also awards its tier in stars. The first enemy unit becomes the boss, gains an HP multiplier of `1.25 + tier × 0.2`, and gains one Attack per model. Finishing the boss's Post-War segment secures the sector and unlocks the next one. Finishing the last sector ends the campaign.
 
@@ -507,3 +507,7 @@ Production URL at handoff: `https://combatpatrol.vercel.app`. The interactive We
 ### Sector-chart and Distress handoff — 24 October 2026
 
 `sector.chart` stores the versioned layers, start beacon, links and legacy-offer compatibility. `CampaignChart.js` computes reachable, cleared and bypassed states. `run.rescuedUnits` stores complete mission-only profiles; `pendingPostWar.rescueOffer` locks the random survivor before claiming, so reopening or reloading cannot reroll or duplicate it. The initial pool uses all eligible `Imperium` profiles in the compact roster, with Darnath Lysander, Bjorn the Fell-Handed and Ragnar Blackmane as epic heroes. No invented tabletop statlines are added. Future data expansion can add more Imperial profiles to the pool. `npm run check` includes chart migration, adjacency, boss gating and rescue-lifetime checks.
+
+### Compact chart and encounter cancellation — 24 October 2026
+
+Chart version 2 reduces new sectors to three regular battles (nine possible battle systems) and one final system. It records its own `depth`. Migration preserves an already visible/selected legacy encounter and all completed battles, then shortens the unvisited tail. Advanced existing sectors can therefore temporarily contain more than three regular battles; later sectors use the compact layout. The final system stores three boss options but only one map beacon. Unlocks are 0/5/8 sector stars, without spending stars. Deployment has a separate Cancel action, available even with an empty/illegal army. It clears only the pending encounter and returns to the unchanged chart; formation, stars, rewards and route progress are retained. Cancellation is unavailable once combat starts or mandatory rewards are pending. The boss choice also has a return-to-chart action.

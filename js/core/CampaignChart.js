@@ -1,8 +1,14 @@
 // Saved route topology extends the existing three-choice battle layers.
-export function buildSectorChart({region, depth, makeLayer, offers, history, step}) {
+export function buildSectorChart({region, depth, makeLayer, offers, history, step, previousLayers = []}) {
   const visited = history.filter(node => node.region === region);
   const layers = Array.from({length: depth + 1}, (_, row) => {
-    const nodes = row === step && offers?.length ? structuredClone(offers) : makeLayer(row);
+    if (row === depth) {
+      const bosses = makeLayer(row);
+      return [{id:`r${region}-boss-system`,type:'boss-system',name:'SECTOR COMMAND',lane:1,step:row,region,
+        enemyFaction:bosses[0].enemyFaction,bossOptions:bosses.map(boss => ({...boss,enemyFaction:bosses[0].enemyFaction}))}];
+    }
+    const existing = row === step && offers?.some(node => node.type !== 'boss') ? offers : previousLayers[row];
+    const nodes = existing?.length ? structuredClone(existing) : makeLayer(row);
     for (const previous of visited.filter(node => node.step === row)) {
       const index = nodes.findIndex(node => node.id === previous.id);
       if (index >= 0) nodes[index] = structuredClone(previous);
@@ -16,7 +22,7 @@ export function buildSectorChart({region, depth, makeLayer, offers, history, ste
       if (row === depth || Math.abs(from.lane - to.lane) <= 1) links.push({from: from.id, to: to.id});
     }
   }
-  return {version: 1, start, layers, links, legacyOpenStep: offers?.length ? step : null};
+  return {version: 2, depth, start, layers, links, legacyOpenStep: offers?.length ? step : null};
 }
 
 export function chartState(chart, history, region, step, sectorStars) {

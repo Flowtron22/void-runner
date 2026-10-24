@@ -239,6 +239,7 @@
 #map-screen .sector-route-chart .webgl-map-label:disabled small { display: none; }
 #map-screen .sector-route-chart .webgl-map-label.locked b { display: none; }
 #map-screen .sector-route-chart .webgl-map-label.locked.boss b { display: block; font-size: 7px !important; }
+#map-screen .sector-route-chart .webgl-map-label.locked.boss-system b { display: block; }
 #map-screen .sector-route-chart .webgl-map-label.bypassed { opacity: .32; }
 #map-screen .sector-route-chart .webgl-map-label.complete b { color: #a4bd92 !important; }
 #map-screen .sector-route-chart .current-position b::before { content: '⌖ '; }
@@ -251,6 +252,18 @@
   box-shadow: 0 0 8px #b3a17455;
 }
 .webgl-fallback .webgl-map-label:disabled::before { filter: grayscale(1); }
+
+#loadout-screen .station-footer.encounter-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#loadout-screen .encounter-actions button { min-width: 0; min-height: 48px; font-size: 9px; }
+#boss-choice-screen.active { display: flex; flex-direction: column; }
+.boss-choice-stars { color: var(--crt-amber); font: 400 11px/1.6 var(--crt-data); }
+.boss-tier-options { display: grid; gap: 12px; margin: 12px 0; }
+.screen .boss-tier-option { display: grid; gap: 7px; width: 100%; padding: 12px; text-align: left; }
+.boss-tier-option .boss-tier-stars { color: var(--crt-amber); font-size: 22px; letter-spacing: .14em; }
+.boss-tier-option b { font-size: 12px; }
+.boss-tier-option small { color: var(--crt-dim); font-size: 9px; }
+.boss-tier-option > span:last-child { color: var(--crt-dim); font-size: 8px; }
+#boss-choice-screen .station-footer { margin-top: auto; }
 
 #map-screen > .run-stats { display: grid; width: 100%; }
 #map-screen > .run-stats small { color: var(--crt-dim); font-size: 10px; }

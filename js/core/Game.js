@@ -237,6 +237,8 @@ export class Game {
       this.renderLoadout(); this.save();
     };
     $('#deploy-button').onclick = () => this.finishPrep();
+    $('#cancel-encounter-button').onclick = () => this.cancelEncounter();
+    $('#boss-choice-back').onclick = () => { this.renderMap(); this.show('map'); };
     $('#speed-button').onclick = () => this.toggleSpeed();
     $('#skip-button').onclick = () => this.resolveBattleNow();
     $('#run-end-button').onclick = () => this.handleEndButton();
@@ -345,10 +347,12 @@ export class Game {
       this.renderHome(); return this.show('home');
     }
     if (this.currentScreen === 'loadout') {
+      if (this.run?.pendingNode) return this.cancelEncounter();
       if (this.run?.pendingNode || this.loadoutReturn === 'map') { this.renderMap(); return this.show('map'); }
       if (this.loadoutReturn === 'sector') { this.renderSectors(); return this.show('sector'); }
       this.renderHub(); return this.show('hub');
     }
+    if (this.currentScreen === 'boss-choice') { this.renderMap(); return this.show('map'); }
     if (this.currentScreen === 'map' || this.currentScreen === 'sector' || this.currentScreen === 'research') { this.renderHub(); return this.show('hub'); }
     if (this.currentScreen === 'reward') return;
     this.renderHome(); this.show('home');
@@ -526,6 +530,8 @@ export class Game {
     this.renderProtocols();
     const legal = used > 0 && used <= this.run.cap;
     $('#deploy-button').disabled = Boolean(this.run.pendingNode) && !legal;
+    $('#cancel-encounter-button').hidden = !this.run.pendingNode;
+    $('#cancel-encounter-button').parentElement.classList.toggle('encounter-actions',Boolean(this.run.pendingNode));
     $('#deploy-button').textContent = this.run.pendingNode ? '⚔ BATTLE' : this.loadoutReturn === 'map' ? '⌖ RETURN TO CHART' : '← RETURN TO COMMAND DECK';
     const chosen = this.unit(this.selectedBlueprint);
     $('#prep-status').textContent = legal ? `▦ ${this.run.deployed.length} · ${this.run.cap - used} FREE` : chosen ? `▸ ${chosen.name.toUpperCase()}` : '▦ SELECT';
@@ -861,11 +867,29 @@ export class Game {
     scene.flyTo(String(index), {duration: 1100, arrivalDistance: 2.8});
   }
 
-  makeOffers(s = this.run.step, r = this.run.region) {
+  sectorDepth() {
+    const chart = this.run.sectors?.[this.run.region]?.chart;
+    return chart?.version === 2 ? chart.depth : CAMPAIGN_TIERS[this.run.tierIndex].depth;
+  }
+
+  ensureSectorChart() {
+    const sector = this.run.sectors[this.run.region];
+    if (sector.chart?.version === 2) return sector.chart;
+    // Keep an already selected/visible legacy encounter; shorten only its unvisited tail.
+    const pending = this.run.pendingNode || this.run.rewardContext?.node || this.run.pendingPostWar?.node;
+    const hasRegular = pending ? pending.type !== 'boss' : this.run.offers?.some(node => node.type !== 'boss');
+    const depth = Math.max(3, this.run.step + (hasRegular ? 1 : 0));
+    sector.chart = buildSectorChart({region:this.run.region,depth,step:this.run.step,
+      makeLayer:step => this.makeOffers(step,this.run.region,depth), offers:this.run.offers,
+      history:this.run.history, previousLayers:sector.chart?.layers});
+    return sector.chart;
+  }
+
+  makeOffers(s = this.run.step, r = this.run.region, depth = this.sectorDepth()) {
     const tier = CAMPAIGN_TIERS[this.run.tierIndex];
-    if (s === tier.depth) {
+    if (s === depth) {
       const enemy = this.enemyFaction();
-      const thresholds = [0,tier.depth + 1,tier.depth * 2];
+      const thresholds = [0,5,8];
       return [1,2,3].map((bossTier,lane) => ({
         id:`r${r}-boss-${bossTier}`,type:'boss',bossTier,
         name:['WARLORD','CHAMPION','APEX COMMANDER'][bossTier-1],
@@ -890,12 +914,11 @@ export class Game {
     this.galaxyScene = null;
     const tier = CAMPAIGN_TIERS[this.run.tierIndex];
     const sector = this.run.sectors[this.run.region];
-    sector.chart ||= buildSectorChart({region: this.run.region, depth: tier.depth,
-      makeLayer: step => this.makeOffers(step), offers: this.run.offers,
-      history: this.run.history, step: this.run.step});
+    const chart = this.ensureSectorChart();
+    const depth = chart.depth;
     const state = chartState(sector.chart, this.run.history, this.run.region, this.run.step, this.run.sectorStars);
     this.run.offers = state.nodes.filter(node => node.step === this.run.step);
-    $('#region-kicker').textContent = `SECTOR ${this.run.region + 1} / ${this.run.sectors.length} · AREA ${Math.min(this.run.step + 1,tier.depth + 1)} / ${tier.depth + 1}`;
+    $('#region-kicker').textContent = `SECTOR ${this.run.region + 1} / ${this.run.sectors.length} · AREA ${Math.min(this.run.step + 1,depth + 1)} / ${depth + 1}`;
     $('#map-title').textContent = sector.name;
     $('#map-cap').textContent = this.run.cap;
     $('#run-hull').textContent = `${this.run.hull}/${this.run.maxHull}`;
@@ -904,12 +927,12 @@ export class Game {
     $('#run-protocol-count').textContent = this.run.protocols.length;
     const mission = this.missionFor(this.run.region);
     $('#mission-strip-title').textContent = mission.title;
-    $('#mission-strip-progress').textContent = `${Math.min(this.run.step, tier.depth)} / ${tier.depth} TARGETS · ${this.run.sectorStars} ★`;
+    $('#mission-strip-progress').textContent = `${Math.min(this.run.step, depth)} / ${depth} TARGETS · ${this.run.sectorStars} ★`;
     const map = $('#route-map');
     map.className = 'route-map area-galaxy star-system-map webgl-star-map local-webgl-map sector-route-chart';
     map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout local" aria-hidden="true"><span>LOCAL CARTOGRAPHY</span><b>${sector.name}</b></div>`;
     const labelLayer = map.querySelector('.webgl-map-labels');
-    const rowY = row => -9 + (row + 1) * 18 / (tier.depth + 1);
+    const rowY = row => -9 + (row + 1) * 18 / (depth + 1);
     const start = document.createElement('button');
     start.className = 'webgl-map-label route-start'; start.disabled = true;
     start.innerHTML = '<b>START POINT</b><small>VIGILANT</small>';
@@ -921,7 +944,7 @@ export class Game {
       if (node.id === state.currentId) choice.classList.add('current-position');
       labelLayer.append(choice);
       systems.push({
-        id:node.id,name:node.name,tone:node.type === 'boss' ? 'crimson' : node.event === 'distress' ? 'ice' : 'amber',size:.85,
+        id:node.id,name:node.name,tone:node.type === 'boss-system' ? 'crimson' : node.event === 'distress' ? 'ice' : 'amber',size:node.type === 'boss-system' ? 1.1 : .85,
         position:[(node.lane - 1)*8.5 + Math.sin((node.step + 1)*1.7 + node.lane)*.8,rowY(node.step) + Math.sin(node.step*2 + node.lane)*.25,0],
         locked:node.locked,available:!node.locked,complete:node.status === 'complete',current:node.id === state.currentId,button:choice
       });
@@ -943,13 +966,17 @@ export class Game {
   makeNodeButton(node, classes, active, deferToScene = false) {
     const button = document.createElement('button');
     button.className = `route-node ${classes}`;
-    const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'SECTOR BOSS',closed:'UNKNOWN'};
+    const labels = {skirmish:'BATTLE',elite:'ELITE',salvage:'SUPPLY',repair:'RECOVERY',boss:'SECTOR BOSS','boss-system':'FINAL SYSTEM',closed:'UNKNOWN'};
     const faction = node.enemyFaction ? this.faction(node.enemyFaction).name : labels[node.type];
-    const rewardIcon = node.type === 'boss' ? '♜' : node.type === 'repair' ? '♥' : node.type === 'elite' ? '✦' : node.type === 'salvage' ? '⚙' : '◆';
+    const rewardIcon = node.type.startsWith('boss') ? '♜' : node.type === 'repair' ? '♥' : node.type === 'elite' ? '✦' : node.type === 'salvage' ? '⚙' : '◆';
     const signal = node.event === 'distress' ? 'DISTRESS' : node.event === 'recruit' ? 'REINFORCEMENTS' : node.event === 'store' ? 'FIELD STORE' : '';
     const status = node.status === 'complete' ? 'CLEARED' : node.status === 'bypassed' ? 'BYPASSED' : node.needsStars && node.step === this.run.step ? `NEEDS ${node.threshold} ★` : signal;
     button.innerHTML = `<b>${rewardIcon} ${node.name}</b><small>${faction}</small><span class="system-difficulty" aria-label="Difficulty ${node.stars || 1} of 3">${'★'.repeat(node.stars || 1)}</span>${status ? `<span class="system-signal ${node.event === 'distress' ? 'distress-signal' : ''}">${status}</span>` : ''}`;
     button.title = `${node.name} · Difficulty ${node.stars || 1}/3${node.locked ? ' · Not reachable yet' : ' · Reachable'}${signal ? ` · ${signal}` : ''}`;
+    if (node.type === 'boss-system') {
+      button.innerHTML = '<b>♜ SECTOR COMMAND</b><span class="system-signal">FINAL SYSTEM</span>';
+      button.title = `Final system · Choose boss difficulty on arrival${node.locked ? ' · Not reachable yet' : ' · Reachable'}`;
+    }
     button.setAttribute('aria-label', `${button.title} · ${faction}`);
     button.disabled = !active || node.locked;
     if (active && !node.locked && !deferToScene) button.onclick = () => {
@@ -965,9 +992,37 @@ export class Game {
   chooseNode(node) {
     if (!this.run || this.run.rewardContext || this.run.pendingPostWar || node.locked) return;
     if (!this.run.offers?.some(offer => offer.id === node.id && !offer.locked)) return;
+    if (node.type === 'boss-system') return this.openBossChoices(node);
     this.run.pendingNode = node;
     this.save();
-    this.openLoadout();
+    this.openLoadout('map');
+  }
+
+  cancelEncounter() {
+    if (!this.run || this.battle || this.run.rewardContext || this.run.pendingPostWar) return;
+    this.run.pendingNode = null;
+    this.save(); this.renderMap(); this.show('map');
+  }
+
+  openBossChoices(node) {
+    $('#boss-choice-stars').textContent = `${this.run.sectorStars} ★ COLLECTED · CHOOSE YOUR ENGAGEMENT`;
+    const list = $('#boss-tier-options'); list.innerHTML = '';
+    for (const option of node.bossOptions) {
+      const locked = this.run.sectorStars < option.threshold;
+      const button = document.createElement('button'); button.className = 'boss-tier-option'; button.disabled = locked;
+      button.innerHTML = `<span class="boss-tier-stars">${'★'.repeat(option.bossTier)}</span><b>${option.name}</b><small>${locked ? `REQUIRES ${option.threshold} COLLECTED STARS` : option.threshold ? `AVAILABLE · ${option.threshold} STARS REQUIRED` : 'ALWAYS AVAILABLE'}</small><span>${option.reward}</span>`;
+      button.onclick = () => this.chooseBossTier(node.id,option.bossTier);
+      list.append(button);
+    }
+    this.show('boss-choice');
+  }
+
+  chooseBossTier(systemId, bossTier) {
+    const system = this.run?.offers?.find(node => node.id === systemId && node.type === 'boss-system' && !node.locked);
+    const option = system?.bossOptions.find(boss => boss.bossTier === bossTier);
+    if (!option || this.run.sectorStars < option.threshold || this.run.rewardContext || this.run.pendingPostWar) return;
+    this.run.pendingNode = {...option,locked:false,step:this.run.step,region:this.run.region};
+    this.save(); this.openLoadout('map');
   }
 
   buildFighter(placed, side = 'player') {

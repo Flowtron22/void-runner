@@ -20,10 +20,10 @@ export const WARGEAR = [
 
 export const CAMPAIGN_TIERS = [
   {points:500, name:'COMBAT PATROL', sectors:4, depth:3, enemyScale:1, permanentReward:30},
-  {points:1000, name:'INCURSION', sectors:5, depth:4, enemyScale:1.08, permanentReward:45},
-  {points:1500, name:'BATTLE HOST', sectors:6, depth:4, enemyScale:1.16, permanentReward:60},
-  {points:2000, name:'STRIKE FORCE', sectors:7, depth:5, enemyScale:1.24, permanentReward:80},
-  {points:3000, name:'ONSLAUGHT', sectors:8, depth:6, enemyScale:1.34, permanentReward:110}
+  {points:1000, name:'INCURSION', sectors:5, depth:3, enemyScale:1.08, permanentReward:45},
+  {points:1500, name:'BATTLE HOST', sectors:6, depth:3, enemyScale:1.16, permanentReward:60},
+  {points:2000, name:'STRIKE FORCE', sectors:7, depth:3, enemyScale:1.24, permanentReward:80},
+  {points:3000, name:'ONSLAUGHT', sectors:8, depth:3, enemyScale:1.34, permanentReward:110}
 ];
 
 export const SECTOR_NAMES = [
