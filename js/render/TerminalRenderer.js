@@ -135,12 +135,18 @@ export class TerminalRenderer {
     this.buttonMeshes = new Map();
     this.activeScreen = '';
     this.reveal = 0;
+    this.lastRenderTime = 0;
 
     this.createLayers();
     this.observe();
     this.resize();
     this.syncScreen(true);
-    this.renderer.setAnimationLoop(() => this.render());
+    this.renderer.setAnimationLoop(time => {
+      const chartOpen = this.activeScreen === 'sector' || this.activeScreen === 'map';
+      if (chartOpen && time - this.lastRenderTime < 50) return;
+      this.lastRenderTime = time;
+      this.render();
+    });
   }
 
   createLayers() {

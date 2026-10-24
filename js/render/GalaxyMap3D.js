@@ -20,7 +20,7 @@ function seededRandom(seed = 1) {
   };
 }
 
-function radialTexture(inner,outer = 'rgba(0,0,0,0)',size = 256) {
+function radialTexture(inner,outer = 'rgba(0,0,0,0)',size = 128) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const context = canvas.getContext('2d');
@@ -36,27 +36,65 @@ function radialTexture(inner,outer = 'rgba(0,0,0,0)',size = 256) {
   return texture;
 }
 
+function neutronStarTexture(size = 128) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const context = canvas.getContext('2d');
+  const center = size / 2;
+  context.globalCompositeOperation = 'screen';
+  const glow = context.createRadialGradient(center,center,0,center,center,center*.48);
+  glow.addColorStop(0,'rgba(255,255,255,1)');
+  glow.addColorStop(.11,'rgba(239,249,255,1)');
+  glow.addColorStop(.23,'rgba(142,210,255,.92)');
+  glow.addColorStop(.5,'rgba(73,151,220,.28)');
+  glow.addColorStop(1,'rgba(22,74,132,0)');
+  context.fillStyle = glow;
+  context.fillRect(0,0,size,size);
+  const horizontal = context.createLinearGradient(0,center,size,center);
+  horizontal.addColorStop(0,'rgba(92,178,255,0)');
+  horizontal.addColorStop(.46,'rgba(176,226,255,.42)');
+  horizontal.addColorStop(.5,'rgba(255,255,255,.95)');
+  horizontal.addColorStop(.54,'rgba(176,226,255,.42)');
+  horizontal.addColorStop(1,'rgba(92,178,255,0)');
+  context.fillStyle = horizontal;
+  context.fillRect(0,center-1,size,2);
+  const vertical = context.createLinearGradient(center,0,center,size);
+  vertical.addColorStop(0,'rgba(110,194,255,0)');
+  vertical.addColorStop(.47,'rgba(205,236,255,.3)');
+  vertical.addColorStop(.5,'rgba(255,255,255,.88)');
+  vertical.addColorStop(.53,'rgba(205,236,255,.3)');
+  vertical.addColorStop(1,'rgba(110,194,255,0)');
+  context.fillStyle = vertical;
+  context.fillRect(center-1,0,2,size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 function nebulaTexture(colors,size = 512) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const context = canvas.getContext('2d');
-  context.fillStyle = '#020407';
-  context.fillRect(0,0,size,size);
+  context.clearRect(0,0,size,size);
   const random = seededRandom(4021);
   context.globalCompositeOperation = 'screen';
-  for (let index=0; index<34; index++) {
-    const x = random()*size, y = random()*size;
-    const radius = size*(.08+random()*.24);
+  context.filter = `blur(${Math.round(size*.025)}px)`;
+  for (let index=0; index<28; index++) {
+    const progress = index / 27;
+    const x = size * (.02 + progress * .96) + (random()-.5)*size*.12;
+    const y = size * (.2 + progress*.58 + Math.sin(progress*Math.PI*2.2)*.11) + (random()-.5)*size*.12;
+    const radius = size*(.07+random()*.11);
     const color = colors[index % colors.length];
     const gradient = context.createRadialGradient(x,y,0,x,y,radius);
-    gradient.addColorStop(0,`${color}55`);
-    gradient.addColorStop(.42,`${color}20`);
+    gradient.addColorStop(0,`${color}a0`);
+    gradient.addColorStop(.38,`${color}48`);
     gradient.addColorStop(1,`${color}00`);
     context.fillStyle = gradient;
     context.beginPath();
-    context.ellipse(x,y,radius,radius*(.32+random()*.5),random()*Math.PI,0,Math.PI*2);
+    context.ellipse(x,y,radius,radius*(.26+random()*.28),-.7+random()*.5,0,Math.PI*2);
     context.fill();
   }
+  context.filter = 'none';
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -89,11 +127,12 @@ export class GalaxyMap3D {
     this.camera = new THREE.PerspectiveCamera(42,1,.1,120);
     this.camera.position.copy(this.cameraGoal);
     this.camera.lookAt(this.target);
-    this.renderer = new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+    this.compactGpu = window.matchMedia('(max-width: 640px)').matches;
+    this.renderer = new THREE.WebGLRenderer({canvas,antialias:!this.compactGpu,powerPreference:'high-performance'});
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,1.5));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,this.compactGpu ? 1 : 1.35));
     this.createEnvironment();
     this.createSystems();
     this.bindEvents();
@@ -108,7 +147,7 @@ export class GalaxyMap3D {
     const galaxy = this.mode === 'galaxy';
     const starRandom = seededRandom(galaxy ? 8219 : 4417);
     for (let layer=0; layer<3; layer++) {
-      const count = galaxy ? 520-layer*90 : 380-layer*70;
+      const count = galaxy ? 360-layer*65 : 290-layer*55;
       const positions = new Float32Array(count*3);
       const colors = new Float32Array(count*3);
       for (let index=0; index<count; index++) {
@@ -129,9 +168,9 @@ export class GalaxyMap3D {
       (this.starLayers ||= []).push(points);
     }
 
-    const nebula = nebulaTexture(galaxy ? ['#443050','#692d43','#243b57'] : ['#173d51','#255764','#28334e']);
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(galaxy ? 48 : 38,galaxy ? 62 : 54),new THREE.MeshBasicMaterial({map:nebula,transparent:true,opacity:galaxy?.7:.8,depthWrite:false}));
-    plane.position.z = -17;
+    const nebula = nebulaTexture(galaxy ? ['#4e3968','#793c68','#2d5275'] : ['#18506b','#2c7180','#394d77']);
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(galaxy ? 52 : 42,galaxy ? 66 : 58),new THREE.MeshBasicMaterial({map:nebula,transparent:true,opacity:galaxy?.88:.82,blending:THREE.AdditiveBlending,depthWrite:false}));
+    plane.position.z = -15;
     plane.rotation.z = galaxy ? -.14 : .08;
     this.scene.add(plane);
     this.nebulaPlane = plane;
@@ -180,34 +219,25 @@ export class GalaxyMap3D {
   }
 
   createSystems() {
+    const starTexture = neutronStarTexture();
     for (const system of this.systems) {
       const tone = TONES[system.tone] || TONES.gold;
       const group = new THREE.Group();
       group.position.set(...system.position);
       group.userData = {id:system.id,locked:system.locked};
-      const texture = radialTexture(`rgba(${tone.core>>16},${(tone.core>>8)&255},${tone.core&255},1)`);
-      const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:texture,color:tone.light,transparent:true,opacity:system.locked?.28:.86,blending:THREE.AdditiveBlending,depthWrite:false}));
-      const scale = (system.size || 1)*(system.primary ? 3.4 : 2.25);
+      const starColor = system.locked ? 0x879197 : tone.light;
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:starTexture,color:starColor,transparent:true,opacity:system.locked?.5:.96,blending:THREE.AdditiveBlending,depthWrite:false}));
+      const scale = (system.size || 1)*(system.primary ? 1.9 : 1.3);
       halo.scale.set(scale,scale,1);
       halo.userData = group.userData;
       group.add(halo);
-      const core = new THREE.Mesh(new THREE.SphereGeometry((system.primary?.34:.18)*(system.size||1),20,14),new THREE.MeshBasicMaterial({color:tone.core,transparent:true,opacity:system.locked?.4:1}));
-      core.userData = group.userData;
-      group.add(core);
       const pick = new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,opacity:.001,depthWrite:false}));
-      pick.scale.set(Math.max(1.4,scale*.75),Math.max(1.4,scale*.75),1);
+      pick.scale.set(Math.max(1.65,scale*1.35),Math.max(1.65,scale*1.35),1);
       pick.userData = group.userData;
       group.add(pick);
       this.pickables.push(pick);
-      if (system.available && !system.locked) {
-        const reticle = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({length:40},(_,i)=>{
-          const angle=i/40*Math.PI*2; return new THREE.Vector3(Math.cos(angle)*scale*.43,Math.sin(angle)*scale*.43,0);
-        })),new THREE.LineBasicMaterial({color:tone.core,transparent:true,opacity:.34}));
-        reticle.userData.rotationRate = .18;
-        group.add(reticle);
-      }
       this.scene.add(group);
-      this.systemGroups.set(system.id,{group,halo,core,system});
+      this.systemGroups.set(system.id,{group,halo,baseScale:scale,baseOpacity:system.locked?.5:.96,system});
     }
   }
 
@@ -332,10 +362,11 @@ export class GalaxyMap3D {
       this.nebulaPlane.rotation.z+=(this.mode==='galaxy'?.0004:.0002);
       if (this.localDust) this.localDust.rotation.z+=.0003;
       if (this.ship) this.ship.position.y+=Math.sin(elapsed*.8)*.00045;
-      for (const {group,halo,system} of this.systemGroups.values()) {
-        const pulse=system.available ? 1+Math.sin(elapsed*2.1+group.position.x)*.08 : 1;
-        halo.scale.setScalar((system.size||1)*(system.primary?3.4:2.25)*pulse);
-        for (const child of group.children) if (child.userData.rotationRate) child.rotation.z+=child.userData.rotationRate*delta;
+      for (const {group,halo,baseScale,baseOpacity,system} of this.systemGroups.values()) {
+        const wave=Math.sin(elapsed*(system.locked?1.45:2.15)+group.position.x*.7);
+        const pulse=1+wave*(system.available?.15:.08);
+        halo.scale.setScalar(baseScale*pulse);
+        halo.material.opacity=clamp(baseOpacity+wave*(system.locked?.18:.06),.22,1);
       }
     }
     this.projectLabels();
