@@ -287,6 +287,22 @@ dialog.modal::backdrop {
   padding-top: 8px;
 }
 
+#research-screen.active {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#research-screen .section-head,
+#research-screen .research-grid,
+#research-screen .station-footer { flex: 0 0 auto; }
+#research-screen .station-footer {
+  position: relative;
+  bottom: auto;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
 @media (max-width: 390px) {
   :root {
     --terminal-screen-left: 9%;
