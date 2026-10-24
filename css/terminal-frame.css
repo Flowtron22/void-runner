@@ -263,7 +263,18 @@ dialog.modal::backdrop {
 
 #mission-dialog::backdrop { background: transparent; backdrop-filter: none; }
 .app-shell:has(#mission-dialog[open]) .screen.active { filter: brightness(.36) blur(1px); pointer-events: none; }
-.mission-portrait { height: min(26dvh, 230px); }
+#mission-dialog .mission-portrait { height: min(31.5dvh, 270px); }
+#mission-dialog .mission-portrait img { object-position: 50% 8%; filter: saturate(.82) contrast(1.08) brightness(.91); }
+#mission-dialog .mission-transmission { padding: 12px 14px 14px; }
+#mission-dialog .mission-transmission .eyebrow { margin-bottom: 4px; }
+#mission-dialog .mission-transmission h2 { margin: 0 0 5px; font-size: 25px; }
+#mission-dialog .mission-speaker { margin-bottom: 8px; }
+#mission-dialog .mission-transmission > p:not(.eyebrow) { margin-bottom: 10px; font-size: 9px; line-height: 1.42; }
+#mission-dialog .mission-objective { margin-bottom: 10px; padding: 8px 9px; }
+#mission-dialog .mission-objective b { margin-top: 3px; }
+#mission-dialog .mission-objective span { margin-top: 4px; }
+#mission-dialog .mission-actions { gap: 6px; }
+#mission-dialog .mission-actions button { min-height: 44px; }
 
 #loadout-screen.active {
   --cell: clamp(34px, 4.55dvh, 42px);
