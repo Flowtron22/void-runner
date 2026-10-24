@@ -95,13 +95,15 @@ body.star-chart-open .app-shell {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-color: #756548 #101613;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.screen::-webkit-scrollbar { width: 5px; }
-.screen::-webkit-scrollbar-track { background: #101613; }
-.screen::-webkit-scrollbar-thumb { background: #756548; }
+.screen::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 
 /* Keep controls in the CRT image plane instead of laying opaque web panels over it. */
 .webgl-terminal-active .screen :is(

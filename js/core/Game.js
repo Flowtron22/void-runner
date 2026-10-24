@@ -301,7 +301,12 @@ export class Game {
       this.galaxyScene?.destroy();
       this.galaxyScene = null;
     }
-    for (const screen of $$('.screen')) screen.classList.toggle('active', screen.id === `${name}-screen`);
+    let activeScreen = null;
+    for (const screen of $$('.screen')) {
+      const active = screen.id === `${name}-screen`;
+      screen.classList.toggle('active', active);
+      if (active) activeScreen = screen;
+    }
     document.body.classList.toggle('main-menu-open', name === 'home');
     document.body.classList.toggle('intro-open', name === 'intro');
     document.body.classList.toggle('hub-open', name === 'hub');
@@ -310,6 +315,10 @@ export class Game {
     if (name !== 'battle') this.clearBattleStage();
     this.currentScreen = name;
     if (this.run && name !== 'battle') { this.run.lastScreen = name; this.save({silent:true}); }
+    if (activeScreen) {
+      activeScreen.scrollTop = 0;
+      activeScreen.scrollLeft = 0;
+    }
     window.scrollTo(0, 0);
     this.renderHeader();
   }
