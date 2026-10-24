@@ -117,8 +117,9 @@ export class GalaxyMap3D {
     this.clock = new THREE.Clock();
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
-    this.target = new THREE.Vector3(0,0,0);
-    this.cameraGoal = new THREE.Vector3(0,0,mode === 'galaxy' ? 29 : 23);
+    const initialVerticalFocus = mode === 'galaxy' ? 2.25 : 0;
+    this.target = new THREE.Vector3(0,initialVerticalFocus,0);
+    this.cameraGoal = new THREE.Vector3(0,initialVerticalFocus,mode === 'galaxy' ? 29 : 23);
     this.travel = null;
     this.drag = null;
     this.scene = new THREE.Scene();
