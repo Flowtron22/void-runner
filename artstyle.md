@@ -281,3 +281,5 @@ Do not align chart systems in symmetrical columns or evenly spaced rows. Use sta
 ### Ordeal portrait archive — 25 October 2026
 
 Retain the formation case at the top and use compact vertical portrait cards below it. Four columns fit the CRT at phone width; only essential names, points, footprint and stock/sealed state belong on cards. Full rules belong in a separate full-screen CRT datasheet with expandable sections. Keep available patterns first, retain sealed portraits for inspection, and preserve roster scroll when returning. Drag previews should fill the exact rectangular footprint and use restrained green/red emission. The user explicitly permits model-reference portraits for this feature; existing original artwork remains the fallback where a matching image is unavailable.
+
+Portrait framing must focus on the face or helmet and include at least the upper torso. Author the crop for each image rather than relying on a shared center crop. Keep the same focal area readable in tall cards and wider datasheet views. Use the supplied `ref/GK/GK_potrait` artwork for Grey Knights portraits; preserve original source files.

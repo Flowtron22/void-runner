@@ -3,6 +3,7 @@ import { buildSectorChart, chartState } from './CampaignChart.js';
 import { ensureConstellationPositions } from '../render/ChartLayout.js';
 import { placementIssue } from './DraftPlacement.js';
 import { bindDraftDrag } from '../ui/DraftDrag.js';
+import { portraitMarkup } from '../data/portraits.js';
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
@@ -116,12 +117,6 @@ const unitSpriteStyle = (id, variant = 0) => {
   return `--icon-x:${column * 100 / 3}%;--icon-y:${row * 100 / 3}%`;
 };
 
-const portraitStyle = id => {
-  const base=id.split('--rescued-')[0];
-  const portraits={'grey-knight-interceptors':['interceptor.webp','center 70%','170% auto'],'grey-knight-castellan-crowe':['castellan-crowe.webp','center 65%','auto 120%'],'grey-knight-voldus':['voldus.jpg','center 72%','140% auto']};
-  const portrait=portraits[base];
-  return portrait ? `--unit-art:url(/assets/unit-portraits/${portrait[0]});--unit-art-position:${portrait[1]};--unit-art-size:${portrait[2]}` : unitSpriteStyle(id);
-};
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function weaponRules(weapon, halfRange = false) {
@@ -611,7 +606,8 @@ export class Game {
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
       const cardName=unit.name.replace(/^Brotherhood /,'');
       const badge=unrecovered?'SEALED':out?'DEPLOYED':tooLarge?'OVER CAP':`×${unit.stock-deployedCount}`;
-      button.innerHTML = `<span class="portrait-art" style="${portraitStyle(unit.id)}" aria-hidden="true"></span><span class="portrait-stock">${badge}</span><span class="portrait-caption"><b>${escapeHTML(cardName)}</b><small>${unit.points} PTS <i>${unit.size.join('×')}</i></small></span>${unit.rescueKind?'<span class="rescue-mark">MISSION</span>':''}`;
+      const portrait=portraitMarkup(unit.id);
+      button.innerHTML = `<span class="portrait-art ${portrait?'illustrated':''}" style="${portrait?'':unitSpriteStyle(unit.id)}" aria-hidden="true">${portrait}</span><span class="portrait-stock">${badge}</span><span class="portrait-caption"><b>${escapeHTML(cardName)}</b><small>${unit.points} PTS <i>${unit.size.join('×')}</i></small></span>${unit.rescueKind?'<span class="rescue-mark">MISSION</span>':''}`;
       button.onclick = () => this.openDatasheet(unit.id);
       if(!out && !tooLarge && !unrecovered) bindDraftDrag(button,unit,this);
       roster.append(button);
@@ -627,7 +623,10 @@ export class Game {
     const ref=unit.datasheet;
     const profile=ref?.profile || {movement:null,...unit.defense,leadership:unit.leadership,oc:unit.oc};
     $('#datasheet-title').textContent=unit.name;
-    $('#datasheet-portrait').style.cssText=portraitStyle(id);
+    const portrait=portraitMarkup(id,true);
+    $('#datasheet-portrait').style.cssText=portrait?'':unitSpriteStyle(id);
+    $('#datasheet-portrait').classList.toggle('illustrated',Boolean(portrait));
+    $('#datasheet-portrait').innerHTML=portrait;
     $('#datasheet-portrait').setAttribute('aria-label',`${unit.name} portrait`);
     $('#datasheet-subtitle').textContent=`${this.faction(unit.faction).name} · ${unit.role}`;
     $('#datasheet-stats').innerHTML=[['M',profile.movement?`${profile.movement}″`:'—'],['T',profile.toughness],['SV',`${profile.save}+`],['W',profile.wounds],['LD',`${profile.leadership}+`],['OC',profile.oc]].map(([label,value])=>`<div><small>${label}</small><b>${value}</b></div>`).join('');
