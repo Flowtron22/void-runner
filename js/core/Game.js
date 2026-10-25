@@ -4,6 +4,14 @@ import { ensureConstellationPositions } from '../render/ChartLayout.js';
 import { placementIssue } from './DraftPlacement.js';
 import { bindDraftDrag } from '../ui/DraftDrag.js';
 import { portraitMarkup } from '../data/portraits.js';
+import { summarizeBattle, battleReportRows, addCombatTotals } from './BattleReport.js';
+
+const DEBRIEF_ART = {
+  victory:new URL('../../assets/directive-victory.webp',import.meta.url).href,
+  failure:new URL('../../assets/directive-failure.webp',import.meta.url).href,
+  recovery:new URL('../../assets/recovery-apothecary.webp',import.meta.url).href,
+  requisition:new URL('../../assets/rogue-trader.jpg',import.meta.url).href
+};
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
@@ -352,6 +360,7 @@ export class Game {
   goBack() {
     if (this.battle) return;
     if (this.currentScreen === 'store') return this.finishPostWarEvent();
+    if (this.currentScreen === 'run-end') return this.handleEndButton();
     if (this.currentScreen === 'datasheet') return this.closeDatasheet();
     if (this.currentScreen === 'mission') {
       if ($('#mission-accept-button').dataset.review === 'true') { this.renderMap(); return this.show('map'); }
@@ -492,6 +501,7 @@ export class Game {
       if (event === 'store') return this.openStoreEvent();
       return this.finishPostWarEvent();
     }
+    if (this.run.pendingDefeat && this.run.pendingNode) return this.renderDefeatReport(this.run.pendingNode);
     if (this.run.pendingNode) return this.openLoadout('map');
     this.renderHub(); this.show('hub');
   }
@@ -1160,6 +1170,7 @@ export class Game {
     const enemies = this.makeEnemyForce(node);
     this.battle = {
       node, players, enemies, round:0,
+      stats:{damageDealt:0,damageTaken:0},
       log:[`⚔ ${this.faction(node.enemyFaction).name}`],
       resolving:false, lastRoll:null, visibleStage:-1, actors:[], actorIndex:0, currentPlan:null,
       cp:{player:1 + (this.stratagemEffects().startingCp || 0),enemy:1}, insaneBravery:{player:false,enemy:false}, stratagemUsed:{player:false,enemy:false}, oathTarget:{player:null,enemy:null},
@@ -1421,6 +1432,9 @@ export class Game {
   applyDiceAttack(plan) {
     if (!plan || plan.applied) return;
     const target = plan.targetRef;
+    this.battle.stats ||= {damageDealt:0,damageTaken:0};
+    const damageKey=plan.actorRef.side === 'player' ? 'damageDealt' : 'damageTaken';
+    this.battle.stats[damageKey]+=plan.damageLost;
     target.hp = [...plan.remainingHp];
     target.currentHp = target.hp.reduce((sum,value) => sum + value, 0);
     target.dead = target.hp.length === 0;
@@ -1522,6 +1536,8 @@ export class Game {
     clearTimeout(this.battleTimer);
     this.battle.resolving = true;
     const node = this.battle.node;
+    this.run.lastBattleReport=summarizeBattle(this.battle,victory);
+    this.run.combatTotals=addCombatTotals(this.run.combatTotals,this.run.lastBattleReport);
     const defeatedSide = victory ? 'enemy' : 'player';
     $(`.battle-wing-${defeatedSide}`).classList.add('defeated');
     $('#desktop-battle-stage').classList.add('battle-concluded');
@@ -1541,7 +1557,8 @@ export class Game {
     this.run.battles++;
     if (node.type === 'boss') this.run.bosses++;
     const req = Math.round((18 + (node.stars || 1) * 8) * (1 + (this.meta.research.salvage || 0) * .15));
-    this.run.rewardContext = {node, req};
+    this.run.pendingDefeat=false;
+    this.run.rewardContext = {node, req,report:this.run.lastBattleReport?.nodeId===node.id ? structuredClone(this.run.lastBattleReport) : null};
     this.ensureRewardState(this.run.rewardContext);
     this.renderRewardSegments();
     $('#reward-data').textContent = `+${node.stars || 0} ★`;
@@ -1595,6 +1612,10 @@ export class Game {
     const options = this.rewardSegmentOptions(context);
     const remaining = this.rewardClaimsRemaining();
     const resolved = context.totalClaims - remaining;
+    $('#debrief-mission').textContent=`${context.node.name}${context.node.type==='boss'?` · WARLORD TIER ${context.node.bossTier || 1}`:''}`;
+    this.renderReportStats('#debrief-stats',battleReportRows(context.report));
+    $('#reward-data').textContent=`+${context.node.stars || 0} ★`;
+    $('#reward-gear-line').textContent=`${context.node.type==='boss'?90*(context.node.bossTier || 1):20+context.node.stars*10} CAMPAIGN SCORE`;
     $('#reward-title').textContent = 'POST-WAR AFFAIRS';
     $('#reward-copy').textContent = remaining ? `${resolved} / ${context.totalClaims} AFFAIRS RESOLVED · CLEAR ALL LOOT TO CONTINUE` : 'ALL LOOT SECURED · THE ROUTE IS OPEN';
     const list = $('#reward-options'); list.innerHTML = '';
@@ -1605,11 +1626,12 @@ export class Game {
       button.className = 'reward-option pixel-panel';
       button.title = option.desc;
       button.setAttribute('aria-label', `${option.name}: ${option.desc}`);
-      button.innerHTML = `<b>${option.icon} ${option.name}</b><small>${option.desc}</small><span>${option.tag}</span>`;
+      button.innerHTML = this.rewardBranchMarkup(option.kind,option.name,option.desc,option.tag);
       button.onclick = () => this.selectPostWarSegment(option.kind);
       list.append(button);
     }
     $('#reward-continue-button').hidden = remaining !== 0;
+    $('#reward-continue-button').textContent=context.node.type==='boss'?'RETURN TO STRIKE CRUISER':'CONTINUE THE PATH →';
     $('#reward-continue-button').onclick = () => this.completePostWarSegment();
     this.save();
   }
@@ -1648,7 +1670,7 @@ export class Game {
       const item = source.find(entry => entry.id === id); const button = document.createElement('button');
       button.className = 'reward-option pixel-panel'; button.title = item.desc;
       const symbol = kind === 'honour' ? ruleSymbol(`${item.name} ${item.tag}`) : kind === 'stratagem' ? '⌖' : '⚙';
-      button.innerHTML = `<b>${symbol} ${item.name}</b><small>${item.desc}</small><span>${kind === 'gear' ? 'RECOVERED WARGEAR' : item.tag}</span>`;
+      button.innerHTML = this.rewardBranchMarkup(kind,`${symbol} ${item.name}`,item.desc,kind === 'gear' ? 'RECOVERED WARGEAR' : item.tag);
       button.onclick = () => this.claimPostWarChoice(kind,id); list.append(button);
     });
     const back = document.createElement('button');
@@ -1658,6 +1680,9 @@ export class Game {
   }
 
   claimPostWarChoice(kind,id) {
+    if(!this.run?.rewardContext || !['honour','stratagem','gear'].includes(kind) || !this.rewardRemaining(kind)) return;
+    const source=kind==='honour'?BATTLE_HONOURS:kind==='stratagem'?STRATAGEMS:WARGEAR;
+    if(!source.some(item=>item.id===id)) return;
     if (kind === 'honour' && !this.run.protocols.includes(id)) this.run.protocols.push(id);
     if (kind === 'stratagem' && !this.run.stratagems.includes(id)) {
       this.run.stratagems.push(id);
@@ -1813,37 +1838,59 @@ export class Game {
   handleDefeat(node) {
     this.run.hull--;
     this.run.pendingNode = node;
+    this.run.pendingDefeat=true;
     this.save();
     if (this.run.hull <= 0) return this.endRun(false);
+    this.renderDefeatReport(node);
+  }
+
+  renderReportStats(selector,rows) {
+    $(selector).innerHTML=rows.map(([name,value])=>`<span>${escapeHTML(name)}<b>${escapeHTML(value)}</b></span>`).join('');
+  }
+
+  rewardBranchMarkup(kind,name,desc,tag) {
+    const illustration={honour:'grey-knight-champion',stratagem:'brotherhood-librarian',gear:'grey-knight-techmarine'}[kind];
+    const picture=illustration?portraitMarkup(illustration):`<img src="${kind==='recovery'?DEBRIEF_ART.recovery:DEBRIEF_ART.requisition}" alt="" loading="lazy" />`;
+    return `<span class="reward-picture" aria-hidden="true">${picture}</span><span class="reward-text"><b>${escapeHTML(name)}</b><small>${escapeHTML(desc)}</small><em>${escapeHTML(tag)}</em></span>`;
+  }
+
+  setEndArtwork(victory) {
+    $('#run-end-screen').classList.toggle('failed',!victory);
+    $('#run-end-art').src=victory?DEBRIEF_ART.victory:DEBRIEF_ART.failure;
+    $('#run-end-art').alt=victory?'Grey Knight victorious over a vanquished daemon':'Grey Knights bearing their fallen brothers';
+  }
+
+  renderDefeatReport(node) {
+    this.setEndArtwork(false);
     $('#run-end-kicker').textContent = '// BATTLE LOST';
-    $('#run-end-title').textContent = 'REBUILD THE ARMY.';
-    $('#run-end-copy').textContent = `${node.name} was lost. You have ${this.run.hull} campaign attempts remaining.`;
-    $('#run-end-stats').innerHTML = `<span>ATTEMPTS LEFT<b>${this.run.hull}</b></span><span>POINTS LIMIT<b>${this.run.cap}</b></span>`;
-    $('#run-end-button').textContent = 'EDIT ARMY';
+    $('#run-end-title').textContent = 'DIRECTIVE FAILED';
+    $('#run-end-copy').textContent = `${node.name}. The enemy remains. The sacrifice is recorded.`;
+    this.renderReportStats('#run-end-stats',[...battleReportRows(this.run.lastBattleReport),['ATTEMPTS LEFT',`${this.run.hull} / ${this.run.maxHull}`],['POINTS LIMIT',this.run.cap]]);
+    $('#run-end-button').textContent = 'REASSEMBLE STRIKE FORCE';
     $('#run-end-button').dataset.action = 'retry';
-    $('#run-end-dialog').showModal();
+    this.show('run-end');
   }
 
   endRun(victory) {
     const earned = victory ? this.run.chests + Math.floor(this.run.currency * .25) : 0;
     this.meta.currency += earned;
     if (victory) this.meta.wins++;
-    const snapshot = {battles:this.run.battles,bosses:this.run.bosses,data:this.run.data,stars:this.run.stars,chests:earned};
+    const snapshot = {battles:this.run.battles,bosses:this.run.bosses,data:this.run.data,stars:this.run.stars,chests:earned,combat:this.run.combatTotals};
     this.run = null;
     this.save();
+    this.setEndArtwork(victory);
     $('#run-end-kicker').textContent = victory ? '// CAMPAIGN COMPLETE' : '// CAMPAIGN LOST';
-    $('#run-end-title').textContent = victory ? 'VICTORY.' : 'THE OFFENSIVE ENDS.';
+    $('#run-end-title').textContent = victory ? 'DIRECTIVE FULFILLED' : 'DIRECTIVE FAILED';
     $('#run-end-copy').textContent = victory ? 'Every required sector is secured. Banked campaign rewards are now permanent Requisition; run-only Enhancements, Stratagems and Wargear are cleared.' : 'The offensive ended before every required sector was secured. Banked campaign rewards were lost.';
-    $('#run-end-stats').innerHTML = `<span>BATTLES WON<b>${snapshot.battles}</b></span><span>SECTORS CLEARED<b>${snapshot.bosses}</b></span><span>STARS<b>${snapshot.stars}</b></span><span>PERMANENT REQ<b>+${snapshot.chests}</b></span>`;
-    $('#run-end-button').textContent = 'RETURN TO COMMAND';
+    this.renderReportStats('#run-end-stats',[['BATTLES WON',snapshot.battles],['SECTORS CLEARED',snapshot.bosses],['STARS',snapshot.stars],['PERMANENT REQ',`+${snapshot.chests}`],['ENEMY LOSSES',snapshot.combat?.enemyModelsLost ?? '—'],['OUR LOSSES',snapshot.combat?.playerModelsLost ?? '—']]);
+    $('#run-end-button').textContent = 'RETURN TO TITAN';
     $('#run-end-button').dataset.action = 'home';
-    $('#run-end-dialog').showModal();
+    this.show('run-end');
   }
 
   handleEndButton() {
     const action = $('#run-end-button').dataset.action;
-    $('#run-end-dialog').close();
-    if (action === 'retry' && this.run) this.openLoadout();
+    if (action === 'retry' && this.run) { this.run.pendingDefeat=false; this.save(); this.openLoadout('map'); }
     else { this.renderHome(); this.show('home'); }
   }
 

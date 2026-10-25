@@ -13,7 +13,7 @@ A portrait-first Warhammer 40,000 army-building roguelike with automatic, visibl
 - Travel through interactive Three.js galaxy and local-system charts with constrained pan, wheel/pinch zoom, emissive selectable stars, projected accessible labels, and camera approaches. See the full connected sector route, follow reachable systems, and unlock stronger sector bosses with collected stars. Future systems glow grey; large stars show difficulty.
 - Win at DISTRESS systems to rescue a random Imperial unique unit or epic hero for the current mission, across all its sectors. Recruits use normal army points and disappear when the mission ends.
 - Watch Attacks, Hits, Wounds, Saves and Damage roll automatically. Player combat dice receive a modest low-roll recovery advantage; enemy dice remain standard D6 rolls.
-- Resolve 3–5 distinct Post-War Affairs claims after a victory: one Requisition cache, one Enhancement, one Stratagem, then Wargear and Force Recovery on richer routes. Each block closes after its single claim, and special route events resolve before travel continues.
+- Review an illustrated CRT battle report with actual losses, survivors and wounds, then resolve 3–5 distinct Post-War Affairs claims after a victory: one Requisition cache, one Enhancement, one Stratagem, then Wargear and Force Recovery on richer routes. Each block closes after its single claim, and special route events resolve before travel continues.
 - Bank sector-boss rewards during the campaign. They become permanent research Requisition only after every required sector is completed; temporary run currency buys Wargear in field stores.
 - Save campaign data in browser-local storage, including partially resolved Post-War Affairs. Saves do not transfer through Git.
 

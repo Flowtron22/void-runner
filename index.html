@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/terminal-signal.css" />
   <link rel="stylesheet" href="css/ordeal.css" />
   <link rel="stylesheet" href="css/field-store.css" />
+  <link rel="stylesheet" href="css/debrief.css" />
 </head>
 <body>
   <aside id="desktop-battle-stage" class="desktop-battle-stage" aria-hidden="true">
@@ -146,10 +147,16 @@
       <div class="battle-controls"><button id="speed-button">SPEED ×1</button><button id="skip-button">RESOLVE NOW</button></div>
     </section>
 
-    <section id="reward-screen" class="screen" aria-labelledby="reward-title">
-      <div class="reward-sigil">◆</div><p class="eyebrow">// AREA SECURED</p><h2 id="reward-title">POST-WAR AFFAIRS</h2>
-      <p id="reward-copy" class="reward-copy"></p><div id="reward-options" class="reward-options"></div><div class="reward-ledger pixel-panel"><span>SCORE GAINED <b id="reward-data">+0</b></span><span id="reward-gear-line">NO WARGEAR FOUND</span></div>
-      <button id="reward-continue-button" class="primary-button reward-continue" hidden>CONTINUE THE PATH →</button>
+    <section id="reward-screen" class="screen debrief-screen" aria-labelledby="debrief-title">
+      <div class="debrief-scroll">
+        <div class="debrief-art"><img src="assets/directive-victory.webp" alt="A Grey Knight stands victorious over a vanquished daemon" /></div>
+        <header class="debrief-heading"><p class="eyebrow">// ORDO MALLEUS · BATTLE REPORT</p><h2 id="debrief-title">DIRECTIVE FULFILLED</h2><p id="debrief-mission"></p><small>WE ARE THE HAMMER.</small></header>
+        <div id="debrief-stats" class="debrief-stats" aria-label="Calculated battle statistics"></div>
+        <div class="reward-ledger"><span>STARS SECURED <b id="reward-data">+0</b></span><span id="reward-gear-line">CAMPAIGN SCORE</span></div>
+        <div class="reward-tree-root"><h3 id="reward-title">POST-WAR AFFAIRS</h3><p id="reward-copy" class="reward-copy" role="status"></p></div>
+        <div id="reward-options" class="reward-options reward-tree"></div>
+      </div>
+      <footer class="debrief-footer"><button id="reward-continue-button" class="primary-button reward-continue" hidden>CONTINUE THE PATH →</button></footer>
     </section>
 
     <section id="research-screen" class="screen" aria-labelledby="research-title">
@@ -205,9 +212,14 @@
       <button id="close-help-button" class="primary large">UNDERSTOOD</button>
     </dialog>
 
-    <dialog id="run-end-dialog" class="modal pixel-panel">
-      <p class="eyebrow" id="run-end-kicker">// EXPEDITION COMPLETE</p><h2 id="run-end-title">THE FRONT BREAKS.</h2><p id="run-end-copy"></p><div id="run-end-stats" class="end-ledger"></div><button id="run-end-button" class="primary large">RETURN TO COMMAND</button>
-    </dialog>
+    <section id="run-end-screen" class="screen debrief-screen" aria-labelledby="run-end-title">
+      <div class="debrief-scroll">
+        <div class="debrief-art"><img id="run-end-art" src="assets/directive-failure.webp" alt="Grey Knights bearing their fallen brothers" /></div>
+        <header class="debrief-heading"><p class="eyebrow" id="run-end-kicker">// ORDO MALLEUS</p><h2 id="run-end-title">DIRECTIVE FAILED</h2><p id="run-end-copy"></p></header>
+        <div id="run-end-stats" class="debrief-stats" aria-label="Mission report statistics"></div>
+      </div>
+      <footer class="debrief-footer"><button id="run-end-button" class="large">RETURN TO TITAN</button></footer>
+    </section>
   </main>
   <script type="module" src="js/main.js"></script>
 </body>
