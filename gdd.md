@@ -167,7 +167,7 @@ Only these three factions are selectable at launch:
 - Imperial Fists (`imperial-fists`).
 - Grey Knights (`grey-knights`).
 
-The full data roster contains 19 factions and 86 units, including 14 Grey Knights patterns. All other factions remain available to the enemy generator:
+The full data roster contains 19 factions and 88 units, including 16 Grey Knights patterns. All other factions remain available to the enemy generator:
 
 - Ultramarines
 - Orks
@@ -530,3 +530,7 @@ Checks: `npm run check` covers placement bounds, rotations, overlap, points, sto
 ### Supplied Grey Knights portraits — 25 October 2026
 
 Ordeal cards and datasheets now use the user-supplied `ref/GK/GK_potrait` collection. Thirteen unchanged WebP copies cover all fourteen patterns; Interceptors share the battle-brother illustration because the collection has no dedicated Interceptor portrait. `js/data/portraits.js` maps unit IDs (including rescued snapshots) to source dimensions and individual face-to-torso crop bounds. Inline SVG view windows apply responsive framing without rewriting source pixels. Tall cards fill the crop window; wide datasheet views preserve its vertical face-to-torso extent. Formation-grid art remains separate from these portrait mappings. Browser checks at 390px verified card crops and the off-center Voldus datasheet; checks and production build passed.
+
+### Sealed additions — 25 October 2026
+
+Added Venerable Dreadnought (`grey-knight-venerable-dreadnought`, 130 points, 3×3) and Kaldor Draigo (`grey-knight-kaldor-draigo`, 125 points, 2×2). Both start SEALED in new and existing missions: portraits and datasheets are inspectable, drafting is unavailable until recovered through existing reward paths. Draigo joins the Epic Hero rescue pool and his source sheet is marked LEGENDS in the datasheet subtitle. Both use supplied artwork with individual face/coffin-and-torso framing. No starting unlocks were added.

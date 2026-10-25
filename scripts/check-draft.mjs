@@ -19,7 +19,12 @@ const terminator=knights[1];
 assert.ok(placementIssue({...input,unit:terminator,x:4}));
 assert.equal(placementIssue({...input,unit:terminator,x:4,rotated:true}),null);
 assert.deepEqual(occupied,[{unitId:unit.id,x:0,y:0,rotated:false}],'validation must never mutate formation');
-assert.equal(knights.length,14);
+assert.equal(knights.length,16);
+for(const id of ['grey-knight-venerable-dreadnought','grey-knight-kaldor-draigo']) {
+  const sealed=knights.find(u=>u.id===id);
+  assert.equal(sealed.startingAvailable,false);
+  assert.match(placementIssue({...input,unit:sealed,unlocked:false}),/UNRECOVERED/);
+}
 assert.equal(knights.filter(u=>u.startingAvailable).length,4);
 for(const u of knights) {
   assert.ok(u.datasheet.source.startsWith('https://wahapedia.ru/'));

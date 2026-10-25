@@ -78,8 +78,11 @@ const GALAXY_SYSTEM_LAYOUT = [
   {x:75,y:56,size:.78,tone:'red'},{x:30,y:56,size:.94,tone:'blue'},{x:55,y:73,size:.7,tone:'white'},
   {x:25,y:85,size:.68,tone:'red'},{x:77,y:86,size:.62,tone:'gold'}
 ];
-const EPIC_HERO_IDS = ['imperial-fists-darnath-lysander', 'space-wolves-bjorn-the-fell-handed', 'space-wolves-ragnar-blackmane', 'grey-knight-castellan-crowe', 'grey-knight-voldus'];
+const EPIC_HERO_IDS = ['imperial-fists-darnath-lysander', 'space-wolves-bjorn-the-fell-handed', 'space-wolves-ragnar-blackmane', 'grey-knight-castellan-crowe', 'grey-knight-voldus', 'grey-knight-kaldor-draigo'];
 const GREY_KNIGHT_UNIT_ART = {
+  'grey-knight-venerable-dreadnought':[
+    new URL('../../assets/units/grey-knights/dreadnought.png',import.meta.url).href
+  ],
   'grey-knight-strike-squad':[
     new URL('../../assets/units/grey-knights/strike-squad.png',import.meta.url).href,
     new URL('../../assets/units/grey-knights/strike-brother.png',import.meta.url).href
@@ -105,7 +108,7 @@ const UNIT_SPRITES = {
 };
 const unitSpriteStyle = (id, variant = 0) => {
   id = id.split('--rescued-')[0];
-  const aliases = {'grey-knight-interceptors':'grey-knight-strike-squad','grey-knight-purgation':'grey-knight-strike-squad','grey-knight-purifiers':'grey-knight-strike-squad','grey-knight-paladins':'grey-knight-terminators','grey-knight-champion':'grey-knight-strike-squad','grey-knight-chaplain':'brotherhood-librarian','grey-knight-techmarine':'grey-knight-strike-squad','grey-knight-brother-captain':'grey-knight-terminators','grey-knight-castellan-crowe':'grey-knight-strike-squad','grey-knight-voldus':'grey-knight-terminators'};
+  const aliases = {'grey-knight-kaldor-draigo':'grey-knight-terminators','grey-knight-interceptors':'grey-knight-strike-squad','grey-knight-purgation':'grey-knight-strike-squad','grey-knight-purifiers':'grey-knight-strike-squad','grey-knight-paladins':'grey-knight-terminators','grey-knight-champion':'grey-knight-strike-squad','grey-knight-chaplain':'brotherhood-librarian','grey-knight-techmarine':'grey-knight-strike-squad','grey-knight-brother-captain':'grey-knight-terminators','grey-knight-castellan-crowe':'grey-knight-strike-squad','grey-knight-voldus':'grey-knight-terminators'};
   id = aliases[id] || id;
   const unitArt = GREY_KNIGHT_UNIT_ART[id];
   if (unitArt) {
@@ -628,7 +631,7 @@ export class Game {
     $('#datasheet-portrait').classList.toggle('illustrated',Boolean(portrait));
     $('#datasheet-portrait').innerHTML=portrait;
     $('#datasheet-portrait').setAttribute('aria-label',`${unit.name} portrait`);
-    $('#datasheet-subtitle').textContent=`${this.faction(unit.faction).name} · ${unit.role}`;
+    $('#datasheet-subtitle').textContent=`${this.faction(unit.faction).name} · ${unit.role}${ref?.classification?` · ${ref.classification}`:''}`;
     $('#datasheet-stats').innerHTML=[['M',profile.movement?`${profile.movement}″`:'—'],['T',profile.toughness],['SV',`${profile.save}+`],['W',profile.wounds],['LD',`${profile.leadership}+`],['OC',profile.oc]].map(([label,value])=>`<div><small>${label}</small><b>${value}</b></div>`).join('');
     $('#datasheet-invuln').textContent=profile.invuln<7?`INVULNERABLE SAVE · ${profile.invuln}+`:'NO INVULNERABLE SAVE';
     const weapons=ref?.weapons || [unit.weapon];

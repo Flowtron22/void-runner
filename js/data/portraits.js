@@ -13,7 +13,9 @@ const art = {
   champion: ['champion.webp',516,753,[130,145,300,350]],
   chaplain: ['chaplain.webp',667,1000,[180,280,380,440]],
   techmarine: ['techmarine.webp',625,910,[125,190,350,405]],
-  captain: ['brother-captain.webp',803,1200,[200,235,450,520]]
+  captain: ['brother-captain.webp',803,1200,[200,235,450,520]],
+  venerable: ['venerable-dreadnought.webp',842,1247,[220,240,440,510]],
+  draigo: ['kaldor-draigo.webp',680,957,[80,90,400,465]]
 };
 const units = {
   'grey-knight-strike-squad':'brother',
@@ -29,7 +31,9 @@ const units = {
   'grey-knight-champion':'champion',
   'grey-knight-chaplain':'chaplain',
   'grey-knight-techmarine':'techmarine',
-  'grey-knight-brother-captain':'captain'
+  'grey-knight-brother-captain':'captain',
+  'grey-knight-venerable-dreadnought':'venerable',
+  'grey-knight-kaldor-draigo':'draigo'
 };
 
 export function portraitMarkup(id, wide=false) {

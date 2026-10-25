@@ -19,7 +19,9 @@ const summaries={
   'Brotherhood-Champion':'Clarion of Haste: the led squad can charge after advancing. Inspiring Exemplar: defeating a Character in melee awards CP and improves the Champion’s attacks.',
   'Brotherhood-Chaplain':'Zealous Path: the led squad rerolls charges. Litanies of Sanctity: once per battle, removes Battle-shock from a nearby Grey Knights squad.',
   'Brotherhood-Techmarine':'Techmarine: gains Lone Operative near friendly vehicles. Blessing of the Omnissiah: repairs a nearby vehicle and improves its hits. Guardians of the Machine: discounts a qualifying Heroic Intervention.',
-  'Brother-captain':'Hammerhand: grants Lethal Hits to the led squad’s melee weapons. Eye of Judgement: rerolls this model’s wounds.'
+  'Brother-captain':'Hammerhand: grants Lethal Hits to the led squad’s melee weapons. Eye of Judgement: rerolls this model’s wounds.',
+  'Venerable-Dreadnought':'Guidance of the Ancients: a target hit by this model’s shooting becomes easier for other Grey Knights to hit for the rest of that phase.',
+  'Kaldor-Draigo':'Untouchable Purity: the led squad ignores mortal wounds on 4+. One With the Warp: once per battle, gains 3 to a charge after arriving by teleport. Supreme Commander: must be the Warlord when included.'
 };
 const clean = s => s.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const entries = [
@@ -36,7 +38,9 @@ const entries = [
   ['Brotherhood-Champion','grey-knight-champion','Nemesis force weapon',[1,1]],
   ['Brotherhood-Chaplain','grey-knight-chaplain','Crozius arcanum',[2,2]],
   ['Brotherhood-Techmarine','grey-knight-techmarine','Omnissian power axe',[1,1]],
-  ['Brother-captain','grey-knight-brother-captain','Nemesis force weapon',[2,2]]
+  ['Brother-captain','grey-knight-brother-captain','Nemesis force weapon',[2,2]],
+  ['Venerable-Dreadnought','grey-knight-venerable-dreadnought','Assault cannon',[3,3]],
+  ['Kaldor-Draigo','grey-knight-kaldor-draigo','The Titansword',[2,2]]
 ];
 for (const [anchor,id,chosen,size,startingAvailable=false] of entries) {
   const start = html.indexOf(`<a id="${anchor}"`);
@@ -63,8 +67,8 @@ for (const [anchor,id,chosen,size,startingAvailable=false] of entries) {
     const weapon=weapons.find(w=>w.name.toLowerCase()===chosen.toLowerCase());
     if(!weapon || !points || !profile.toughness) throw new Error(`Incomplete ${anchor}: ${chosen}`);
     const character=coreAbilities.includes('Leader');
-    const epic=/Castellan|Voldus/.test(anchor);
-    unit={id,name:anchor.replaceAll('-',' '),points,stock:character?1:2,size,models:character?1:5,role:epic?'Epic Hero · Leader':character?'Character · Leader':'Elite',startingAvailable,keywords:['Infantry','Psyker','Imperium','Grey Knights',...(character?['Character','Leader']:[]),...(epic?['Epic Hero']:[]),...(/Paladin|Voldus|Chaplain|captain/.test(anchor)?['Terminator']:[])],leadership:profile.leadership,oc:profile.oc,abilities:[...abilities,...coreAbilities,'Gate of Infinity'],defense:{toughness:profile.toughness,save:profile.save,wounds:profile.wounds,invuln},weapon};
+    const epic=/Castellan|Voldus|Draigo/.test(anchor);
+    unit={id,name:anchor.replaceAll('-',' '),points,stock:character?1:2,size,models:character?1:5,role:epic?'Epic Hero · Leader':character?'Character · Leader':'Elite',startingAvailable,keywords:['Infantry','Psyker','Imperium','Grey Knights',...(character?['Character','Leader']:[]),...(epic?['Epic Hero']:[]),...(/Paladin|Voldus|Chaplain|captain|Draigo/.test(anchor)?['Terminator']:[])],leadership:profile.leadership,oc:profile.oc,abilities:[...abilities,...coreAbilities,'Gate of Infinity'],defense:{toughness:profile.toughness,save:profile.save,wounds:profile.wounds,invuln},weapon};
     if(character) {
       const leaderBlock=block.slice(block.indexOf('>LEADER<'),block.indexOf('KEYWORDS:'));
       const targets=[...leaderBlock.matchAll(/href="[^"]*#([^"#]+)"/g)].map(m=>entries.find(e=>e[0]===m[1])?.[1]).filter(Boolean);
@@ -78,12 +82,17 @@ for (const [anchor,id,chosen,size,startingAvailable=false] of entries) {
     'grey-knight-champion':['grey-knight-purgation','grey-knight-strike-squad'],
     'grey-knight-chaplain':['grey-knight-terminators','grey-knight-paladins'],
     'grey-knight-techmarine':['grey-knight-purgation','grey-knight-purifiers','grey-knight-strike-squad'],
-    'grey-knight-brother-captain':['grey-knight-terminators','grey-knight-paladins']
+    'grey-knight-brother-captain':['grey-knight-terminators','grey-knight-paladins'],
+    'grey-knight-kaldor-draigo':['grey-knight-terminators','grey-knight-paladins']
   };
   if(leaderTargets[id]) unit.leader.targets=leaderTargets[id];
   if(id==='grey-knight-paladins') unit.models=4;
   if(id==='grey-knight-brother-captain') unit.name='Brother-Captain';
+  if(id==='grey-knight-venerable-dreadnought') {
+    Object.assign(unit,{name:'Venerable Dreadnought',models:1,stock:1,role:'Walker · Character',startingAvailable:false,keywords:['Vehicle','Walker','Character','Psyker','Smoke','Imperium','Grey Knights']});
+  }
   unit.datasheet={source,retrieved:'2026-10-25',profile,weapons,abilities:[...abilities,...coreAbilities,'Gate of Infinity'],abilitySummary:summaries[anchor],composition};
+  if(id==='grey-knight-kaldor-draigo') { unit.startingAvailable=false; unit.datasheet.classification='LEGENDS'; }
 }
 roster.source.greyKnights={url:'https://wahapedia.ru/wh40k11ed/factions/grey-knights/datasheets.html',retrieved:'2026-10-25',notice:'Additional Grey Knights use the smallest listed unit and first-unit points. Rectangular footprints and stock are game adaptations. Existing combat profiles are preserved; datasheet reference profiles may differ. One chosen weapon resolves in automatic combat; other weapons and ability names are reference information.'};
 // Preserve the compact style of the existing dataset.
