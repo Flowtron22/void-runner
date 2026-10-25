@@ -43,6 +43,7 @@ body.star-chart-open::after {
 }
 
 .app-shell,
+body.battle-active .app-shell,
 body.main-menu-open .app-shell,
 body.star-chart-open .app-shell {
   position: relative;

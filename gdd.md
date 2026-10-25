@@ -538,3 +538,7 @@ Added Venerable Dreadnought (`grey-knight-venerable-dreadnought`, 130 points, 3�
 ### Dedicated squad portrait refresh — 25 October 2026
 
 Strike Squad, Interceptors, Purgation and Purifiers now use the newly supplied `GK_StrikeSquad.jpg`, `GK_Interceptor_Squad2.webp`, `GK_Purgation.jpg` and `GK_Purifier.jpg`. Each has its own face/helmet-to-torso crop in `js/data/portraits.js`; Interceptors no longer share the Strike Squad portrait. Original reference files remain unchanged.
+
+### Battle outer-edge cleanup — 26 October 2026
+
+Removed the legacy 1px inset lines from the desktop battle shell and side army backdrops. The persistent chassis rule now explicitly includes `body.battle-active .app-shell`, preserving a transparent, shadow-free outer canvas in combat. The physical terminal artwork and CRT content borders remain intact. Verified in an actual battle at desktop width: shell border 0, shell box-shadow none, both wing box-shadows none; production build passed.
