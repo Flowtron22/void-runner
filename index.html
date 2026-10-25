@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/terminal-frame.css" />
   <link rel="stylesheet" href="css/terminal-signal.css" />
+  <link rel="stylesheet" href="css/ordeal.css" />
 </head>
 <body>
   <aside id="desktop-battle-stage" class="desktop-battle-stage" aria-hidden="true">
@@ -107,10 +108,23 @@
       <div class="capacity-meter"><i id="capacity-fill"></i></div>
       <div class="loadout-tip pixel-panel" hidden><b>① UNIT</b><span>→</span><b>② GRID</b></div>
       <div class="case-wrap"><div class="case-axis"><span>FRONT LINE</span><span>REAR LINE</span></div><div id="formation-grid" class="formation-grid" aria-label="Six by five deployment grid"></div></div>
-      <div class="prep-actions"><button id="remove-button" class="danger" aria-label="Remove selected unit">✕ REMOVE</button><button id="clear-button" aria-label="Clear formation">⌫</button></div>
+      <div class="prep-actions"><button id="remove-button" class="danger" aria-label="Remove selected unit">✕ REMOVE</button><button id="rotate-button" aria-label="Rotate draft footprint" aria-pressed="false">↻ ROTATE</button><button id="clear-button" aria-label="Clear formation">⌫</button></div>
       <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">▦ UNITS</button><button data-prep-tab="gear">⚙ <span id="gear-count">0</span></button><button data-prep-tab="protocols">✦ DOCTRINES</button></nav>
-      <div id="unit-roster" class="prep-list active"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
-      <div class="station-footer pixel-panel"><div hidden><small id="prep-status-label">▦</small><b id="prep-status">SELECT A UNIT</b></div><button id="cancel-encounter-button" hidden>SYSTEM CHART</button><button id="deploy-button" disabled>← RETURN TO COMMAND DECK</button></div>
+      <p class="draft-hint">TAP TO INSPECT · HOLD & DRAG TO DRAFT</p>
+      <div id="unit-roster" class="prep-list active" aria-label="Available unit portraits"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
+      <p id="prep-status" class="draft-status" role="status" aria-live="polite">SELECT A UNIT</p>
+      <div class="station-footer pixel-panel"><button id="cancel-encounter-button" hidden>SYSTEM CHART</button><button id="deploy-button" disabled>← RETURN TO COMMAND DECK</button></div>
+    </section>
+
+    <section id="datasheet-screen" class="screen" aria-labelledby="datasheet-title">
+      <header class="datasheet-head"><p class="eyebrow">// LIBER DAEMONICA</p><h2 id="datasheet-title"></h2><p id="datasheet-subtitle"></p></header>
+      <div class="datasheet-scroll">
+        <div id="datasheet-portrait" class="datasheet-portrait" role="img" aria-label="Unit portrait"></div>
+        <div id="datasheet-stats" class="datasheet-stats"></div>
+        <p id="datasheet-invuln" class="datasheet-invuln"></p>
+        <div id="datasheet-content"></div>
+      </div>
+      <footer class="datasheet-actions"><button id="datasheet-back">← ORDEAL</button><button id="datasheet-draft">DRAFT</button></footer>
     </section>
 
     <section id="boss-choice-screen" class="screen" aria-labelledby="boss-choice-title">

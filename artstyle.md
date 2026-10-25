@@ -277,3 +277,7 @@ The compact sector chart uses nine regular battle beacons and a single, clearly 
 ### Constellation composition — 25 October 2026
 
 Do not align chart systems in symmetrical columns or evenly spaced rows. Use stable, seeded constellation positions that drift and branch upward/right from a lower-left start. Enter on a close view of the current position and its nearby reachable systems; zoom out to reveal the full route. Do not move stars to different world coordinates when resizing. Keep emission 20% larger than the earlier route chart, with brighter available stars and visible grey future signals. Simplify labels at overview scale. Build gas texture softness into radial gradients rather than depending on Canvas blur, which can vary across browsers. Keep clouds subordinate to stars and CRT text.
+
+### Ordeal portrait archive — 25 October 2026
+
+Retain the formation case at the top and use compact vertical portrait cards below it. Four columns fit the CRT at phone width; only essential names, points, footprint and stock/sealed state belong on cards. Full rules belong in a separate full-screen CRT datasheet with expandable sections. Keep available patterns first, retain sealed portraits for inspection, and preserve roster scroll when returning. Drag previews should fill the exact rectangular footprint and use restrained green/red emission. The user explicitly permits model-reference portraits for this feature; existing original artwork remains the fallback where a matching image is unavailable.

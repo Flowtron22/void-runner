@@ -1,6 +1,8 @@
 import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATAGEMS } from '../data/units.js';
 import { buildSectorChart, chartState } from './CampaignChart.js';
 import { ensureConstellationPositions } from '../render/ChartLayout.js';
+import { placementIssue } from './DraftPlacement.js';
+import { bindDraftDrag } from '../ui/DraftDrag.js';
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
@@ -75,7 +77,7 @@ const GALAXY_SYSTEM_LAYOUT = [
   {x:75,y:56,size:.78,tone:'red'},{x:30,y:56,size:.94,tone:'blue'},{x:55,y:73,size:.7,tone:'white'},
   {x:25,y:85,size:.68,tone:'red'},{x:77,y:86,size:.62,tone:'gold'}
 ];
-const EPIC_HERO_IDS = ['imperial-fists-darnath-lysander', 'space-wolves-bjorn-the-fell-handed', 'space-wolves-ragnar-blackmane'];
+const EPIC_HERO_IDS = ['imperial-fists-darnath-lysander', 'space-wolves-bjorn-the-fell-handed', 'space-wolves-ragnar-blackmane', 'grey-knight-castellan-crowe', 'grey-knight-voldus'];
 const GREY_KNIGHT_UNIT_ART = {
   'grey-knight-strike-squad':[
     new URL('../../assets/units/grey-knights/strike-squad.png',import.meta.url).href,
@@ -102,6 +104,8 @@ const UNIT_SPRITES = {
 };
 const unitSpriteStyle = (id, variant = 0) => {
   id = id.split('--rescued-')[0];
+  const aliases = {'grey-knight-interceptors':'grey-knight-strike-squad','grey-knight-purgation':'grey-knight-strike-squad','grey-knight-purifiers':'grey-knight-strike-squad','grey-knight-paladins':'grey-knight-terminators','grey-knight-champion':'grey-knight-strike-squad','grey-knight-chaplain':'brotherhood-librarian','grey-knight-techmarine':'grey-knight-strike-squad','grey-knight-brother-captain':'grey-knight-terminators','grey-knight-castellan-crowe':'grey-knight-strike-squad','grey-knight-voldus':'grey-knight-terminators'};
+  id = aliases[id] || id;
   const unitArt = GREY_KNIGHT_UNIT_ART[id];
   if (unitArt) {
     const src = unitArt[variant % unitArt.length];
@@ -111,6 +115,14 @@ const unitSpriteStyle = (id, variant = 0) => {
   const [column, row] = UNIT_SPRITES[id] || [hash % 4, Math.floor(hash / 4) % 4];
   return `--icon-x:${column * 100 / 3}%;--icon-y:${row * 100 / 3}%`;
 };
+
+const portraitStyle = id => {
+  const base=id.split('--rescued-')[0];
+  const portraits={'grey-knight-interceptors':['interceptor.webp','center 70%','170% auto'],'grey-knight-castellan-crowe':['castellan-crowe.webp','center 65%','auto 120%'],'grey-knight-voldus':['voldus.jpg','center 72%','140% auto']};
+  const portrait=portraits[base];
+  return portrait ? `--unit-art:url(/assets/unit-portraits/${portrait[0]});--unit-art-position:${portrait[1]};--unit-art-size:${portrait[2]}` : unitSpriteStyle(id);
+};
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function weaponRules(weapon, halfRange = false) {
   const rules = { unsupported: [] };
@@ -230,6 +242,9 @@ export class Game {
     $('#event-continue-button').onclick = () => this.finishPostWarEvent();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
     $('#remove-button').onclick = () => this.removeSelected();
+    $('#rotate-button').onclick = () => { this.rotated=!this.rotated; $('#rotate-button').setAttribute('aria-pressed',String(this.rotated)); const unit=this.unit(this.selectedBlueprint); $('#prep-status').textContent=unit?`${unit.name.toUpperCase()} · ${this.sizeFor(unit,this.rotated).join('×')}`:'ROTATION CHANGED'; };
+    $('#datasheet-back').onclick = () => this.closeDatasheet();
+    $('#datasheet-draft').onclick = () => { this.selectedBlueprint=this.datasheetUnitId; this.selectedPlaced=null; this.closeDatasheet(); const unit=this.unit(this.selectedBlueprint); $('#prep-status').textContent=`TAP A FREE SPACE · ${this.sizeFor(unit,this.rotated).join('×')}`; $('#formation-grid .grid-cell')?.focus({preventScroll:true}); };
     $('#clear-button').onclick = () => {
       if (!this.run) return;
       this.run.deployed = [];
@@ -337,6 +352,7 @@ export class Game {
 
   goBack() {
     if (this.battle) return;
+    if (this.currentScreen === 'datasheet') return this.closeDatasheet();
     if (this.currentScreen === 'mission') {
       if ($('#mission-accept-button').dataset.review === 'true') { this.renderMap(); return this.show('map'); }
       return this.closeMissionBriefing();
@@ -445,7 +461,7 @@ export class Game {
       hull: 3 + (this.meta.research.insurance || 0), maxHull: 3 + (this.meta.research.insurance || 0),
       data:0, stars:0, sectorStars:0, currency:0, chests:0, protocols:[], stratagems:[], gear:[], deployed:[], history:[], offers:null,
       sectors:Array.from({length:tier.sectors},(_,i)=>({id:i,name:SECTOR_NAMES[i],status:i===0?'available':'locked',stars:0})),
-      unlockedUnits:factionUnits.slice(0,2).map(unit=>unit.id), battles:0, bosses:0, pendingNode:null, pendingPostWar:null,
+      unlockedUnits:factionUnits.filter((unit,index)=>index<2 || unit.startingAvailable).map(unit=>unit.id), battles:0, bosses:0, pendingNode:null, pendingPostWar:null,
       story:{briefed:[],completed:[],pendingBriefing:null}
     };
     this.run.cap = this.getBaseCap();
@@ -518,6 +534,10 @@ export class Game {
   }
 
   renderLoadout() {
+    // New core squad patterns are available in existing saves as well as new missions.
+    for(const unit of this.units.filter(u=>u.faction===this.run.faction && u.startingAvailable)) {
+      if(!this.run.unlockedUnits.includes(unit.id)) this.run.unlockedUnits.push(unit.id);
+    }
     this.run.cap = this.getBaseCap();
     const used = this.usedPoints();
     $('#used-points').textContent = used;
@@ -561,6 +581,8 @@ export class Game {
       el.style.height = `calc(${h} * var(--cell) + ${(h - 1) * 2}px)`;
       el.innerHTML = `<span class="grid-unit-icon" style="${unitSpriteStyle(unit.id,artVariant)}" aria-hidden="true"></span><small>${unit.points}</small>`;
       el.title = `${unit.name} · ${unit.role} · ${unit.points} points`;
+      el.setAttribute('aria-label',`${unit.name}, ${unit.points} points, column ${placed.x+1}, row ${placed.y+1}`);
+      el.dataset.placedId=placed.id;
       el.onclick = event => {
         event.stopPropagation();
         const leader = this.unit(this.selectedBlueprint);
@@ -573,23 +595,69 @@ export class Game {
 
   renderRoster() {
     const roster = $('#unit-roster');
+    const scrollTop=roster.scrollTop;
     roster.innerHTML = '';
-    for (const unit of [...this.units.filter(item => item.faction === this.run.faction), ...(this.run.rescuedUnits || [])]) {
+    const candidates=[...this.units.filter(item => item.faction === this.run.faction), ...(this.run.rescuedUnits || [])];
+    candidates.sort((a,b)=>Number(Boolean(!a.rescueKind && !this.run.unlockedUnits.includes(a.id)))-Number(Boolean(!b.rescueKind && !this.run.unlockedUnits.includes(b.id))));
+    for (const unit of candidates) {
       const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
       const out = deployedCount >= unit.stock;
       const tooLarge = unit.points > this.run.cap;
       const unrecovered = !unit.rescueKind && !this.run.unlockedUnits.includes(unit.id);
       const button = document.createElement('button');
-      button.className = `unit-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${out || tooLarge || unrecovered ? 'locked' : ''}`;
+      button.className = `unit-card portrait-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${out || tooLarge || unrecovered ? 'unavailable' : ''}`;
       button.style.setProperty('--unit-color', unit.color);
-      button.disabled = out || tooLarge || unrecovered;
-      const weapon = unit.weapon;
       const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.rescueKind ? `${unit.rescueKind} · ${this.faction(unit.faction).name} · MISSION ONLY · ×${unit.stock - deployedCount}` : unit.leader ? `${unit.size[0]}×${unit.size[1]} · ♛ GRID OR BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
-      button.innerHTML = `<span class="unit-icon" style="${unitSpriteStyle(unit.id,deployedCount)}" aria-hidden="true"></span><span class="unit-copy"><b>${unit.name}</b><small class="unit-meta">${status}</small><span class="stat-chips"><i title="Toughness">T${unit.defense.toughness}</i><i title="Save">SV${unit.defense.save}+</i><i title="Wounds">W${unit.defense.wounds}</i><i title="Leadership">LD${unit.leadership}+</i><i title="Objective Control">OC${unit.oc}</i></span><span class="weapon-line-mini" title="${weapon.name}">⚔ ${weapon.attacks}A · ${weapon.hit}+ · S${weapon.strength} · AP${weapon.ap} · D${weapon.damage}</span></span><span class="unit-cost">${unit.points}<small>PTS</small></span>`;
-      button.onclick = () => { this.selectedBlueprint = unit.id; this.selectedPlaced = null; this.renderLoadout(); };
+      const cardName=unit.name.replace(/^Brotherhood /,'');
+      const badge=unrecovered?'SEALED':out?'DEPLOYED':tooLarge?'OVER CAP':`×${unit.stock-deployedCount}`;
+      button.innerHTML = `<span class="portrait-art" style="${portraitStyle(unit.id)}" aria-hidden="true"></span><span class="portrait-stock">${badge}</span><span class="portrait-caption"><b>${escapeHTML(cardName)}</b><small>${unit.points} PTS <i>${unit.size.join('×')}</i></small></span>${unit.rescueKind?'<span class="rescue-mark">MISSION</span>':''}`;
+      button.onclick = () => this.openDatasheet(unit.id);
+      if(!out && !tooLarge && !unrecovered) bindDraftDrag(button,unit,this);
       roster.append(button);
     }
+    roster.scrollTop=scrollTop;
+  }
+
+  openDatasheet(id) {
+    const unit=this.unit(id);
+    if(!unit) return;
+    this.rosterScroll=$('#unit-roster').scrollTop;
+    this.datasheetUnitId=id;
+    const ref=unit.datasheet;
+    const profile=ref?.profile || {movement:null,...unit.defense,leadership:unit.leadership,oc:unit.oc};
+    $('#datasheet-title').textContent=unit.name;
+    $('#datasheet-portrait').style.cssText=portraitStyle(id);
+    $('#datasheet-portrait').setAttribute('aria-label',`${unit.name} portrait`);
+    $('#datasheet-subtitle').textContent=`${this.faction(unit.faction).name} · ${unit.role}`;
+    $('#datasheet-stats').innerHTML=[['M',profile.movement?`${profile.movement}″`:'—'],['T',profile.toughness],['SV',`${profile.save}+`],['W',profile.wounds],['LD',`${profile.leadership}+`],['OC',profile.oc]].map(([label,value])=>`<div><small>${label}</small><b>${value}</b></div>`).join('');
+    $('#datasheet-invuln').textContent=profile.invuln<7?`INVULNERABLE SAVE · ${profile.invuln}+`:'NO INVULNERABLE SAVE';
+    const weapons=ref?.weapons || [unit.weapon];
+    const weaponSection=(name,list)=>`<details><summary>${name}</summary><div class="datasheet-weapons">${list.length?list.map(w=>`<article><b>${escapeHTML(w.name)}</b><div class="weapon-values">${[['R',w.range?`${w.range}″`:'Melee'],['A',w.attacks],['BS/WS',`${w.hit}+`],['S',w.strength],['AP',w.ap],['D',w.damage]].map(([k,v])=>`<span><small>${k}</small>${escapeHTML(v)}</span>`).join('')}</div><small>${escapeHTML(w.keywords.join(' · '))}</small></article>`).join(''):'<p>None listed.</p>'}</div></details>`;
+    const issue=this.draftAvailability(unit);
+    $('#datasheet-content').innerHTML=weaponSection('RANGED WEAPONS',weapons.filter(w=>w.range>0))+weaponSection('MELEE WEAPONS',weapons.filter(w=>w.range===0))+`<details><summary>ABILITIES</summary><p>${(ref?.abilities || unit.abilities).map(escapeHTML).join(' · ')}</p>${ref?.abilitySummary?`<p>${escapeHTML(ref.abilitySummary)}</p><p class="reference-note">REFERENCE ABILITIES</p>`:''}</details><details><summary>UNIT COMPOSITION</summary><p>${escapeHTML(ref?.composition || `${unit.models} model${unit.models===1?'':'s'}`)}</p>${unit.leader?`<p>LEADS: ${unit.leader.targets.map(id=>escapeHTML(this.unit(id)?.name || id)).join(' · ')}</p>`:''}</details><details open><summary>ORDEAL PROFILE</summary><p>${unit.points} PTS · ${unit.models} MODELS · ${unit.size.join('×')} SPACE · STOCK ${unit.stock}</p><p>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · LD${unit.leadership}+ · OC${unit.oc}</p><p>COMBAT WEAPON: ${escapeHTML(unit.weapon.name)}</p>${ref?`<p class="reference-note">The reference weapons and ability names above describe the datasheet. Automatic combat uses this Ordeal profile and one weapon.</p><a href="${escapeHTML(ref.source)}" target="_blank" rel="noopener">OPEN SOURCE DATASHEET ↗</a>`:''}</details>`;
+    $('#datasheet-draft').disabled=Boolean(issue);
+    $('#datasheet-draft').textContent=issue || `DRAFT · ${unit.points} PTS`;
+    this.show('datasheet');
+    $('#datasheet-back').focus({preventScroll:true});
+  }
+
+  closeDatasheet() {
+    const id=this.datasheetUnitId;
+    this.openLoadout();
+    $('#unit-roster').scrollTop=this.rosterScroll || 0;
+    [...$('#unit-roster').children].find(card=>card.getAttribute('aria-label')?.startsWith(this.unit(id)?.name+','))?.focus({preventScroll:true});
+  }
+
+  draftAvailability(unit) {
+    if(!unit || (!unit.rescueKind && !this.run.unlockedUnits.includes(unit.id))) return 'PATTERN UNRECOVERED · FIND IN SECTOR';
+    if(this.run.deployed.filter(p=>p.unitId===unit.id).length>=unit.stock) return 'ALL COPIES DEPLOYED';
+    if(this.usedPoints()+unit.points>this.run.cap) return 'NOT ENOUGH POINTS';
+    return null;
+  }
+
+  draftIssue(unit,x,y) {
+    return placementIssue({unit,unlocked:Boolean(unit?.rescueKind || this.run.unlockedUnits.includes(unit?.id)),deployed:this.run.deployed,cap:this.run.cap,used:this.usedPoints(),x,y,rotated:this.rotated,unitFor:id=>this.unit(id)});
   }
 
   renderGear() {
@@ -646,7 +714,7 @@ export class Game {
   sizeFor(unit, rotated) { return rotated ? [unit.size[1], unit.size[0]] : unit.size; }
 
   canPlace(x, y, w, h) {
-    if (x + w > 6 || y + h > 5) return false;
+    if (x < 0 || y < 0 || x + w > 6 || y + h > 5) return false;
     return !this.run.deployed.some(placed => {
       const [pw, ph] = this.sizeFor(this.unit(placed.unitId), placed.rotated);
       return x < placed.x + pw && x + w > placed.x && y < placed.y + ph && y + h > placed.y;
@@ -656,11 +724,8 @@ export class Game {
   placeUnit(x, y) {
     const unit = this.unit(this.selectedBlueprint);
     if (!unit) return;
-    const [w, h] = this.sizeFor(unit, this.rotated);
-    const deployedCount = this.run.deployed.filter(item => item.unitId === unit.id).length;
-    if (deployedCount >= unit.stock) return;
-    if (this.usedPoints() + unit.points > this.run.cap) { $('#prep-status').textContent = `NEED ${this.usedPoints() + unit.points - this.run.cap} MORE POINTS`; return; }
-    if (!this.canPlace(x, y, w, h)) { $('#prep-status').textContent = 'THAT UNIT DOES NOT FIT HERE'; return; }
+    const issue=this.draftIssue(unit,x,y);
+    if(issue) { $('#prep-status').textContent=issue; return; }
     this.run.deployed.push({ id: `${unit.id}-${Date.now()}-${Math.random()}`, unitId: unit.id, x, y, rotated: this.rotated });
     this.selectedPlaced = this.run.deployed.at(-1).id;
     this.selectedBlueprint = null;

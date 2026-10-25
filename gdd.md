@@ -61,7 +61,7 @@ Post-War rewards are run-only unless explicitly labeled permanent:
 - **Distress signal:** victory rescues a random Imperial unique unit or epic hero for the entire mission (the selected campaign across all sectors). Rescues enter Ordeal at one stock, use their existing roster profile and normal points/grid limits, survive sector changes and reloads, and disappear when the mission ends. Older saved reinforcement events still unlock faction patterns.
 - **Field store:** occasionally offers three Wargear items for campaign Requisition.
 
-Only the first two unit patterns in the chosen faction's JSON are available at campaign start. Reinforcement events can unlock the other two. Unit stock limits still apply, and the full 6×5 grid remains available from the start.
+The first two faction patterns are available at campaign start. Grey Knights additionally start with Interceptors, Paladins, Purgation and Purifier squads; existing saves receive these four patterns when Ordeal opens. Reinforcement events can unlock sealed faction patterns, and Distress can rescue their mission-only equivalents. Unit stock limits still apply, and the full 6×5 grid remains available from the start.
 
 - **40K supplies the army layer:** factions, units, points, models, Toughness, Saves, Wounds, Invulnerable Saves, weapon Attacks, Hit values, Strength, AP and Damage.
 - **The KS project supplies the data and dice model:** compact game data is derived from `D:/Projects/Minigames/KS/solo-lab/public/armies`, and attack resolution follows the KS sequence.
@@ -167,7 +167,7 @@ Only these three factions are selectable at launch:
 - Imperial Fists (`imperial-fists`).
 - Grey Knights (`grey-knights`).
 
-The full data roster contains 19 factions and 76 units. All other factions remain available to the enemy generator:
+The full data roster contains 19 factions and 86 units, including 14 Grey Knights patterns. All other factions remain available to the enemy generator:
 
 - Ultramarines
 - Orks
@@ -517,3 +517,12 @@ Chart version 2 reduces new sectors to three regular battles (nine possible batt
 `ChartLayout.js` generates saved `chart.positions` from the mission seed and sector index. Star positions are irregular and ascend from the lower-left start toward the upper-right final system; route lanes remain gameplay rules only. Coordinates stay fixed across reloads, zoom and aspect changes. The initial camera frames the ship/current position and reachable neighbours (about four beacons at sector entry); wheel, pinch and +/− reveal more, while ALL fits the full constellation. Zoom interpolates its focus toward the overview centre. Overview labels simplify to stars/events to avoid crowding. System sprites are 20% larger and brighter. Chart-return controls read SYSTEM CHART and still cancel pending selections without spending progress. Nebulae now use transformed, fully feathered radial gradients without Canvas blur or clipped ellipse edges, plus linear texture filtering. This removes a likely Safari rendering dependency; actual iPad/Safari visual confirmation remains necessary.
 
 Constellation spacing revision (25 October): position layout version 3 expands existing coordinates once (2.5x horizontally, 1.3x vertically) and tightens overview padding so systems occupy more of the CRT field. Star style, route links, encounters and rewards are unchanged. The saved positionVersion prevents repeated expansion on reload.
+## Ordeal portrait draft — 25 October 2026
+
+Keep the 6×5 case visible above a scrolling four-column portrait archive. Portrait taps open a dedicated CRT datasheet screen with unit art, six characteristics, invulnerable save, expandable ranged/melee profiles, ability summaries, composition, leader targets and the effective Ordeal profile. Back restores roster scroll and focus. Draft selects the pattern for keyboard/tap grid placement; Rotate changes its rectangular footprint. Mouse dragging begins after a movement threshold. Touch swipes scroll the roster; holding for 230ms begins a drag with a ghost and green/red footprint. Releasing outside the case or cancelling never deploys a unit. All final drops recheck points, stock, unlock, bounds and collisions through `DraftPlacement.js`.
+
+Ten Grey Knights patterns were added from the requested Wahapedia 11th-edition page, retrieved 25 October 2026: Interceptors, Paladins, Purgation, Purifiers, Castellan Crowe, Grand Master Voldus, Brotherhood Champion, Chaplain, Techmarine and Brother-Captain. Numeric source snapshots and paraphrased reference summaries live under each unit’s `datasheet`; `scripts/import-grey-knights.mjs` refreshes from a saved HTML snapshot. New squads use the smallest listed model count and first-unit cost; footprints/stock are game adaptations. Existing four combat profiles remain save compatible, and their reference stat differences are visible in the Ordeal Profile panel. The engine still uses one chosen weapon and existing supported effects; displaying an ability does not implement new tabletop phase/movement rules.
+
+The requested source contains no model portraits. Crowe, Voldus and Interceptor imagery is copied from the project’s existing model references into `public/assets/unit-portraits`; remaining patterns reuse matching existing squad/character artwork. This follows the user’s explicit permission to use model portraits for this feature. No external hotlinked assets are required. Grey Knights Epic Heroes also participate in the existing Distress hero pool.
+
+Checks: `npm run check` covers placement bounds, rotations, overlap, points, stock, locks, source data, leader targets, pointer tap/scroll/hold/drop/cancel lifecycle, plus existing campaign tests. Browser layout and tap-to-draft checks supplement these; physical iPad Safari touch behavior still requires device verification.
