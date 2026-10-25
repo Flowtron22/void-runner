@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/terminal-frame.css" />
   <link rel="stylesheet" href="css/terminal-signal.css" />
   <link rel="stylesheet" href="css/ordeal.css" />
+  <link rel="stylesheet" href="css/field-store.css" />
 </head>
 <body>
   <aside id="desktop-battle-stage" class="desktop-battle-stage" aria-hidden="true">
@@ -181,6 +182,17 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <section id="store-screen" class="screen" aria-labelledby="store-title">
+      <div class="store-portrait mission-portrait"><img src="assets/rogue-trader.jpg" alt="Rogue Trader offering recovered wargear" /></div>
+      <header class="store-heading">
+        <div><p class="eyebrow">// ROGUE TRADER · POST-WAR</p><h2 id="store-title">FIELD STORE</h2></div>
+        <div class="store-balance"><small>REQUISITION</small><b id="store-currency">0</b></div>
+      </header>
+      <p id="store-copy" class="store-copy">Choose one recovered relic, or conserve Requisition.</p>
+      <div id="store-options" class="store-options" role="group" aria-label="Wargear for sale"></div>
+      <footer class="store-footer"><button id="store-continue-button">LEAVE STORE</button></footer>
     </section>
 
     <dialog id="event-dialog" class="modal pixel-panel">

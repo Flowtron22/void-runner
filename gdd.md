@@ -542,3 +542,9 @@ Strike Squad, Interceptors, Purgation and Purifiers now use the newly supplied `
 ### Battle outer-edge cleanup — 26 October 2026
 
 Removed the legacy 1px inset lines from the desktop battle shell and side army backdrops. The persistent chassis rule now explicitly includes `body.battle-active .app-shell`, preserving a transparent, shadow-free outer canvas in combat. The physical terminal artwork and CRT content borders remain intact. Verified in an actual battle at desktop width: shell border 0, shell box-shadow none, both wing box-shadows none; production build passed.
+
+### Field Store merchant transmission — 26 October 2026
+
+Field Store now opens as the dedicated `store-screen` inside the shared CRT safe area, replacing the reward page completely instead of opening a top-layer modal. The user-supplied `ref/GK/RT_UI/rogue_trader.jpg` is copied unchanged to `assets/rogue-trader.jpg` and framed above the stock, using the directive portrait treatment, edge falloff and shared scanlines. Balance, three item descriptions/prices and Leave Store remain inside the glass; stock can scroll on shorter screens.
+
+The existing one-item-or-leave rule and 20/30/40 prices remain. `fieldStoreOffers()` saves the three offers in `pendingPostWar.storeOffers` so a reload does not reroll stock. `purchaseStoreItem()` checks affordability and active stock, adds one gear item and resolves the visit; repeated clicks after resolution cannot purchase again. Reinforcement and Distress dialogs are unchanged. Campaign checks cover saved stock, affordability, purchase, duplicate rejection and leaving without spending. Browser verification at 390×854 and 320×740 found no overflow, no open modal and only the store screen active; production build passed.

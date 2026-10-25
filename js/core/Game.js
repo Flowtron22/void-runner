@@ -238,6 +238,7 @@ export class Game {
       document.body.classList.toggle('reduced-motion', event.target.checked); this.save();
     };
     $('#event-continue-button').onclick = () => this.finishPostWarEvent();
+    $('#store-continue-button').onclick = () => this.finishPostWarEvent();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
     $('#remove-button').onclick = () => this.removeSelected();
     $('#rotate-button').onclick = () => { this.rotated=!this.rotated; $('#rotate-button').setAttribute('aria-pressed',String(this.rotated)); const unit=this.unit(this.selectedBlueprint); $('#prep-status').textContent=unit?`${unit.name.toUpperCase()} · ${this.sizeFor(unit,this.rotated).join('×')}`:'ROTATION CHANGED'; };
@@ -350,6 +351,7 @@ export class Game {
 
   goBack() {
     if (this.battle) return;
+    if (this.currentScreen === 'store') return this.finishPostWarEvent();
     if (this.currentScreen === 'datasheet') return this.closeDatasheet();
     if (this.currentScreen === 'mission') {
       if ($('#mission-accept-button').dataset.review === 'true') { this.renderMap(); return this.show('map'); }
@@ -1739,16 +1741,42 @@ export class Game {
     if (!$('#event-dialog').open) $('#event-dialog').showModal();
   }
 
+  fieldStoreOffers() {
+    const pending=this.run?.pendingPostWar;
+    if(pending?.node.event !== 'store') return [];
+    if(!pending.storeOffers) {
+      pending.storeOffers=shuffle(WARGEAR).slice(0,3).map((gear,index)=>({gearId:gear.id,price:20+index*10}));
+      this.save();
+    }
+    return pending.storeOffers;
+  }
+
   openStoreEvent() {
-    $('#event-kicker').textContent = '// POST-WAR · FIELD STORE'; $('#event-title').textContent = `REQUISITION ${this.run.currency}`;
-    $('#event-copy').textContent = 'Choose one recovered relic, or conserve Requisition.';
-    const list = $('#event-options'); list.innerHTML = '';
-    shuffle(WARGEAR).slice(0,3).forEach((gear,index) => {
-      const price = 20 + index * 10; const button = document.createElement('button'); button.className = 'event-card'; button.disabled = this.run.currency < price;
-      button.innerHTML = `<span>⚙</span><b>${gear.name}</b><small>◆ ${price} · ${gear.desc}</small>`;
-      button.onclick = () => { this.run.currency -= price; this.run.gear.push({gearId:gear.id,equippedTo:null,id:`${gear.id}-${Date.now()}`}); this.save(); $('#event-dialog').close(); this.finishPostWarEvent(); }; list.append(button);
-    });
-    $('#event-continue-button').hidden = false; $('#event-dialog').showModal();
+    if(this.run?.pendingPostWar?.node.event !== 'store') return;
+    if($('#event-dialog').open) $('#event-dialog').close();
+    $('#store-currency').textContent=this.run.currency;
+    const list=$('#store-options'); list.innerHTML='';
+    list.scrollTop=0;
+    for(const offer of this.fieldStoreOffers()) {
+      const gear=WARGEAR.find(item=>item.id===offer.gearId);
+      if(!gear) continue;
+      const button=document.createElement('button');
+      button.className='store-item'; button.disabled=this.run.currency<offer.price;
+      button.setAttribute('aria-label',`${gear.name}, ${offer.price} Requisition. ${gear.desc}`);
+      button.innerHTML=`<span class="store-item-sigil" aria-hidden="true">⚙</span><span class="store-item-copy"><b>${escapeHTML(gear.name)}</b><small>${escapeHTML(gear.desc)}</small></span><span class="store-item-price">◆ ${offer.price}</span>`;
+      button.onclick=()=>this.purchaseStoreItem(gear.id);
+      list.append(button);
+    }
+    this.show('store');
+  }
+
+  purchaseStoreItem(gearId) {
+    const offer=this.fieldStoreOffers().find(item=>item.gearId===gearId);
+    if(!offer || !WARGEAR.some(item=>item.id===gearId) || this.run.currency<offer.price) return;
+    this.run.currency-=offer.price;
+    this.run.gear.push({gearId,equippedTo:null,id:`${gearId}-${Date.now()}`});
+    this.save();
+    this.finishPostWarEvent();
   }
 
   finishPostWarEvent() {
