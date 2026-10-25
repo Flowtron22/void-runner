@@ -1,13 +1,14 @@
 // Source pixels remain unchanged. Each SVG window frames the face through torso.
 // x/y/width/height are authored crop bounds in the original image's coordinates.
 const art = {
-  brother: ['battle-brother.webp',531,836,[135,160,360,420]],
+  strike: ['strike-squad.jpg',519,753,[145,100,310,360]],
+  interceptor: ['interceptor-squad.webp',798,1119,[200,120,450,525]],
   terminator: ['terminator.webp',837,967,[200,185,430,500]],
   dreadknight: ['dreadknight.webp',673,939,[150,240,380,440]],
   librarian: ['librarian.webp',786,1049,[280,300,420,480]],
   paladin: ['paladin.webp',523,746,[165,65,310,360]],
-  purgation: ['purgation.webp',454,791,[80,0,360,420]],
-  purifier: ['purifier.webp',450,686,[70,0,340,395]],
+  purgation: ['purgation-squad.jpg',953,1234,[140,120,560,650]],
+  purifier: ['purifier-squad.jpg',376,531,[55,130,270,315]],
   crowe: ['crowe.webp',778,1131,[130,270,500,580]],
   voldus: ['grand-master-voldus.webp',1000,792,[570,230,320,370]],
   champion: ['champion.webp',516,753,[130,145,300,350]],
@@ -18,11 +19,11 @@ const art = {
   draigo: ['kaldor-draigo.webp',680,957,[80,90,400,465]]
 };
 const units = {
-  'grey-knight-strike-squad':'brother',
+  'grey-knight-strike-squad':'strike',
   'grey-knight-terminators':'terminator',
   'nemesis-dreadknight':'dreadknight',
   'brotherhood-librarian':'librarian',
-  'grey-knight-interceptors':'brother',
+  'grey-knight-interceptors':'interceptor',
   'grey-knight-paladins':'paladin',
   'grey-knight-purgation':'purgation',
   'grey-knight-purifiers':'purifier',

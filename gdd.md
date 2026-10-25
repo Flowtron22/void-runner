@@ -534,3 +534,7 @@ Ordeal cards and datasheets now use the user-supplied `ref/GK/GK_potrait` collec
 ### Sealed additions — 25 October 2026
 
 Added Venerable Dreadnought (`grey-knight-venerable-dreadnought`, 130 points, 3×3) and Kaldor Draigo (`grey-knight-kaldor-draigo`, 125 points, 2×2). Both start SEALED in new and existing missions: portraits and datasheets are inspectable, drafting is unavailable until recovered through existing reward paths. Draigo joins the Epic Hero rescue pool and his source sheet is marked LEGENDS in the datasheet subtitle. Both use supplied artwork with individual face/coffin-and-torso framing. No starting unlocks were added.
+
+### Dedicated squad portrait refresh — 25 October 2026
+
+Strike Squad, Interceptors, Purgation and Purifiers now use the newly supplied `GK_StrikeSquad.jpg`, `GK_Interceptor_Squad2.webp`, `GK_Purgation.jpg` and `GK_Purifier.jpg`. Each has its own face/helmet-to-torso crop in `js/data/portraits.js`; Interceptors no longer share the Strike Squad portrait. Original reference files remain unchanged.
