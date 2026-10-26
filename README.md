@@ -36,3 +36,5 @@ Active missions retain their original combat/reward rules; new missions use bala
 Checks cover routes, drafting, reports, chapter isolation, RNG offers, stock, rank combat and sector payouts. Browser QA includes narrow-phone layouts and the latest UI cleanup. Physical iPad Safari still needs verification; balance across repeated missions remains provisional.
 
 26 October battle GIF fix: clear and hide previous artwork when leaving combat; reveal each new GIF only after its own load event. Stale load/error callbacks cannot affect a subsequent fight. Layout is unchanged. Regression checks live in scripts/check-battle-art.mjs.
+
+26 October link branding: browser title and social preview title are Combat Patrol by Ureka Games. Root favicon.svg/PNG/ICO and apple-touch-icon.png use a CP monogram matching the CRT palette. Static Open Graph/Twitter large-image metadata in index.html points to the unchanged existing warship artwork at /social/combat-patrol.jpg (1920×1219). Canonical URL is https://combatpatrol.vercel.app/. Metadata is present in initial HTML for crawlers; no gameplay layout changes. External platforms may cache older link previews.
