@@ -2,17 +2,17 @@
 
 A portrait-first 40K army-building roguelike with automatic visible D6 combat, presented inside one gothic CRT terminal.
 
-Updated 26 October 2026. Latest gameplay/UI release: 81d4fac. Live: https://combatpatrol.vercel.app.
+Updated 26 October 2026. UI cleanup release: 81d4fac; new-mission balance pass dated 26 October 2026. Live: https://combatpatrol.vercel.app.
 
 ## Current version
 
 - Main menu uses RESUME and NEW GAME as separate actions. New Game opens TAKE YOUR OATH; Grey Knights are available, Ultramarines and Imperial Fists remain sealed.
 - New missions start at 500 points plus chapter capacity upgrades. Clear four sectors; the fourth sector boss is the Final Boss, with no extra encounter.
-- Each secured sector retains 30 permanent chapter Requisition, including when a run ends early. Three sectors earn 90; four earn 120. Temporary mission Requisition expires without conversion.
-- Chapter Armoury has +150 points per capacity rank and separate Infantry/Vehicle attacks, Toughness and wounds upgrades. Wallets/upgrades never carry across chapters. Costs increase with rank.
+- Each secured sector retains a base 30 permanent chapter Requisition, including when a run ends early. Higher boss tiers award 35/40. Three easy sectors earn 90; four earn 120, up to 160 on the hardest route. Before the first secured sector, unique battle wins provide a capped 9-currency consolation payout. Temporary mission Requisition expires without conversion.
+- Chapter Armoury has +150 points per capacity rank and separate Infantry/Vehicle attacks, Toughness and wounds upgrades. Wallets/upgrades never carry across chapters. Costs increase with rank, with capacity purchases capped at 180 each. Permanent attacks and wounds apply per unit instead of every model; Fortification gives a conditional +1 Toughness rather than stacking +3.
 - Ordeal uses compact squad portrait slots, without rotation. Frontline screens targets, ranged units fire from rear, rear melee waits and rear units advance when the front falls. Attached leaders follow their bodyguards.
-- Explore the saved asymmetric constellation chart. Future systems glow grey. Inspect rewards, Start Mission, or return to System Chart without committing or rerolling. Sector stars unlock boss tiers at 0 / 5 / 8.
-- Post-war Stratagem offers randomly mix Normal and Relic cards with no fixed quota. Choose one card only. Trader stock is also RNG: buy multiple recruits, weapon boosts or wargear with mission Requisition; sold stock persists. Recruits and gear last for that full mission only.
+- Explore the saved asymmetric constellation chart. Future systems glow grey. Inspect rewards, Start Mission, or return to System Chart without committing or rerolling. Sector stars unlock boss tiers at 0 / 5 / 8. Later sectors escalate; enemies scale at 85% of added starting capacity. Larger capacity gradually increases chapter unit stock.
+- Post-war Stratagem offers randomly mix Normal and Relic cards with no fixed quota. Choose one card only. Build rewards are paced across the route to six Enhancement and six Stratagem opportunities per full run. Trader stock is also RNG: buy multiple recruits, weapon boosts or wargear with mission Requisition; sold stock persists. Recruits and gear last for that full mission only.
 - The Command Deck stations are back near the bottom. Marked instructional captions, verbose preview descriptions, map compass and duplicate Active Mission action are removed. Mechanical effects remain on actual choice cards; everything stays beneath CRT glass.
 
 Read [gdd.md](gdd.md) for current rules, costs, saves, code ownership and follow-ups. Read [artstyle.md](artstyle.md) before changing layout or artwork.
@@ -28,6 +28,8 @@ The compact checked-in roster contains 19 factions and 88 profiles, with 16 Grey
 Clone https://github.com/Flowtron22/void-runner, use main, run npm ci and read the three Markdown files before editing. Source/runtime assets are included. Browser-local progress does not transfer through Git and differs between localhost and production. Preserve unrelated user changes under ref/.
 
 Vercel project: interstellar-void under flowtron22. main pushes deploy https://combatpatrol.vercel.app using npm run build and dist/. Confirm deployment Ready and matching build before reporting live. Login/project linkage is local to each PC; never commit tokens or .vercel. No backend/cloud saves exist.
+
+Active missions retain their original combat/reward rules; new missions use balanceVersion 1. Chapter progress is preserved. Run npm run balance:simulate -- 360 for deterministic samples using the actual combat engine.
 
 ## Verification limits
 

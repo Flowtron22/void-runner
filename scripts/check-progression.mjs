@@ -10,7 +10,7 @@ migrateProgression(meta,null);migrateProgression(meta,null);
 assert.equal(chapterProfile(meta,'grey-knights').currency,90);
 assert.equal(chapterProfile(meta,'space-marines').currency,0);
 assert.equal(chapterProfile(meta,'grey-knights').research.capacity,1);
-assert.equal(CHAPTER_UPGRADES.find(u=>u.id==='capacity').cost(1),105);
+assert.equal(CHAPTER_UPGRADES.find(u=>u.id==='capacity').cost(1),75);
 const run={region:2,chests:0,securedSectors:[]};
 assert.equal(secureSector(run),30);assert.equal(secureSector(run),0);
 run.region=0;secureSector(run);run.region=1;secureSector(run);assert.equal(run.chests,90);

@@ -7,6 +7,7 @@ import { portraitMarkup } from '../data/portraits.js';
 import { summarizeBattle, battleReportRows, addCombatTotals } from './BattleReport.js';
 import {CHAPTER_UPGRADES,chapterProfile,migrateProgression,formationRows,migrateFormation,secureSector} from './Progression.js';
 import {TACTICS,rollTacticOffer,rollStoreOffers} from './RunRewards.js';
+import {BALANCE_VERSION,balanced,encounterDifficulty,threatCapacity,bossReward,earlyRecovery,pacedClaims,fortificationBonus,prepareTraining} from './Balance.js';
 
 const DEBRIEF_ART = {
   victory:new URL('../../assets/directive-victory.webp',import.meta.url).href,
@@ -270,7 +271,12 @@ export class Game {
   }
 
   faction(id) { return this.factions.find(faction => faction.id === id); }
-  unit(id) { return this.units.find(unit => unit.id === id) || this.run?.rescuedUnits?.find(unit => unit.id === id); }
+  unit(id) {
+    const unit=this.units.find(unit => unit.id === id) || this.run?.rescuedUnits?.find(unit => unit.id === id);
+    if(unit && balanced(this.run) && unit.faction===this.run.faction && !unit.sourceUnitId && !unit.leader)
+      return {...unit,stock:unit.stock+Math.floor(Math.max(0,(this.run.missionCap || 500)-500)/600)};
+    return unit;
+  }
 
   setupBattleStage(enemyFaction) {
     if (!window.matchMedia('(min-width:1100px)').matches) return;
@@ -457,12 +463,14 @@ export class Game {
 
   startRun() {
     // Starting a replacement mission retains already secured chapter rewards.
-    if(this.run)this.chapter().currency+=this.run.chests || 0;
+    if(this.run)this.chapter().currency+=(this.run.chests || 0)+(balanced(this.run)?earlyRecovery(this.run):0);
+    this.run=null;
     const tier = CAMPAIGN_TIERS[0];
     this.selectedFaction = this.setupChoice.faction || 'grey-knights';
+    prepareTraining(chapterProfile(this.meta,this.selectedFaction));
     const factionUnits = this.units.filter(unit => unit.faction === this.selectedFaction);
     this.run = {
-      rulesVersion:2,formationVersion:2,securedSectors:[],seed: Date.now(), faction: this.selectedFaction, tierIndex:0, region:null, step:0, cap:tier.points,
+      rulesVersion:2,balanceVersion:BALANCE_VERSION,balanceVictories:[],formationVersion:2,securedSectors:[],seed: Date.now(), faction: this.selectedFaction, tierIndex:0, region:null, step:0, cap:tier.points,
       hull: 3 + (this.chapter().research.insurance || 0), maxHull: 3 + (this.chapter().research.insurance || 0),
       data:0, stars:0, sectorStars:0, currency:0, chests:0, protocols:[], stratagems:[], gear:[], deployed:[], history:[], offers:null,
       sectors:Array.from({length:tier.sectors},(_,i)=>({id:i,name:SECTOR_NAMES[i],status:i===0?'available':'locked',stars:0})),
@@ -507,7 +515,7 @@ export class Game {
     if (!this.run) return;
     $('#hub-army-status').textContent = `${this.usedPoints()} / ${this.getBaseCap()} PTS`;
     $('#hub-req-status').textContent = `◆ ${this.chapter().currency} · CHAPTER`;
-    $('#mission-progress').innerHTML=this.run.sectors.map((s,i)=>`<span class="${s.status}">${s.status==='complete'?'✓':i+1}<small>${s.status==='complete'?'30 SECURED':s.status==='available'?'CURRENT':'LOCKED'}</small></span>`).join('');
+    $('#mission-progress').innerHTML=this.run.sectors.map((s,i)=>`<span class="${s.status}">${s.status==='complete'?'✓':i+1}<small>${s.status==='complete'?'SECURED':s.status==='available'?'CURRENT':'LOCKED'}</small></span>`).join('');
     $('#mission-secured').textContent=`${this.run.chests || 0} CHAPTER REQ SECURED · ${this.run.currency} MISSION REQ`;
     $('#hub-mission-label').textContent = 'OPERATION';
   }
@@ -701,6 +709,10 @@ export class Game {
     });
   }
 
+  effectDescription(item) {
+    return balanced(this.run) && item.id==='relic-brotherhood'?'Infantry gain +1 attack per unit and +1 Toughness.':item.desc;
+  }
+
   renderProtocols() {
     const list = $('#protocol-list');
     list.innerHTML = '';
@@ -720,7 +732,7 @@ export class Game {
     if ((this.run.stratagems || []).length) list.insertAdjacentHTML('beforeend','<div class="protocol-heading tactical"><b>STRATAGEMS</b><small>TACTICAL · CONDITIONAL EFFECTS</small></div>');
     for (const id of this.run.stratagems || []) {
       const stratagem = TACTICS.find(item => item.id === id);
-      const el = document.createElement('div'); el.className = 'protocol-card'; el.title = stratagem.desc;
+      const el = document.createElement('div'); el.className = 'protocol-card'; el.title = this.effectDescription(stratagem);
       el.innerHTML = `<span>⌖</span><div><b>${stratagem.name}</b><small>STRATAGEM · ${stratagem.tag}</small></div>`;
       list.append(el);
     }
@@ -981,8 +993,8 @@ export class Game {
       return [1,2,3].map((bossTier,lane) => ({
         id:`r${r}-boss-${bossTier}`,type:'boss',bossTier,
         name:(r===3 && this.run.rulesVersion===2?['FINAL WARLORD','FINAL CHAMPION','FINAL APEX COMMANDER']:['WARLORD','CHAMPION','APEX COMMANDER'])[bossTier-1],
-        reward:this.run.rulesVersion===2?`${bossTier}★ · SECURE 30 CHAPTER REQ · HIGHER TIER: RICHER RUN LOOT`:`${bossTier}★ · BANK ${tier.permanentReward * bossTier} REQ ON CAMPAIGN VICTORY`,
-        difficulty:(1 + bossTier * .22) * tier.enemyScale, enemyFaction:enemy.id,
+        reward:this.run.rulesVersion===2?`${bossTier}★ · SECURE ${balanced(this.run)?bossReward(bossTier):30} CHAPTER REQ`:`${bossTier}★ · BANK ${tier.permanentReward * bossTier} REQ ON CAMPAIGN VICTORY`,
+        difficulty:balanced(this.run)?encounterDifficulty({type:'boss',bossTier},r):(1 + bossTier * .22) * tier.enemyScale, enemyFaction:enemy.id,
         locked:this.run.sectorStars < thresholds[bossTier-1], threshold:thresholds[bossTier-1], stars:bossTier,lane
       }));
     }
@@ -993,7 +1005,7 @@ export class Game {
       const type = stars === 3 ? 'elite' : event === 'store' ? 'salvage' : 'skirmish';
       return {id:`r${r}s${s}n${index}`,type,name:names[(r+s+index)%names.length],stars,event,lane:index,
         reward:event === 'distress' ? 'DISTRESS' : event === 'store' ? 'FIELD STORE' : '',
-        difficulty:(.62 + stars * .14 + s * .035) * tier.enemyScale,enemyFaction:this.enemyFaction().id};
+        difficulty:balanced(this.run)?encounterDifficulty({stars,step:s},r):(.62 + stars * .14 + s * .035) * tier.enemyScale,enemyFaction:this.enemyFaction().id};
     });
   }
 
@@ -1092,7 +1104,7 @@ export class Game {
     $('#system-title').textContent=node.name;
     $('#system-enemy').textContent=this.faction(node.enemyFaction).name+' · '+'★'.repeat(node.stars || 1)+' · THREAT '+Math.round(node.difficulty*100);
     $('#system-art').innerHTML=portraitMarkup('grey-knight-strike-squad',true);
-    $('#system-drops').innerHTML=this.rewardSegmentOptions(context).map(o=>'<article><b>'+escapeHTML(o.name)+'</b>'+(o.kind==='currency'?'<p>'+plan.req+' MISSION REQ</p>':'')+'</article>').join('')+(node.type==='boss'?'<article><b>SECTOR MILESTONE</b><p>30 CHAPTER REQ</p></article>':node.event==='store'?'<article><b>ROGUE TRADER</b></article>':node.event==='distress'?'<article><b>DISTRESS RESCUE</b></article>':'');
+    $('#system-drops').innerHTML=this.rewardSegmentOptions(context).map(o=>'<article><b>'+escapeHTML(o.name)+'</b>'+(o.kind==='currency'?'<p>'+plan.req+' MISSION REQ</p>':'')+'</article>').join('')+(node.type==='boss'?'<article><b>SECTOR MILESTONE</b><p>'+(balanced(this.run)?bossReward(node.bossTier):30)+' CHAPTER REQ</p></article>':node.event==='store'?'<article><b>ROGUE TRADER</b></article>':node.event==='distress'?'<article><b>DISTRESS RESCUE</b></article>':'');
     this.show('system');
   }
 
@@ -1161,14 +1173,20 @@ export class Game {
       fighter.saveBonus += effects.saveBonus || 0;
       fighter.invuln = Math.min(fighter.invuln, effects.invuln || 7);
       fighter.fnp = effects.fnp || 7;
-      const doctrine = this.researchRanks().doctrine || 0;
+      const doctrine = balanced(this.run)?0:(this.researchRanks().doctrine || 0);
       if(this.run.rulesVersion===2) {
         const ranks=this.researchRanks(),type=unit.keywords.includes('Vehicle')?'vehicle':unit.keywords.includes('Infantry')?'infantry':null;
         if(type) {
-          fighter.attacksBonus+=(ranks[type+'-attacks'] || 0)+(effects[type+'Attacks'] || 0);
-          fighter.toughness+=(ranks[type+'-toughness'] || 0)+(effects[type+'Toughness'] || 0);
-          fighter.defense={...unit.defense,wounds:unit.defense.wounds+2*(ranks[type+'-wounds'] || 0)};
-          fighter.hp=Array(unit.models).fill(fighter.defense.wounds);fighter.maxHp=fighter.currentHp=fighter.hp.reduce((a,b)=>a+b,0);
+          fighter.attacksBonus+=(balanced(this.run)?0:(ranks[type+'-attacks'] || 0))+(effects[type+'Attacks'] || 0);
+          fighter.squadAttacks=balanced(this.run)?(ranks[type+'-attacks'] || 0)+(type==='infantry'?(effects.infantryAttacks || 0):0):0;
+          if(balanced(this.run) && type==='infantry')fighter.attacksBonus-=effects.infantryAttacks || 0;
+          fighter.toughness+=(balanced(this.run)?0:(ranks[type+'-toughness'] || 0))+(effects[type+'Toughness'] || 0);
+          fighter.fortificationRank=balanced(this.run)?(ranks[type+'-toughness'] || 0):0;
+          fighter.defense={...unit.defense,wounds:unit.defense.wounds+(balanced(this.run)?0:2*(ranks[type+'-wounds'] || 0))};
+          fighter.squadWounds=balanced(this.run)?2*(ranks[type+'-wounds'] || 0):0;
+          fighter.hp=Array(unit.models).fill(fighter.defense.wounds);
+          fighter.hp[fighter.hp.length-1]+=fighter.squadWounds;
+          fighter.maxHp=fighter.currentHp=fighter.hp.reduce((a,b)=>a+b,0);
           if(type==='infantry')fighter.invuln=Math.min(fighter.invuln,effects.infantryInvuln || 7);
         }
       }
@@ -1182,10 +1200,10 @@ export class Game {
 
   makeEnemyForce(node) {
     const pool = this.units.filter(unit => unit.faction === node.enemyFaction && unit.points <= this.run.cap && !unit.leader);
-    const target = Math.max(150, Math.round((this.run.rulesVersion===2?(this.run.missionCap || 500):this.usedPoints()) * node.difficulty));
+    const target = Math.max(150, Math.round((this.run.rulesVersion===2?(balanced(this.run)?threatCapacity(this.run.missionCap || 500):(this.run.missionCap || 500)):this.usedPoints()) * node.difficulty));
     const force = [];
     let total = 0, safety = 0;
-    while (total < target * .85 && safety++ < 20) {
+    while (total < target * .85 && safety++ < (balanced(this.run)?40:20)) {
       const choices = pool.filter(unit => unit.points <= target - total + 80);
       const unit = pick(choices.length ? choices : pool);
       force.push(this.buildFighter({id:`enemy-${force.length}`,unitId:unit.id,x:force.length%3,y:Math.floor(force.length/3)}, 'enemy'));
@@ -1199,6 +1217,16 @@ export class Game {
       force[0].attacksBonus += 1;
     }
     if(this.run.rulesVersion===2)force.forEach((unit,index)=>unit.rank=unit.weapon.range===0 || index<Math.ceil(force.length/2)?'front':'rear');
+    if(balanced(this.run) && node.type==='boss' && this.run.region===3 && (node.bossTier || 1)>=2) {
+      // The final elite force counters a developed run, not just with another HP sponge.
+      for(const unit of force) {
+        unit.hitBonus=1;
+        if(node.bossTier===3) {
+          unit.attacksBonus+=1;
+          if(unit===force[0]){unit.woundBonus=1;unit.toughness+=1;}
+        }
+      }
+    }
     return force;
   }
 
@@ -1420,7 +1448,7 @@ export class Game {
     }
     const effects = actor.side === 'player' ? this.protocolEffects() : {};
     const tactics = actor.side === 'player' && this.battle.round === 1 ? this.stratagemEffects() : {};
-    attacks += models * (tactics.openingAttacks || 0);
+    attacks += (actor.squadAttacks || 0)+models * (tactics.openingAttacks || 0);
     const hitTarget = clamp(actor.weapon.hit - actor.hitBonus - (tactics.openingHit || 0), 2, 6);
     const attackDie = actor.side === 'player' ? playerD6 : d6;
     const saveDie = target.side === 'player' ? playerD6 : d6;
@@ -1434,7 +1462,7 @@ export class Game {
     const autoWounds = tacticalAutoWounds || (effects.lethalHits || rules.lethalHits ? criticalHits : 0);
     const sustainedHits = Math.max(effects.sustainedHits || 0, rules.sustainedHits || 0, leader.sustainedHits || 0);
     if (sustainedHits) hits += criticalHits * sustainedHits;
-    const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness) - actor.woundBonus - (tactics.openingWound || 0), 2, 6);
+    const woundNeeded = clamp(woundTarget(actor.weapon.strength, target.toughness+fortificationBonus(target.fortificationRank || 0,target.currentHp/target.maxHp)) - actor.woundBonus - (tactics.openingWound || 0), 2, 6);
     const antiNeeded = target.keywords?.includes('Infantry') ? rules.antiInfantry : target.keywords?.includes('Monster') ? rules.antiMonster : target.keywords?.includes('Vehicle') ? rules.antiVehicle : null;
     const effectiveWoundNeeded = Math.min(woundNeeded, antiNeeded || 7);
     let woundRolls = Array.from({length:Math.max(0,hits-autoWounds)}, attackDie);
@@ -1503,7 +1531,7 @@ export class Game {
 
   restoreWounds(unit, amount) {
     if (!unit.hp.length) return;
-    const max = unit.defense.wounds;
+    const max = unit.defense.wounds+(unit.hp.length===1?(unit.squadWounds || 0):0);
     unit.hp[0] = Math.min(max, unit.hp[0] + amount);
     unit.currentHp = unit.hp.reduce((sum,value) => sum + value, 0);
     unit.flash = 'heal';
@@ -1534,7 +1562,7 @@ export class Game {
       el.className = `fighter ${fighter.dead ? 'dead' : ''} ${destroying ? 'destroying' : ''} ${fighter.flash || ''}`;
       el.style.setProperty('--fighter-color', fighter.side === 'enemy' ? '#ff496c' : fighter.color);
       const states = [this.run.rulesVersion===2?(fighter.rank==='front'?'FRONTLINE':'REAR LINE'):'',fighter.battleShocked ? 'BATTLE-SHOCKED' : '', fighter.attachedTo ? 'LEADER' : '', fighter.protectedBy && !fighter.protectedBy.dead ? `ATTACHED TO ${fighter.protectedBy.name}` : ''].filter(Boolean).join(' · ');
-      el.innerHTML = `<b>${fighter.name}</b><small>${fighter.hp.length}/${fighter.models} models · T${fighter.toughness} · SV${fighter.save}+${states ? `<br>${states}` : ''}</small><div class="hp"><i style="width:${clamp(fighter.currentHp/fighter.maxHp*100,0,100)}%"></i></div>`;
+      el.innerHTML = `<b>${fighter.name}</b><small>${fighter.hp.length}/${fighter.models} models · T${fighter.toughness+fortificationBonus(fighter.fortificationRank || 0,fighter.currentHp/fighter.maxHp)} · SV${fighter.save}+${states ? `<br>${states}` : ''}</small><div class="hp"><i style="width:${clamp(fighter.currentHp/fighter.maxHp*100,0,100)}%"></i></div>`;
       container.append(el);
       fighter.flash = '';
     }
@@ -1611,6 +1639,7 @@ export class Game {
     this.run.stars += node.stars || 0;
     this.run.sectorStars += node.stars || 0;
     this.run.battles++;
+    if(balanced(this.run) && node.type!=='boss') {this.run.balanceVictories ||= [];if(!this.run.balanceVictories.includes(node.id))this.run.balanceVictories.push(node.id);}
     if (node.type === 'boss') this.run.bosses++;
     const plan=this.run.rulesVersion===2?this.systemRewardPlan(node):null;
     const req=plan?.req ?? Math.round((18+(node.stars || 1)*8)*(1+(this.researchRanks().salvage || 0)*.15));
@@ -1630,7 +1659,7 @@ export class Game {
     const total = clamp(2 + stars + (node.type === 'boss' || node.event ? 1 : 0), 3, 5);
     if (context.rewardVersion !== 2) {
       const previous = context.claimed || {};
-      context.claims = {currency:1, honour:1, stratagem:1, gear:total >= 4 ? 1 : 0, recovery:total >= 5 ? 1 : 0};
+      context.claims = balanced(this.run)?pacedClaims({...node,region:node.region ?? this.run.region}):{currency:1, honour:1, stratagem:1, gear:total >= 4 ? 1 : 0, recovery:total >= 5 ? 1 : 0};
       context.claimed = {
         currency:Math.min(previous.currency || 0, 1), honour:Math.min(previous.honour || 0, 1),
         stratagem:Math.min(previous.stratagem || 0, 1), gear:0, recovery:0
@@ -1725,10 +1754,10 @@ export class Game {
     const list = $('#reward-options'); list.innerHTML = '';
     ids.forEach(id => {
       const item = source.find(entry => entry.id === id); const button = document.createElement('button');
-      button.className = 'reward-option pixel-panel'; button.title = item.desc;
+      button.className = 'reward-option pixel-panel'; button.title = this.effectDescription(item);
       const symbol = kind === 'honour' ? ruleSymbol(`${item.name} ${item.tag}`) : kind === 'stratagem' ? '⌖' : '⚙';
       button.dataset.tier=item.tier || 'normal';
-      button.innerHTML = this.rewardBranchMarkup(kind,`${symbol} ${item.name}`,item.desc,kind === 'gear' ? 'RECOVERED WARGEAR' : `${(item.tier || 'normal').toUpperCase()} · ${item.tag}`);
+      button.innerHTML = this.rewardBranchMarkup(kind,`${symbol} ${item.name}`,this.effectDescription(item),kind === 'gear' ? 'RECOVERED WARGEAR' : `${(item.tier || 'normal').toUpperCase()} · ${item.tag}`);
       button.onclick = () => this.claimPostWarChoice(kind,id); list.append(button);
     });
     const back = document.createElement('button');
@@ -1881,7 +1910,7 @@ export class Game {
       this.run.story ||= {briefed:[],completed:[],pendingBriefing:null};
       if (!this.run.story.completed.includes(this.run.region)) this.run.story.completed.push(this.run.region);
       const tier = CAMPAIGN_TIERS[this.run.tierIndex];
-      if(this.run.rulesVersion===2)secureSector(this.run);
+      if(this.run.rulesVersion===2)secureSector(this.run,node);
       else this.run.chests+=tier.permanentReward*(node?.bossTier || 1);
       const repair = this.stratagemEffects().bossRepair || 0;
       this.run.hull = Math.min(this.run.maxHull, this.run.hull + repair);
@@ -1933,7 +1962,7 @@ export class Game {
 
   endRun(victory) {
     if(!this.run)return;
-    const earned=this.run.rulesVersion===2?(this.run.chests || 0):(victory?this.run.chests+Math.floor(this.run.currency*.25):0);
+    const earned=this.run.rulesVersion===2?(this.run.chests || 0)+(balanced(this.run)?earlyRecovery(this.run):0):(victory?this.run.chests+Math.floor(this.run.currency*.25):0);
     if(this.run.rulesVersion===2) {this.chapter().currency+=earned;if(victory)this.chapter().wins++;}
     else this.meta.currency+=earned;
     if (victory) this.meta.wins++;

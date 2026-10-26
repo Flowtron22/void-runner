@@ -1,9 +1,10 @@
+import {capacityCost,bossReward,balanced} from './Balance.js';
 export const CHAPTER_UPGRADES=[
-  {id:'capacity',name:'Expanded Muster',icon:'▦',max:20,desc:'+150 army points per rank.',cost:rank=>60+rank*45},
+  {id:'capacity',name:'Expanded Muster',icon:'▦',max:20,desc:'+150 army points per rank.',cost:capacityCost},
   ...['infantry','vehicle'].flatMap(type=>[
-    {id:`${type}-attacks`,name:`${type==='infantry'?'Infantry':'Vehicle'} Fire Discipline`,icon:'⚔',max:3,desc:`+1 attack per ${type} model per rank.`,cost:r=>90+r*90},
-    {id:`${type}-toughness`,name:`${type==='infantry'?'Infantry':'Vehicle'} Fortification`,icon:'▲',max:3,desc:`+1 Toughness to ${type} per rank.`,cost:r=>120+r*120},
-    {id:`${type}-wounds`,name:`${type==='infantry'?'Infantry':'Vehicle'} Endurance`,icon:'✚',max:3,desc:`+2 wounds per ${type} model per rank.`,cost:r=>100+r*110}
+    {id:`${type}-attacks`,name:`${type==='infantry'?'Infantry':'Vehicle'} Fire Discipline`,icon:'⚔',max:3,desc:`+1 attack per ${type} unit per rank.`,cost:r=>90+r*45},
+    {id:`${type}-toughness`,name:`${type==='infantry'?'Infantry':'Vehicle'} Fortification`,icon:'▲',max:3,desc:`${type} Toughness +1 above 75% / 50% / any health at ranks 1 / 2 / 3.`,cost:r=>120+r*60},
+    {id:`${type}-wounds`,name:`${type==='infantry'?'Infantry':'Vehicle'} Endurance`,icon:'✚',max:3,desc:`+2 total wounds per ${type} unit per rank.`,cost:r=>100+r*50}
   ]),
   {id:'salvage',name:'Requisition Rights',icon:'◆',max:3,desc:'+15% mission Requisition per rank.',cost:r=>70+r*90},
   {id:'insurance',name:'Campaign Reserve',icon:'♥',max:2,desc:'+1 mission attempt per rank.',cost:r=>100+r*140}
@@ -45,8 +46,9 @@ export function migrateFormation(run,cap) {
   run.formationVersion=2;
   run.formationRows=rows;
 }
-export function secureSector(run) {
+export function secureSector(run,node=null) {
   run.securedSectors ||= [];
   if(run.securedSectors.includes(run.region)) return 0;
-  run.securedSectors.push(run.region);run.chests=(run.chests || 0)+30;return 30;
+  const reward=balanced(run)?bossReward(node?.bossTier):30;
+  run.securedSectors.push(run.region);run.chests=(run.chests || 0)+reward;return reward;
 }
