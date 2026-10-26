@@ -34,3 +34,5 @@ Active missions retain their original combat/reward rules; new missions use bala
 ## Verification limits
 
 Checks cover routes, drafting, reports, chapter isolation, RNG offers, stock, rank combat and sector payouts. Browser QA includes narrow-phone layouts and the latest UI cleanup. Physical iPad Safari still needs verification; balance across repeated missions remains provisional.
+
+26 October battle GIF fix: clear and hide previous artwork when leaving combat; reveal each new GIF only after its own load event. Stale load/error callbacks cannot affect a subsequent fight. Layout is unchanged. Regression checks live in scripts/check-battle-art.mjs.

@@ -230,3 +230,5 @@ Next chat: read README.md, this GDD and artstyle.md; inspect git status. Preserv
 Balance compatibility: on starting the first balanced mission, legacy Veteran Training ranks become at least the same rank of Infantry and Vehicle Fire Discipline, once per chapter. The old global Hit/Wound/FNP stack is disabled in balanced missions, while existing missions retain it. No wallet reset occurs. Fortification is reflected in the existing battle Toughness readout.
 
 Balance sampling: 32 scenarios × 360 seeds = 11,520 isolated encounters. Fresh 500-point samples won about 94% of opening 1-star encounters and 72% of first-sector tier-1 bosses. Boss tier/sector escalation and developed accounts produced materially different outcomes. This is an initial tuning pass; full-run economy, player-selected builds, gear, recruits and faction outliers still need playtesting.
+
+26 October battle GIF fix: clear and hide previous artwork when leaving combat; reveal each new GIF only after its own load event. Stale load/error callbacks cannot affect a subsequent fight. Layout is unchanged. Regression checks live in scripts/check-battle-art.mjs.

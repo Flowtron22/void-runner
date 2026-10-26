@@ -309,3 +309,5 @@ Check layout at 320, 390 and 480 CSS px and with reduced motion. Real iPad Safar
 ## Balance pass presentation constraint — 26 October 2026
 
 The balance pass changes no UI layout, screen hierarchy, chassis, typography, station placement or map composition. Update only essential numerical effect/reward text within existing controls. Tier payouts read 30 / 35 / 40; permanent attacks/wounds are per unit and Fortification has health thresholds. Fewer reward categories may appear because offers are paced; use the existing Post-War Affairs branches without adding panels or instructions. Keep removed helper text hidden. Existing missions preserve earlier combat/reward rules; new missions opt into the new balance version.
+
+26 October battle GIF fix: clear and hide previous artwork when leaving combat; reveal each new GIF only after its own load event. Stale load/error callbacks cannot affect a subsequent fight. Layout is unchanged. Regression checks live in scripts/check-battle-art.mjs.

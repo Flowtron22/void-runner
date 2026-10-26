@@ -3,6 +3,7 @@ import { buildSectorChart, chartState } from './CampaignChart.js';
 import { ensureConstellationPositions } from '../render/ChartLayout.js';
 import { placementIssue, rankPlacementIssue } from './DraftPlacement.js';
 import { bindDraftDrag } from '../ui/DraftDrag.js';
+import {loadBattleArt,clearBattleArt} from '../ui/BattleArt.js';
 import { portraitMarkup } from '../data/portraits.js';
 import { summarizeBattle, battleReportRows, addCombatTotals } from './BattleReport.js';
 import {CHAPTER_UPGRADES,chapterProfile,migrateProgression,formationRows,migrateFormation,secureSector} from './Progression.js';
@@ -285,7 +286,7 @@ export class Game {
       const art = BATTLE_ART[factionId] || BATTLE_ART['space-marines'];
       const figure = $(`.battle-wing-${side}`);
       const image = $(`#battle-art-${side}`);
-      image.src = art.src;
+      loadBattleArt(image,art.src);
       figure.className = `battle-wing battle-wing-${side}`;
       figure.classList.toggle('flip', art.facing !== desiredFacing);
     }
@@ -295,6 +296,8 @@ export class Game {
   clearBattleStage() {
     document.body.classList.remove('battle-active');
     $('#app').classList.remove('combat-shake', 'combat-shake-heavy');
+    clearTimeout(this.impactTimer);
+    for(const side of ['player','enemy'])clearBattleArt($(`#battle-art-${side}`));
   }
 
   fireBattleBeam(side) {
