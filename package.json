@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 4173",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "check": "node --check js/main.js && node --check js/core/Game.js && node --check js/data/units.js && node --check js/render/TerminalRenderer.js && node --check js/render/GalaxyMap3D.js && node scripts/check-campaign-chart.mjs && node scripts/check-draft.mjs && node scripts/check-debrief.mjs"
+    "check": "node --check js/main.js && node --check js/core/Game.js && node --check js/data/units.js && node --check js/render/TerminalRenderer.js && node --check js/render/GalaxyMap3D.js && node scripts/check-campaign-chart.mjs && node scripts/check-draft.mjs && node scripts/check-debrief.mjs && node scripts/check-progression.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"

@@ -11,6 +11,8 @@ export const BATTLE_HONOURS = [
 ];
 
 export const WARGEAR = [
+  {id:'psybolt-chamber',name:'Psybolt Chamber',desc:'Add 2 Strength to the equipped unit’s combat weapon.',stat:'weaponStrength',value:2},
+  {id:'sanctic-focus',name:'Sanctic Weapon Focus',desc:'Add 2 attacks per model to the equipped unit.',stat:'attacksBonus',value:2},
   {id:'targeter',name:'Targeting Array',desc:'Improve this unit’s hit roll by 1.',stat:'hitBonus',value:1},
   {id:'armour',name:'Artificer Armour',desc:'Improve this unit’s Save by 1.',stat:'saveBonus',value:1},
   {id:'adamantine',name:'Adamantine Bracing',desc:'Add 2 to this unit’s Toughness.',stat:'toughness',value:2},

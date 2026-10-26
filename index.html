@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/ordeal.css" />
   <link rel="stylesheet" href="css/field-store.css" />
   <link rel="stylesheet" href="css/debrief.css" />
+  <link rel="stylesheet" href="css/progression.css" />
 </head>
 <body>
   <aside id="desktop-battle-stage" class="desktop-battle-stage" aria-hidden="true">
@@ -61,6 +62,7 @@
         <span><small>ARMY</small><b id="hub-army-status">0 / 500 PTS</b></span>
         <span><b id="hub-req-status">◆ 0</b></span>
       </div>
+      <div id="mission-progress" class="mission-progress" aria-label="Four-sector mission progress"></div><p id="mission-secured" class="mission-secured"></p>
       <nav class="hub-stations" aria-label="Command deck stations">
         <button id="hub-army-button" class="hub-station hub-station-army">
           <b>ORDEAL</b>
@@ -72,10 +74,11 @@
           <b id="hub-mission-label">OPERATION</b>
         </button>
       </nav>
+      <button id="abandon-run" class="abandon-run">END RUN · KEEP SECURED CHAPTER REWARDS</button>
     </section>
 
     <section id="setup-screen" class="screen" aria-labelledby="setup-title">
-      <div class="section-head"><div><h2 id="setup-title">CHOOSE UNIT SIZE</h2></div></div>
+      <div class="section-head"><div><h2 id="setup-title">TAKE YOUR OATH</h2></div></div>
       <div id="setup-options" class="setup-options"></div>
     </section>
 
@@ -109,13 +112,18 @@
       </div>
       <div class="capacity-meter"><i id="capacity-fill"></i></div>
       <div class="loadout-tip pixel-panel" hidden><b>① UNIT</b><span>→</span><b>② GRID</b></div>
-      <div class="case-wrap"><div class="case-axis"><span>FRONT LINE</span><span>REAR LINE</span></div><div id="formation-grid" class="formation-grid" aria-label="Six by five deployment grid"></div></div>
-      <div class="prep-actions"><button id="remove-button" class="danger" aria-label="Remove selected unit">✕ REMOVE</button><button id="rotate-button" aria-label="Rotate draft footprint" aria-pressed="false">↻ ROTATE</button><button id="clear-button" aria-label="Clear formation">⌫</button></div>
+      <div class="case-wrap"><div class="case-axis"><span id="formation-label">FRONTLINE / REAR LINE</span></div><div id="formation-grid" class="formation-grid" aria-label="Frontline and rear deployment positions"></div></div>
+      <div class="prep-actions"><button id="remove-button" class="danger" aria-label="Remove selected unit">✕ REMOVE</button><button id="clear-button" aria-label="Clear formation">⌫</button></div>
       <nav class="subtabs" aria-label="Army options"><button data-prep-tab="units" class="active">▦ UNITS</button><button data-prep-tab="gear">⚙ <span id="gear-count">0</span></button><button data-prep-tab="protocols">✦ DOCTRINES</button></nav>
-      <p class="draft-hint">TAP TO INSPECT · HOLD & DRAG TO DRAFT</p>
+      <p class="draft-hint">TAP PORTRAIT TO INSPECT · SELECT DEPLOYED UNIT THEN TAP TO MOVE</p>
       <div id="unit-roster" class="prep-list active" aria-label="Available unit portraits"></div><div id="gear-inventory" class="prep-list"></div><div id="protocol-list" class="prep-list"></div>
       <p id="prep-status" class="draft-status" role="status" aria-live="polite">SELECT A UNIT</p>
       <div class="station-footer pixel-panel"><button id="cancel-encounter-button" hidden>SYSTEM CHART</button><button id="deploy-button" disabled>← RETURN TO COMMAND DECK</button></div>
+    </section>
+
+    <section id="system-screen" class="screen" aria-labelledby="system-title">
+      <div class="system-scroll"><div id="system-art" class="system-art"></div><p class="eyebrow">// SYSTEM BRIEFING</p><h2 id="system-title"></h2><p id="system-enemy"></p><h3>DROPS PREVIEW · VICTORY REWARDS</h3><div id="system-drops"></div></div>
+      <footer class="system-actions"><button id="system-back">SYSTEM CHART</button><button id="system-start">START MISSION</button></footer>
     </section>
 
     <section id="datasheet-screen" class="screen" aria-labelledby="datasheet-title">
@@ -197,7 +205,7 @@
         <div><p class="eyebrow">// ROGUE TRADER · POST-WAR</p><h2 id="store-title">FIELD STORE</h2></div>
         <div class="store-balance"><small>REQUISITION</small><b id="store-currency">0</b></div>
       </header>
-      <p id="store-copy" class="store-copy">Choose one recovered relic, or conserve Requisition.</p>
+      <p id="store-copy" class="store-copy">RNG STOCK · Buy recruits and wargear with mission Requisition. Purchases last for this run.</p>
       <div id="store-options" class="store-options" role="group" aria-label="Wargear for sale"></div>
       <footer class="store-footer"><button id="store-continue-button">LEAVE STORE</button></footer>
     </section>
@@ -208,7 +216,7 @@
 
     <dialog id="help-dialog" class="modal pixel-panel">
       <p class="eyebrow">// HOW TO PLAY</p><h2>BUILD. DEPLOY. ROLL.</h2>
-      <ol><li><b>Choose the campaign.</b><span>Higher point limits add sectors, longer routes, stronger enemies and larger permanent rewards.</span></li><li><b>Build and attach.</b><span>Stay under the point limit. Select an unlocked unit, then tap the deployment grid.</span></li><li><b>Navigate the chart.</b><span>Pan and zoom through three-dimensional stellar space. Select an available system to approach it.</span></li><li><b>Let the dice resolve.</b><span>Combat is automatic. Hit, wound, save and damage rolls remain visible as they resolve.</span></li><li><b>Clear every claim.</b><span>Resolve all Requisition, Enhancement, Stratagem and recovered-loot blocks before continuing the path.</span></li></ol>
+      <ol><li><b>Take your oath.</b><span>Start at 500 points. Clear four sectors; the fourth boss is the Final Boss. Each secured sector earns 30 permanent Requisition for your chapter.</span></li><li><b>Build and attach.</b><span>Stay under the point limit. Select an unlocked unit, then tap the deployment grid.</span></li><li><b>Navigate the chart.</b><span>Pan and zoom through three-dimensional stellar space. Select an available system to approach it.</span></li><li><b>Let the dice resolve.</b><span>Combat is automatic. Hit, wound, save and damage rolls remain visible as they resolve.</span></li><li><b>Clear every claim.</b><span>Resolve all Requisition, Enhancement, Stratagem and recovered-loot blocks before continuing the path.</span></li></ol>
       <button id="close-help-button" class="primary large">UNDERSTOOD</button>
     </dialog>
 

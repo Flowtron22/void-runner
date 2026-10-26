@@ -1,10 +1,12 @@
 import { BATTLE_HONOURS, WARGEAR, RESEARCH, CAMPAIGN_TIERS, SECTOR_NAMES, STRATAGEMS } from '../data/units.js';
 import { buildSectorChart, chartState } from './CampaignChart.js';
 import { ensureConstellationPositions } from '../render/ChartLayout.js';
-import { placementIssue } from './DraftPlacement.js';
+import { placementIssue, rankPlacementIssue } from './DraftPlacement.js';
 import { bindDraftDrag } from '../ui/DraftDrag.js';
 import { portraitMarkup } from '../data/portraits.js';
 import { summarizeBattle, battleReportRows, addCombatTotals } from './BattleReport.js';
+import {CHAPTER_UPGRADES,chapterProfile,migrateProgression,formationRows,migrateFormation,secureSector} from './Progression.js';
+import {TACTICS,rollTacticOffer,rollStoreOffers} from './RunRewards.js';
 
 const DEBRIEF_ART = {
   victory:new URL('../../assets/directive-victory.webp',import.meta.url).href,
@@ -15,12 +17,7 @@ const DEBRIEF_ART = {
 
 const SAVE_KEY = 'void-runner-40k-campaign-v2';
 const RUN_KEY = 'combat-patrol-active-v3';
-const UNIT_SIZES = [
-  {tierIndex:0,label:'COMBAT PATROL'},
-  {tierIndex:1,label:'INCURSION'},
-  {tierIndex:3,label:'STRIKE FORCE'},
-  {tierIndex:4,label:'ONSLAUGHT'}
-];
+
 const MISSION_SCRIPTS = [
   {title:'THE ASHEN TITHE',quote:'Astropathic choirs report a breach beneath Ashen Reach. Confirm daemonic manifestation, seal the rift and leave no witness to the corruption.',objective:'Secure Ashen Reach and identify the source of the incursion.',reward:'ORDO REQUISITION · SECTOR COMMAND AUTHORITY'},
   {title:'GHOSTS OF KARST',quote:'Karst Void has fallen silent under cipher Vermilion. Recover the black signal and purge every vessel that answers it.',objective:'Trace the warp signal through Karst Void.',reward:'CLASSIFIED OBJECTIVE · UNLOCK NAVIGATION CHART'},
@@ -180,6 +177,7 @@ export class Game {
     this.units = this.factions.flatMap(faction => faction.units.map(unit => ({...unit, faction:faction.id, color:faction.color, mark:faction.mark})));
     this.meta = this.load(SAVE_KEY, { currency: 0, research: { logistics: 0, doctrine: 0, salvage: 0, insurance: 0 }, runs: 0, wins: 0 });
     this.run = this.load(RUN_KEY, null);
+    migrateProgression(this.meta,this.run,CAMPAIGN_TIERS[this.run?.tierIndex || 0].points);
     this.meta.settings ||= {};
     if (this.run) {
       this.run.story ||= {briefed:[],completed:[],pendingBriefing:null};
@@ -187,7 +185,7 @@ export class Game {
       this.run.story.completed ||= [];
       this.run.story.pendingBriefing ??= null;
     }
-    this.selectedFaction = this.run?.faction || this.factions[0].id;
+    this.selectedFaction = this.run?.faction || 'grey-knights';
     this.selectedBlueprint = null;
     this.selectedPlaced = null;
     this.rotated = false;
@@ -249,7 +247,9 @@ export class Game {
     $('#store-continue-button').onclick = () => this.finishPostWarEvent();
     $('#close-help-button').onclick = () => $('#help-dialog').close();
     $('#remove-button').onclick = () => this.removeSelected();
-    $('#rotate-button').onclick = () => { this.rotated=!this.rotated; $('#rotate-button').setAttribute('aria-pressed',String(this.rotated)); const unit=this.unit(this.selectedBlueprint); $('#prep-status').textContent=unit?`${unit.name.toUpperCase()} · ${this.sizeFor(unit,this.rotated).join('×')}`:'ROTATION CHANGED'; };
+    $('#system-back').onclick=()=>{this.previewNode=null;this.renderMap();this.show('map');};
+    $('#system-start').onclick=()=>{if(!this.previewNode)return;this.run.pendingNode=this.previewNode;this.previewNode=null;this.save();this.openLoadout('map');};
+    $('#abandon-run').onclick=()=>{if(this.run && !this.battle)this.endRun(false);};
     $('#datasheet-back').onclick = () => this.closeDatasheet();
     $('#datasheet-draft').onclick = () => { this.selectedBlueprint=this.datasheetUnitId; this.selectedPlaced=null; this.closeDatasheet(); const unit=this.unit(this.selectedBlueprint); $('#prep-status').textContent=`TAP A FREE SPACE · ${this.sizeFor(unit,this.rotated).join('×')}`; $('#formation-grid .grid-cell')?.focus({preventScroll:true}); };
     $('#clear-button').onclick = () => {
@@ -360,6 +360,7 @@ export class Game {
   goBack() {
     if (this.battle) return;
     if (this.currentScreen === 'store') return this.finishPostWarEvent();
+    if (this.currentScreen === 'system') {this.previewNode=null;this.renderMap();return this.show('map');}
     if (this.currentScreen === 'run-end') return this.handleEndButton();
     if (this.currentScreen === 'datasheet') return this.closeDatasheet();
     if (this.currentScreen === 'mission') {
@@ -369,7 +370,6 @@ export class Game {
     if (this.currentScreen === 'intro') { this.stopIntro(); this.renderHome(); return this.show('home'); }
     if (this.currentScreen === 'hub') { this.renderHome(); return this.show('home'); }
     if (this.currentScreen === 'setup') {
-      if (this.setupStage === 'faction') return this.renderSetup('tier');
       this.renderHome(); return this.show('home');
     }
     if (this.currentScreen === 'loadout') {
@@ -386,7 +386,7 @@ export class Game {
 
   renderHome() {
     $('#resume-button').hidden = !this.run;
-    $('#new-run-button').textContent = this.run ? 'NEW GAME' : 'START';
+    $('#new-run-button').textContent = this.run ? 'ACTIVE MISSION' : 'START';
     $('#reduced-motion-toggle').checked = Boolean(this.meta.settings?.reducedMotion);
     this.renderHeader();
   }
@@ -437,22 +437,17 @@ export class Game {
   }
 
   beginSetup() {
+    if(this.run)return this.resumeRun();
     this.setupChoice = {tier:null,faction:null};
-    this.renderSetup('tier');
+    this.renderSetup('faction');
     this.show('setup');
   }
 
   renderSetup(stage) {
     this.setupStage = stage;
     const list = $('#setup-options'); list.innerHTML = '';
-    $('#setup-title').textContent = stage === 'tier' ? 'CHOOSE UNIT SIZE' : 'TAKE YOUR OATH';
+    $('#setup-title').textContent = 'TAKE YOUR OATH';
     list.classList.toggle('chapter-grid',stage === 'faction');
-    if (stage === 'tier') UNIT_SIZES.forEach(({tierIndex,label}) => {
-      const tier = CAMPAIGN_TIERS[tierIndex];
-      const button = document.createElement('button'); button.className = 'setup-card tier-card';
-      button.innerHTML = `<span>${tier.points}</span><b>${label}</b>`;
-      button.onclick = () => { this.setupChoice.tier = tierIndex; this.renderSetup('faction'); }; list.append(button);
-    });
     if (stage === 'faction') CHAPTERS.forEach(chapter => {
       const button = document.createElement('button'); button.className = `chapter-card ${chapter.locked ? 'locked' : ''}`;
       button.disabled = chapter.locked;
@@ -462,18 +457,19 @@ export class Game {
   }
 
   startRun() {
-    const tier = CAMPAIGN_TIERS[this.setupChoice.tier ?? 0];
+    const tier = CAMPAIGN_TIERS[0];
     this.selectedFaction = this.setupChoice.faction || 'grey-knights';
     const factionUnits = this.units.filter(unit => unit.faction === this.selectedFaction);
     this.run = {
-      seed: Date.now(), faction: this.selectedFaction, tierIndex:this.setupChoice.tier ?? 0, region:null, step:0, cap:tier.points,
-      hull: 3 + (this.meta.research.insurance || 0), maxHull: 3 + (this.meta.research.insurance || 0),
+      rulesVersion:2,formationVersion:2,securedSectors:[],seed: Date.now(), faction: this.selectedFaction, tierIndex:0, region:null, step:0, cap:tier.points,
+      hull: 3 + (this.chapter().research.insurance || 0), maxHull: 3 + (this.chapter().research.insurance || 0),
       data:0, stars:0, sectorStars:0, currency:0, chests:0, protocols:[], stratagems:[], gear:[], deployed:[], history:[], offers:null,
       sectors:Array.from({length:tier.sectors},(_,i)=>({id:i,name:SECTOR_NAMES[i],status:i===0?'available':'locked',stars:0})),
       unlockedUnits:factionUnits.filter((unit,index)=>index<2 || unit.startingAvailable).map(unit=>unit.id), battles:0, bosses:0, pendingNode:null, pendingPostWar:null,
       story:{briefed:[],completed:[],pendingBriefing:null}
     };
     this.run.cap = this.getBaseCap();
+    this.run.missionCap=this.run.cap;
     this.meta.runs++;
     this.selectedBlueprint = factionUnits[0]?.id || null;
     this.selectedPlaced = null;
@@ -509,7 +505,9 @@ export class Game {
   renderHub() {
     if (!this.run) return;
     $('#hub-army-status').textContent = `${this.usedPoints()} / ${this.getBaseCap()} PTS`;
-    $('#hub-req-status').textContent = `◆ ${this.meta.currency}`;
+    $('#hub-req-status').textContent = `◆ ${this.chapter().currency} · CHAPTER`;
+    $('#mission-progress').innerHTML=this.run.sectors.map((s,i)=>`<span class="${s.status}">${s.status==='complete'?'✓':i+1}<small>${s.status==='complete'?'30 SECURED':s.status==='available'?'CURRENT':'LOCKED'}</small></span>`).join('');
+    $('#mission-secured').textContent=`${this.run.chests || 0} CHAPTER REQ SECURED · ${this.run.currency} MISSION REQ`;
     $('#hub-mission-label').textContent = 'OPERATION';
   }
 
@@ -521,14 +519,18 @@ export class Game {
 
   protocolEffects() {
     const effects = {};
-    for (const id of this.run.protocols) {
-      const next = BATTLE_HONOURS.find(item => item.id === id)?.effect || {};
+    for (const id of [...this.run.protocols,...(this.run.stratagems || []).filter(id=>id.startsWith('relic-'))]) {
+      const next = [...BATTLE_HONOURS,...TACTICS].find(item => item.id === id)?.effect || {};
       for (const [key, value] of Object.entries(next)) effects[key] = typeof value === 'number' ? (effects[key] || 0) + value : value;
     }
     return effects;
   }
 
+  chapter() {return chapterProfile(this.meta,this.run?.faction || this.selectedFaction || 'grey-knights');}
+  researchRanks() {return this.run?.rulesVersion===2?this.chapter().research:this.meta.research;}
+
   getBaseCap() {
+    if(this.run.rulesVersion===2)return Math.max(this.run.capacityFloor || 500,500+(this.chapter().research.capacity || 0)*150)+(this.protocolEffects().pointBonus || 0);
     return CAMPAIGN_TIERS[this.run.tierIndex].points + (this.meta.research.logistics || 0) * 50 + (this.protocolEffects().pointBonus || 0);
   }
 
@@ -544,6 +546,7 @@ export class Game {
   }
 
   renderLoadout() {
+    if(this.run.rulesVersion===2)migrateFormation(this.run,this.getBaseCap());
     // New core squad patterns are available in existing saves as well as new missions.
     for(const unit of this.units.filter(u=>u.faction===this.run.faction && u.startingAvailable)) {
       if(!this.run.unlockedUnits.includes(unit.id)) this.run.unlockedUnits.push(unit.id);
@@ -571,11 +574,13 @@ export class Game {
   renderFormation() {
     const grid = $('#formation-grid');
     grid.innerHTML = '';
-    for (let y = 0; y < 5; y++) for (let x = 0; x < 6; x++) {
+    const rows=this.formationRowCount();grid.style.setProperty('--formation-rows',rows);
+    $('#formation-label').textContent=this.run.rulesVersion===2?`FRONT: ROWS 1–${rows/2} · REAR: ROWS ${rows/2+1}–${rows}`:'DEPLOYMENT';
+    for (let y = 0; y < rows; y++) for (let x = 0; x < 6; x++) {
       const cell = document.createElement('button');
-      cell.className = 'grid-cell';
-      cell.setAttribute('aria-label', `Grid column ${x + 1}, row ${y + 1}`);
-      cell.onclick = () => this.placeUnit(x, y);
+      cell.className = `grid-cell ${y<rows/2?'front-slot':'rear-slot'}`;
+      cell.setAttribute('aria-label',`${this.run.rulesVersion===2?(y<rows/2?'Frontline':'Rear line'):'Grid'} column ${x+1}, row ${y+1}`);
+      cell.onclick=()=>{if(this.run.rulesVersion===2 && this.selectedPlaced && !this.selectedBlueprint){const p=this.run.deployed.find(p=>p.id===this.selectedPlaced);if(!p || p.attachedTo)return;if(this.run.deployed.some(p=>!p.attachedTo && p.x===x && p.y===y))return;Object.assign(p,{x,y,rank:y<rows/2?'front':'rear'});this.run.deployed.filter(i=>i.attachedTo===p.id).forEach(i=>Object.assign(i,{x,y,rank:p.rank}));this.save();this.renderLoadout();}else this.placeUnit(x,y);};
       grid.append(cell);
     }
     for (const placed of this.run.deployed) {
@@ -589,7 +594,7 @@ export class Game {
       el.style.top = `calc(${placed.y} * (var(--cell) + 2px))`;
       el.style.width = `calc(${w} * ((100% - 10px) / 6) + ${(w - 1) * 2}px)`;
       el.style.height = `calc(${h} * var(--cell) + ${(h - 1) * 2}px)`;
-      el.innerHTML = `<span class="grid-unit-icon" style="${unitSpriteStyle(unit.id,artVariant)}" aria-hidden="true"></span><small>${unit.points}</small>`;
+      el.innerHTML = `<span class="grid-token-art">${portraitMarkup(unit.id) || `<span class="grid-unit-icon" style="${unitSpriteStyle(unit.id,artVariant)}"></span>`}</span><small>${unit.points}</small><em>${placed.y<rows/2?'F':'R'} · ${unit.models}</em>`;
       el.title = `${unit.name} · ${unit.role} · ${unit.points} points`;
       el.setAttribute('aria-label',`${unit.name}, ${unit.points} points, column ${placed.x+1}, row ${placed.y+1}`);
       el.dataset.placedId=placed.id;
@@ -617,12 +622,12 @@ export class Game {
       const button = document.createElement('button');
       button.className = `unit-card portrait-card ${this.selectedBlueprint === unit.id ? 'selected' : ''} ${out || tooLarge || unrecovered ? 'unavailable' : ''}`;
       button.style.setProperty('--unit-color', unit.color);
-      const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.rescueKind ? `${unit.rescueKind} · ${this.faction(unit.faction).name} · MISSION ONLY · ×${unit.stock - deployedCount}` : unit.leader ? `${unit.size[0]}×${unit.size[1]} · ♛ GRID OR BODYGUARD · ×${unit.stock - deployedCount}` : `${unit.size[0]}×${unit.size[1]} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
+      const status = unrecovered ? 'UNRECOVERED · FIND IN SECTOR' : tooLarge ? `LOCKED · ${unit.points} PTS` : unit.rescueKind ? `${unit.rescueKind} · ${this.faction(unit.faction).name} · MISSION ONLY · ×${unit.stock - deployedCount}` : unit.leader ? `${this.run.rulesVersion===2?'1 SLOT':unit.size.join('×')} · ♛ GRID OR BODYGUARD · ×${unit.stock - deployedCount}` : `${this.run.rulesVersion===2?'1 SLOT':unit.size.join('×')} · ◉${unit.models} · ×${unit.stock - deployedCount}`;
       button.setAttribute('aria-label', `${unit.name}, ${unit.points} points, ${status}`);
       const cardName=unit.name.replace(/^Brotherhood /,'');
       const badge=unrecovered?'SEALED':out?'DEPLOYED':tooLarge?'OVER CAP':`×${unit.stock-deployedCount}`;
       const portrait=portraitMarkup(unit.id);
-      button.innerHTML = `<span class="portrait-art ${portrait?'illustrated':''}" style="${portrait?'':unitSpriteStyle(unit.id)}" aria-hidden="true">${portrait}</span><span class="portrait-stock">${badge}</span><span class="portrait-caption"><b>${escapeHTML(cardName)}</b><small>${unit.points} PTS <i>${unit.size.join('×')}</i></small></span>${unit.rescueKind?'<span class="rescue-mark">MISSION</span>':''}`;
+      button.innerHTML = `<span class="portrait-art ${portrait?'illustrated':''}" style="${portrait?'':unitSpriteStyle(unit.id)}" aria-hidden="true">${portrait}</span><span class="portrait-stock">${badge}</span><span class="portrait-caption"><b>${escapeHTML(cardName)}</b><small>${unit.points} PTS <i>${this.run.rulesVersion===2?'1 SLOT':unit.size.join('×')}</i></small></span>${unit.rescueKind?'<span class="rescue-mark">MISSION</span>':''}`;
       button.onclick = () => this.openDatasheet(unit.id);
       if(!out && !tooLarge && !unrecovered) bindDraftDrag(button,unit,this);
       roster.append(button);
@@ -649,7 +654,7 @@ export class Game {
     const weapons=ref?.weapons || [unit.weapon];
     const weaponSection=(name,list)=>`<details><summary>${name}</summary><div class="datasheet-weapons">${list.length?list.map(w=>`<article><b>${escapeHTML(w.name)}</b><div class="weapon-values">${[['R',w.range?`${w.range}″`:'Melee'],['A',w.attacks],['BS/WS',`${w.hit}+`],['S',w.strength],['AP',w.ap],['D',w.damage]].map(([k,v])=>`<span><small>${k}</small>${escapeHTML(v)}</span>`).join('')}</div><small>${escapeHTML(w.keywords.join(' · '))}</small></article>`).join(''):'<p>None listed.</p>'}</div></details>`;
     const issue=this.draftAvailability(unit);
-    $('#datasheet-content').innerHTML=weaponSection('RANGED WEAPONS',weapons.filter(w=>w.range>0))+weaponSection('MELEE WEAPONS',weapons.filter(w=>w.range===0))+`<details><summary>ABILITIES</summary><p>${(ref?.abilities || unit.abilities).map(escapeHTML).join(' · ')}</p>${ref?.abilitySummary?`<p>${escapeHTML(ref.abilitySummary)}</p><p class="reference-note">REFERENCE ABILITIES</p>`:''}</details><details><summary>UNIT COMPOSITION</summary><p>${escapeHTML(ref?.composition || `${unit.models} model${unit.models===1?'':'s'}`)}</p>${unit.leader?`<p>LEADS: ${unit.leader.targets.map(id=>escapeHTML(this.unit(id)?.name || id)).join(' · ')}</p>`:''}</details><details open><summary>ORDEAL PROFILE</summary><p>${unit.points} PTS · ${unit.models} MODELS · ${unit.size.join('×')} SPACE · STOCK ${unit.stock}</p><p>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · LD${unit.leadership}+ · OC${unit.oc}</p><p>COMBAT WEAPON: ${escapeHTML(unit.weapon.name)}</p>${ref?`<p class="reference-note">The reference weapons and ability names above describe the datasheet. Automatic combat uses this Ordeal profile and one weapon.</p><a href="${escapeHTML(ref.source)}" target="_blank" rel="noopener">OPEN SOURCE DATASHEET ↗</a>`:''}</details>`;
+    $('#datasheet-content').innerHTML=weaponSection('RANGED WEAPONS',weapons.filter(w=>w.range>0))+weaponSection('MELEE WEAPONS',weapons.filter(w=>w.range===0))+`<details><summary>ABILITIES</summary><p>${(ref?.abilities || unit.abilities).map(escapeHTML).join(' · ')}</p>${ref?.abilitySummary?`<p>${escapeHTML(ref.abilitySummary)}</p><p class="reference-note">REFERENCE ABILITIES</p>`:''}</details><details><summary>UNIT COMPOSITION</summary><p>${escapeHTML(ref?.composition || `${unit.models} model${unit.models===1?'':'s'}`)}</p>${unit.leader?`<p>LEADS: ${unit.leader.targets.map(id=>escapeHTML(this.unit(id)?.name || id)).join(' · ')}</p>`:''}</details><details open><summary>ORDEAL PROFILE</summary><p>${unit.points} PTS · ${unit.models} MODELS · ${this.run.rulesVersion===2?'1 FORMATION SLOT':unit.size.join('×')+' SPACE'} · STOCK ${unit.stock}</p><p>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · LD${unit.leadership}+ · OC${unit.oc}</p><p>COMBAT WEAPON: ${escapeHTML(unit.weapon.name)}</p>${ref?`<p class="reference-note">The reference weapons and ability names above describe the datasheet. Automatic combat uses this Ordeal profile and one weapon.</p><a href="${escapeHTML(ref.source)}" target="_blank" rel="noopener">OPEN SOURCE DATASHEET ↗</a>`:''}</details>`;
     $('#datasheet-draft').disabled=Boolean(issue);
     $('#datasheet-draft').textContent=issue || `DRAFT · ${unit.points} PTS`;
     this.show('datasheet');
@@ -671,6 +676,7 @@ export class Game {
   }
 
   draftIssue(unit,x,y) {
+    if(this.run.rulesVersion===2)return rankPlacementIssue({unit,unlocked:Boolean(unit?.rescueKind || this.run.unlockedUnits.includes(unit?.id)),deployed:this.run.deployed,cap:this.run.cap,used:this.usedPoints(),x,y,rows:this.formationRowCount()});
     return placementIssue({unit,unlocked:Boolean(unit?.rescueKind || this.run.unlockedUnits.includes(unit?.id)),deployed:this.run.deployed,cap:this.run.cap,used:this.usedPoints(),x,y,rotated:this.rotated,unitFor:id=>this.unit(id)});
   }
 
@@ -712,7 +718,7 @@ export class Game {
     }
     if ((this.run.stratagems || []).length) list.insertAdjacentHTML('beforeend','<div class="protocol-heading tactical"><b>STRATAGEMS</b><small>TACTICAL · CONDITIONAL EFFECTS</small></div>');
     for (const id of this.run.stratagems || []) {
-      const stratagem = STRATAGEMS.find(item => item.id === id);
+      const stratagem = TACTICS.find(item => item.id === id);
       const el = document.createElement('div'); el.className = 'protocol-card'; el.title = stratagem.desc;
       el.innerHTML = `<span>⌖</span><div><b>${stratagem.name}</b><small>STRATAGEM · ${stratagem.tag}</small></div>`;
       list.append(el);
@@ -725,7 +731,8 @@ export class Game {
     $(`#${tab === 'units' ? 'unit-roster' : tab === 'gear' ? 'gear-inventory' : 'protocol-list'}`).classList.add('active');
   }
 
-  sizeFor(unit, rotated) { return rotated ? [unit.size[1], unit.size[0]] : unit.size; }
+  formationRowCount() {return this.run?.rulesVersion===2?formationRows(this.run.cap):5;}
+  sizeFor(unit, rotated) {if(this.run?.rulesVersion===2)return [1,1];return rotated ? [unit.size[1], unit.size[0]] : unit.size; }
 
   canPlace(x, y, w, h) {
     if (x < 0 || y < 0 || x + w > 6 || y + h > 5) return false;
@@ -740,7 +747,7 @@ export class Game {
     if (!unit) return;
     const issue=this.draftIssue(unit,x,y);
     if(issue) { $('#prep-status').textContent=issue; return; }
-    this.run.deployed.push({ id: `${unit.id}-${Date.now()}-${Math.random()}`, unitId: unit.id, x, y, rotated: this.rotated });
+    this.run.deployed.push({ id: `${unit.id}-${Date.now()}-${Math.random()}`, unitId: unit.id, x, y, rank:y<this.formationRowCount()/2?'front':'rear', rotated:false });
     this.selectedPlaced = this.run.deployed.at(-1).id;
     this.selectedBlueprint = null;
     this.save();
@@ -753,7 +760,7 @@ export class Game {
     if (this.usedPoints() + leader.points > this.run.cap) { $('#prep-status').textContent = 'NOT ENOUGH POINTS FOR THAT LEADER'; return; }
     const deployedCount = this.run.deployed.filter(item => item.unitId === leader.id).length;
     if (deployedCount >= leader.stock) return;
-    this.run.deployed.push({id:`${leader.id}-${Date.now()}`,unitId:leader.id,x:bodyguard.x,y:bodyguard.y,rotated:false,attachedTo:bodyguard.id});
+    this.run.deployed.push({id:`${leader.id}-${Date.now()}`,unitId:leader.id,x:bodyguard.x,y:bodyguard.y,rank:bodyguard.rank,rotated:false,attachedTo:bodyguard.id});
     this.selectedBlueprint = null;
     this.selectedPlaced = this.run.deployed.at(-1).id;
     this.save();
@@ -800,7 +807,7 @@ export class Game {
     this.galaxyScene?.destroy();
     this.galaxyScene = null;
     const map = $('#sector-map');
-    $('#sector-title').textContent = 'CHOOSE A SECTOR';
+    $('#sector-title').textContent = 'MISSION · FOUR SECTORS';
     map.className = 'sector-map webgl-star-map';
     const activeIndex = Number.isInteger(this.run.region) ? this.run.region : null;
     if (activeIndex !== null && this.run.sectors[activeIndex]) this.run.sectors[activeIndex].status = 'available';
@@ -972,8 +979,8 @@ export class Game {
       const thresholds = [0,5,8];
       return [1,2,3].map((bossTier,lane) => ({
         id:`r${r}-boss-${bossTier}`,type:'boss',bossTier,
-        name:['WARLORD','CHAMPION','APEX COMMANDER'][bossTier-1],
-        reward:`${bossTier}★ · BANK ${tier.permanentReward * bossTier} REQ ON CAMPAIGN VICTORY`,
+        name:(r===3 && this.run.rulesVersion===2?['FINAL WARLORD','FINAL CHAMPION','FINAL APEX COMMANDER']:['WARLORD','CHAMPION','APEX COMMANDER'])[bossTier-1],
+        reward:this.run.rulesVersion===2?`${bossTier}★ · SECURE 30 CHAPTER REQ · HIGHER TIER: RICHER RUN LOOT`:`${bossTier}★ · BANK ${tier.permanentReward * bossTier} REQ ON CAMPAIGN VICTORY`,
         difficulty:(1 + bossTier * .22) * tier.enemyScale, enemyFaction:enemy.id,
         locked:this.run.sectorStars < thresholds[bossTier-1], threshold:thresholds[bossTier-1], stars:bossTier,lane
       }));
@@ -1069,10 +1076,30 @@ export class Game {
     return button;
   }
 
+  systemRewardPlan(node) {
+    this.run.rewardPlans ||= {};
+    if(!this.run.rewardPlans[node.id]) {
+      const req=Math.round((18+(node.stars || 1)*8)*(1+(this.researchRanks().salvage || 0)*.15)*(1+(this.protocolEffects().requisitionBonus || 0)));
+      this.run.rewardPlans[node.id]={req,stratagems:rollTacticOffer(this.run.stratagems || []),honours:shuffle(BATTLE_HONOURS.filter(h=>!this.run.protocols.includes(h.id))).map(h=>h.id).slice(0,3),wargear:shuffle(WARGEAR).map(g=>g.id).slice(0,3)};this.save();
+    }
+    return this.run.rewardPlans[node.id];
+  }
+
+  openSystemBriefing(node) {
+    this.previewNode=structuredClone(node);
+    const plan=this.systemRewardPlan(node),context=this.ensureRewardState({node,req:plan.req,...plan});
+    $('#system-title').textContent=node.name;
+    $('#system-enemy').textContent=this.faction(node.enemyFaction).name+' · '+'★'.repeat(node.stars || 1)+' · THREAT '+Math.round(node.difficulty*100);
+    $('#system-art').innerHTML=portraitMarkup('grey-knight-strike-squad',true);
+    $('#system-drops').innerHTML=this.rewardSegmentOptions(context).map(o=>'<article><b>'+escapeHTML(o.name)+'</b><p>'+(o.kind==='currency'?plan.req+' MISSION REQ · GUARANTEED':o.kind==='stratagem'?'CHOOSE ONE · '+plan.stratagems.map(id=>{const t=TACTICS.find(t=>t.id===id);return escapeHTML(t.tier.toUpperCase()+': '+t.name);}).join(' / '):escapeHTML(o.tag))+'</p></article>').join('')+'<article><b>'+(node.type==='boss'?'SECTOR MILESTONE':node.event==='store'?'ROGUE TRADER':node.event==='distress'?'DISTRESS RESCUE':'CONDITIONS')+'</b><p>'+(node.type==='boss'?'30 CHAPTER REQ SECURED ON SECTOR CLEAR':node.event==='store'?'RNG shop stock · Spend mission Requisition · Optional purchases':node.event==='distress'?'One random Imperial recruit for this mission after victory':'Standard engagement · Frontline screens the rear')+'</p></article>';
+    this.show('system');
+  }
+
   chooseNode(node) {
     if (!this.run || this.run.rewardContext || this.run.pendingPostWar || node.locked) return;
     if (!this.run.offers?.some(offer => offer.id === node.id && !offer.locked)) return;
     if (node.type === 'boss-system') return this.openBossChoices(node);
+    if(this.run.rulesVersion===2)return this.openSystemBriefing(node);
     this.run.pendingNode = node;
     this.save();
     this.openLoadout('map');
@@ -1085,6 +1112,7 @@ export class Game {
   }
 
   openBossChoices(node) {
+    $('#boss-choice-title').textContent=this.run.region===3?'FINAL BOSS':'SECTOR COMMAND';
     $('#boss-choice-stars').textContent = `${this.run.sectorStars} ★ COLLECTED · CHOOSE YOUR ENGAGEMENT`;
     const list = $('#boss-tier-options'); list.innerHTML = '';
     for (const option of node.bossOptions) {
@@ -1101,7 +1129,9 @@ export class Game {
     const system = this.run?.offers?.find(node => node.id === systemId && node.type === 'boss-system' && !node.locked);
     const option = system?.bossOptions.find(boss => boss.bossTier === bossTier);
     if (!option || this.run.sectorStars < option.threshold || this.run.rewardContext || this.run.pendingPostWar) return;
-    this.run.pendingNode = {...option,locked:false,step:this.run.step,region:this.run.region};
+    const chosen={...option,locked:false,step:this.run.step,region:this.run.region};
+    if(this.run.rulesVersion===2)return this.openSystemBriefing(chosen);
+    this.run.pendingNode=chosen;
     this.save(); this.openLoadout('map');
   }
 
@@ -1109,6 +1139,7 @@ export class Game {
     const unit = this.unit(placed.unitId);
     const fighter = {
       ...unit, instanceId:placed.id, side, x:placed.x ?? 0, y:placed.y ?? 0, attachedTo:placed.attachedTo || null,
+      rank:placed.rank || (placed.x<3?'front':'rear'),
       toughness:unit.defense.toughness, save:unit.defense.save, invuln:unit.defense.invuln,
       hitBonus:0, woundBonus:0, saveBonus:0, attacksBonus:0, fnp:7,
       hp:Array(unit.models).fill(unit.defense.wounds), maxHp:unit.models * unit.defense.wounds,
@@ -1118,7 +1149,8 @@ export class Game {
       const gearItem = this.run.gear.find(item => item.equippedTo === placed.id);
       if (gearItem) {
         const gear = WARGEAR.find(item => item.id === gearItem.gearId);
-        if (gear.stat === 'toughness') fighter.toughness += gear.value;
+        if(gear.stat==='weaponStrength')fighter.weapon={...fighter.weapon,strength:fighter.weapon.strength+gear.value};
+        else if (gear.stat === 'toughness') fighter.toughness += gear.value;
         else if (gear.stat === 'invuln') fighter.invuln = Math.min(fighter.invuln, gear.value);
         else fighter[gear.stat] += gear.value;
       }
@@ -1128,7 +1160,17 @@ export class Game {
       fighter.saveBonus += effects.saveBonus || 0;
       fighter.invuln = Math.min(fighter.invuln, effects.invuln || 7);
       fighter.fnp = effects.fnp || 7;
-      const doctrine = this.meta.research.doctrine || 0;
+      const doctrine = this.researchRanks().doctrine || 0;
+      if(this.run.rulesVersion===2) {
+        const ranks=this.researchRanks(),type=unit.keywords.includes('Vehicle')?'vehicle':unit.keywords.includes('Infantry')?'infantry':null;
+        if(type) {
+          fighter.attacksBonus+=(ranks[type+'-attacks'] || 0)+(effects[type+'Attacks'] || 0);
+          fighter.toughness+=(ranks[type+'-toughness'] || 0)+(effects[type+'Toughness'] || 0);
+          fighter.defense={...unit.defense,wounds:unit.defense.wounds+2*(ranks[type+'-wounds'] || 0)};
+          fighter.hp=Array(unit.models).fill(fighter.defense.wounds);fighter.maxHp=fighter.currentHp=fighter.hp.reduce((a,b)=>a+b,0);
+          if(type==='infantry')fighter.invuln=Math.min(fighter.invuln,effects.infantryInvuln || 7);
+        }
+      }
       if (doctrine >= 1) fighter.hitBonus++;
       if (doctrine >= 2) fighter.woundBonus++;
       if (doctrine >= 3) fighter.fnp = Math.min(fighter.fnp, 6);
@@ -1139,7 +1181,7 @@ export class Game {
 
   makeEnemyForce(node) {
     const pool = this.units.filter(unit => unit.faction === node.enemyFaction && unit.points <= this.run.cap && !unit.leader);
-    const target = Math.max(150, Math.round(this.usedPoints() * node.difficulty));
+    const target = Math.max(150, Math.round((this.run.rulesVersion===2?(this.run.missionCap || 500):this.usedPoints()) * node.difficulty));
     const force = [];
     let total = 0, safety = 0;
     while (total < target * .85 && safety++ < 20) {
@@ -1155,6 +1197,7 @@ export class Game {
       force[0].currentHp = force[0].maxHp;
       force[0].attacksBonus += 1;
     }
+    if(this.run.rulesVersion===2)force.forEach((unit,index)=>unit.rank=unit.weapon.range===0 || index<Math.ceil(force.length/2)?'front':'rear');
     return force;
   }
 
@@ -1163,6 +1206,7 @@ export class Game {
     for (const leader of players.filter(unit => unit.attachedTo)) {
       const bodyguard = players.find(unit => unit.instanceId === leader.attachedTo);
       if (bodyguard) {
+        leader.rank=bodyguard.rank;
         leader.protectedBy = bodyguard;
         bodyguard.leaderGrant = leader.leader?.grant || {};
       }
@@ -1191,7 +1235,7 @@ export class Game {
   stratagemEffects() {
     const effects = {};
     for (const id of this.run.stratagems || []) {
-      const effect = STRATAGEMS.find(item => item.id === id)?.effect || {};
+      const effect = TACTICS.find(item => item.id === id)?.effect || {};
       for (const [key,value] of Object.entries(effect)) effects[key] = (effects[key] || 0) + value;
     }
     return effects;
@@ -1210,7 +1254,7 @@ export class Game {
     this.commandPhase();
     const actors = shuffle([...this.alive(this.battle.players), ...this.alive(this.battle.enemies)]);
     for (const actor of actors) {
-      if (actor.dead) continue;
+      if (!this.canAttack(actor)) continue;
       const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
       if (!this.alive(foes).length) break;
       const target = this.chooseTarget(this.alive(foes), actor.side);
@@ -1244,7 +1288,7 @@ export class Game {
   nextAnimatedActor() {
     if (!this.battle || this.battle.resolving) return;
     let actor = this.battle.actors[this.battle.actorIndex++];
-    while (actor?.dead) actor = this.battle.actors[this.battle.actorIndex++];
+    while (actor && !this.canAttack(actor)) actor = this.battle.actors[this.battle.actorIndex++];
     if (!actor) return this.endAnimatedRound();
     const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
     if (!this.alive(foes).length) return this.endAnimatedRound();
@@ -1282,9 +1326,19 @@ export class Game {
 
   chooseTarget(foes, side) {
     const legal = foes.filter(unit => !unit.protectedBy || unit.protectedBy.dead);
-    const pool = legal.length ? legal : foes;
+    let pool = legal.length ? legal : foes;
+    if(this.run.rulesVersion===2){const front=pool.filter(u=>u.rank==='front');if(front.length)pool=front;}
     if (side === 'enemy') return [...pool].sort((a,b) => a.x - b.x || a.currentHp - b.currentHp)[0];
     return [...pool].sort((a,b) => a.currentHp - b.currentHp)[0];
+  }
+
+  canAttack(actor) {
+    if(actor.dead)return false;
+    if(this.run.rulesVersion!==2)return true;
+    const force=actor.side==='player'?this.battle.players:this.battle.enemies;
+    const alive=force.filter(u=>!u.dead);
+    if(!alive.some(u=>u.rank==='front')){alive.forEach(u=>u.rank='front');this.addLog((actor.side==='player'?'OUR':'ENEMY')+' REAR LINE ADVANCES');}
+    return actor.weapon.range>0 || actor.rank==='front';
   }
 
   commandPhase() {
@@ -1472,12 +1526,13 @@ export class Game {
 
   renderForce(container, force) {
     container.innerHTML = '';
-    for (const fighter of force) {
+    const ordered=this.run.rulesVersion===2?[...force].sort((a,b)=>Number(a.rank==='rear')-Number(b.rank==='rear')):force;
+    for (const fighter of ordered) {
       const el = document.createElement('div');
       const destroying = fighter.dead && performance.now() < (fighter.deathEffectUntil || 0);
       el.className = `fighter ${fighter.dead ? 'dead' : ''} ${destroying ? 'destroying' : ''} ${fighter.flash || ''}`;
       el.style.setProperty('--fighter-color', fighter.side === 'enemy' ? '#ff496c' : fighter.color);
-      const states = [fighter.battleShocked ? 'BATTLE-SHOCKED' : '', fighter.attachedTo ? 'LEADER' : '', fighter.protectedBy && !fighter.protectedBy.dead ? `ATTACHED TO ${fighter.protectedBy.name}` : ''].filter(Boolean).join(' · ');
+      const states = [this.run.rulesVersion===2?(fighter.rank==='front'?'FRONTLINE':'REAR LINE'):'',fighter.battleShocked ? 'BATTLE-SHOCKED' : '', fighter.attachedTo ? 'LEADER' : '', fighter.protectedBy && !fighter.protectedBy.dead ? `ATTACHED TO ${fighter.protectedBy.name}` : ''].filter(Boolean).join(' · ');
       el.innerHTML = `<b>${fighter.name}</b><small>${fighter.hp.length}/${fighter.models} models · T${fighter.toughness} · SV${fighter.save}+${states ? `<br>${states}` : ''}</small><div class="hp"><i style="width:${clamp(fighter.currentHp/fighter.maxHp*100,0,100)}%"></i></div>`;
       container.append(el);
       fighter.flash = '';
@@ -1519,7 +1574,7 @@ export class Game {
     if (this.battle.currentPlan) this.applyDiceAttack(this.battle.currentPlan);
     while (this.battle.actorIndex < this.battle.actors.length && this.alive(this.battle.players).length && this.alive(this.battle.enemies).length) {
       const actor = this.battle.actors[this.battle.actorIndex++];
-      if (actor.dead) continue;
+      if (!this.canAttack(actor)) continue;
       const foes = actor.side === 'player' ? this.battle.enemies : this.battle.players;
       if (!this.alive(foes).length) break;
       this.applyDiceAttack(this.prepareDiceAttack(actor, this.chooseTarget(this.alive(foes), actor.side)));
@@ -1556,9 +1611,10 @@ export class Game {
     this.run.sectorStars += node.stars || 0;
     this.run.battles++;
     if (node.type === 'boss') this.run.bosses++;
-    const req = Math.round((18 + (node.stars || 1) * 8) * (1 + (this.meta.research.salvage || 0) * .15));
+    const plan=this.run.rulesVersion===2?this.systemRewardPlan(node):null;
+    const req=plan?.req ?? Math.round((18+(node.stars || 1)*8)*(1+(this.researchRanks().salvage || 0)*.15));
     this.run.pendingDefeat=false;
-    this.run.rewardContext = {node, req,report:this.run.lastBattleReport?.nodeId===node.id ? structuredClone(this.run.lastBattleReport) : null};
+    this.run.rewardContext = {node, req,...(plan || {}),report:this.run.lastBattleReport?.nodeId===node.id ? structuredClone(this.run.lastBattleReport) : null};
     this.ensureRewardState(this.run.rewardContext);
     this.renderRewardSegments();
     $('#reward-data').textContent = `+${node.stars || 0} ★`;
@@ -1581,7 +1637,7 @@ export class Game {
       context.rewardVersion = 2;
     }
     context.honours ||= shuffle(BATTLE_HONOURS.filter(item => !this.run.protocols.includes(item.id))).map(item => item.id);
-    context.stratagems ||= shuffle(STRATAGEMS.filter(item => !this.run.stratagems.includes(item.id))).map(item => item.id);
+    context.stratagems ||= rollTacticOffer(this.run.stratagems || []);
     context.wargear ||= shuffle(WARGEAR).map(item => item.id);
     context.totalClaims = Object.values(context.claims).reduce((sum,value) => sum + value, 0);
     return context;
@@ -1651,7 +1707,7 @@ export class Game {
       context.claimed.recovery++;
       return this.renderRewardSegments();
     }
-    const source = kind === 'honour' ? BATTLE_HONOURS : kind === 'stratagem' ? STRATAGEMS : WARGEAR;
+    const source = kind === 'honour' ? BATTLE_HONOURS : kind === 'stratagem' ? TACTICS : WARGEAR;
     const owned = kind === 'honour' ? this.run.protocols : kind === 'stratagem' ? this.run.stratagems : [];
     const key = kind === 'honour' ? 'honours' : kind === 'stratagem' ? 'stratagems' : 'wargear';
     let ids = context[key].filter(id => !owned.includes(id));
@@ -1662,7 +1718,7 @@ export class Game {
     }
     context[key] = ids;
     ids = ids.slice(0,3);
-    const choiceName = kind === 'honour' ? 'ENHANCEMENT' : kind === 'stratagem' ? 'STRATAGEM' : 'WARGEAR';
+    const choiceName = kind === 'honour' ? 'ENHANCEMENT' : kind === 'stratagem' ? 'STRATAGEM / RELIC' : 'WARGEAR';
     $('#reward-title').textContent = `CHOOSE ${choiceName === 'ENHANCEMENT' ? 'AN' : 'A'} ${choiceName}`;
     $('#reward-copy').textContent = `ONE ${choiceName} MAY BE SECURED`;
     const list = $('#reward-options'); list.innerHTML = '';
@@ -1670,7 +1726,8 @@ export class Game {
       const item = source.find(entry => entry.id === id); const button = document.createElement('button');
       button.className = 'reward-option pixel-panel'; button.title = item.desc;
       const symbol = kind === 'honour' ? ruleSymbol(`${item.name} ${item.tag}`) : kind === 'stratagem' ? '⌖' : '⚙';
-      button.innerHTML = this.rewardBranchMarkup(kind,`${symbol} ${item.name}`,item.desc,kind === 'gear' ? 'RECOVERED WARGEAR' : item.tag);
+      button.dataset.tier=item.tier || 'normal';
+      button.innerHTML = this.rewardBranchMarkup(kind,`${symbol} ${item.name}`,item.desc,kind === 'gear' ? 'RECOVERED WARGEAR' : `${(item.tier || 'normal').toUpperCase()} · ${item.tag}`);
       button.onclick = () => this.claimPostWarChoice(kind,id); list.append(button);
     });
     const back = document.createElement('button');
@@ -1681,12 +1738,14 @@ export class Game {
 
   claimPostWarChoice(kind,id) {
     if(!this.run?.rewardContext || !['honour','stratagem','gear'].includes(kind) || !this.rewardRemaining(kind)) return;
-    const source=kind==='honour'?BATTLE_HONOURS:kind==='stratagem'?STRATAGEMS:WARGEAR;
+    const source=kind==='honour'?BATTLE_HONOURS:kind==='stratagem'?TACTICS:WARGEAR;
     if(!source.some(item=>item.id===id)) return;
+    const offerKey={honour:'honours',stratagem:'stratagems',gear:'wargear'}[kind];
+    if(!this.run.rewardContext[offerKey]?.slice(0,3).includes(id)) return;
     if (kind === 'honour' && !this.run.protocols.includes(id)) this.run.protocols.push(id);
     if (kind === 'stratagem' && !this.run.stratagems.includes(id)) {
       this.run.stratagems.push(id);
-      this.run.currency += STRATAGEMS.find(item => item.id === id)?.effect.currency || 0;
+      this.run.currency += TACTICS.find(item => item.id === id)?.effect.currency || 0;
     }
     if (kind === 'gear') this.run.gear.push({gearId:id,equippedTo:null,id:`${id}-${Date.now()}`});
     this.run.rewardContext.claimed[kind]++;
@@ -1768,40 +1827,40 @@ export class Game {
 
   fieldStoreOffers() {
     const pending=this.run?.pendingPostWar;
-    if(pending?.node.event !== 'store') return [];
-    if(!pending.storeOffers) {
-      pending.storeOffers=shuffle(WARGEAR).slice(0,3).map((gear,index)=>({gearId:gear.id,price:20+index*10}));
-      this.save();
-    }
+    if(pending?.node.event!=='store')return [];
+    if(!pending.storeOffers) {pending.storeOffers=rollStoreOffers(this.units.filter(u=>u.points<=this.getBaseCap()));this.save();}
+    pending.storeOffers.forEach((o,i)=>{o.id ||= 'legacy-stock-'+i;o.kind ||= 'gear';o.sold ||= false;});
     return pending.storeOffers;
   }
 
   openStoreEvent() {
-    if(this.run?.pendingPostWar?.node.event !== 'store') return;
-    if($('#event-dialog').open) $('#event-dialog').close();
+    if(this.run?.pendingPostWar?.node.event!=='store')return;
+    if($('#event-dialog').open)$('#event-dialog').close();
     $('#store-currency').textContent=this.run.currency;
-    const list=$('#store-options'); list.innerHTML='';
-    list.scrollTop=0;
+    const list=$('#store-options'),scroll=list.scrollTop;list.innerHTML='';
     for(const offer of this.fieldStoreOffers()) {
-      const gear=WARGEAR.find(item=>item.id===offer.gearId);
-      if(!gear) continue;
-      const button=document.createElement('button');
-      button.className='store-item'; button.disabled=this.run.currency<offer.price;
-      button.setAttribute('aria-label',`${gear.name}, ${offer.price} Requisition. ${gear.desc}`);
-      button.innerHTML=`<span class="store-item-sigil" aria-hidden="true">⚙</span><span class="store-item-copy"><b>${escapeHTML(gear.name)}</b><small>${escapeHTML(gear.desc)}</small></span><span class="store-item-price">◆ ${offer.price}</span>`;
-      button.onclick=()=>this.purchaseStoreItem(gear.id);
-      list.append(button);
+      const item=offer.kind==='unit'?this.unit(offer.unitId):WARGEAR.find(g=>g.id===offer.gearId);if(!item)continue;
+      const description=offer.kind==='unit'?item.points+' ARMY PTS · '+item.models+' MODELS · MISSION-ONLY RECRUIT':item.desc;
+      const button=document.createElement('button');button.className='store-item';button.disabled=offer.sold || this.run.currency<offer.price;
+      button.setAttribute('aria-label',item.name+', '+offer.price+' Requisition. '+(offer.sold?'SOLD OUT':description));
+      button.innerHTML='<span class="store-item-sigil">'+(offer.kind==='unit'?(portraitMarkup(item.id) || '♛'):'⚙')+'</span><span class="store-item-copy"><b>'+escapeHTML(item.name)+'</b><small>'+escapeHTML(description)+'</small></span><span class="store-item-price">'+(offer.sold?'SOLD OUT':'◆ '+offer.price)+'</span>';
+      button.onclick=()=>this.purchaseStoreItem(offer.id);list.append(button);
     }
-    this.show('store');
+    list.scrollTop=scroll;this.show('store');
   }
 
-  purchaseStoreItem(gearId) {
-    const offer=this.fieldStoreOffers().find(item=>item.gearId===gearId);
-    if(!offer || !WARGEAR.some(item=>item.id===gearId) || this.run.currency<offer.price) return;
-    this.run.currency-=offer.price;
-    this.run.gear.push({gearId,equippedTo:null,id:`${gearId}-${Date.now()}`});
-    this.save();
-    this.finishPostWarEvent();
+  purchaseStoreItem(stockId) {
+    const offer=this.fieldStoreOffers().find(o=>o.id===stockId || o.gearId===stockId);
+    if(!offer || offer.sold || this.run.currency<offer.price)return;
+    if(offer.kind==='unit') {
+      const base=this.unit(offer.unitId);if(!base)return;
+      this.run.rescuedUnits ||= [];
+      this.run.rescuedUnits.push({...structuredClone(base),id:base.id+'--rescued-shop-'+this.run.pendingPostWar.node.id+'-'+offer.id,sourceUnitId:base.id,stock:1,rescueKind:EPIC_HERO_IDS.includes(base.id)?'EPIC HERO':'UNIQUE UNIT'});
+    } else {
+      if(!WARGEAR.some(g=>g.id===offer.gearId))return;
+      this.run.gear.push({gearId:offer.gearId,equippedTo:null,id:offer.gearId+'-'+Date.now()});
+    }
+    this.run.currency-=offer.price;offer.sold=true;this.save();this.openStoreEvent();
   }
 
   finishPostWarEvent() {
@@ -1821,8 +1880,8 @@ export class Game {
       this.run.story ||= {briefed:[],completed:[],pendingBriefing:null};
       if (!this.run.story.completed.includes(this.run.region)) this.run.story.completed.push(this.run.region);
       const tier = CAMPAIGN_TIERS[this.run.tierIndex];
-      const permanent = tier.permanentReward * (node?.bossTier || 1);
-      this.run.chests += permanent;
+      if(this.run.rulesVersion===2)secureSector(this.run);
+      else this.run.chests+=tier.permanentReward*(node?.bossTier || 1);
       const repair = this.stratagemEffects().bossRepair || 0;
       this.run.hull = Math.min(this.run.maxHull, this.run.hull + repair);
       const next = this.run.sectors[this.run.region + 1]; if (next) next.status = 'available';
@@ -1872,8 +1931,10 @@ export class Game {
   }
 
   endRun(victory) {
-    const earned = victory ? this.run.chests + Math.floor(this.run.currency * .25) : 0;
-    this.meta.currency += earned;
+    if(!this.run)return;
+    const earned=this.run.rulesVersion===2?(this.run.chests || 0):(victory?this.run.chests+Math.floor(this.run.currency*.25):0);
+    if(this.run.rulesVersion===2) {this.chapter().currency+=earned;if(victory)this.chapter().wins++;}
+    else this.meta.currency+=earned;
     if (victory) this.meta.wins++;
     const snapshot = {battles:this.run.battles,bosses:this.run.bosses,data:this.run.data,stars:this.run.stars,chests:earned,combat:this.run.combatTotals};
     this.run = null;
@@ -1881,7 +1942,7 @@ export class Game {
     this.setEndArtwork(victory);
     $('#run-end-kicker').textContent = victory ? '// CAMPAIGN COMPLETE' : '// CAMPAIGN LOST';
     $('#run-end-title').textContent = victory ? 'DIRECTIVE FULFILLED' : 'DIRECTIVE FAILED';
-    $('#run-end-copy').textContent = victory ? 'Every required sector is secured. Banked campaign rewards are now permanent Requisition; run-only Enhancements, Stratagems and Wargear are cleared.' : 'The offensive ended before every required sector was secured. Banked campaign rewards were lost.';
+    $('#run-end-copy').textContent = victory ? 'The mission is secured. Sector rewards join this chapter’s permanent Requisition; temporary Requisition, recruits and equipment expire.' : 'The mission has ended. Secured sector rewards are retained by this chapter; temporary Requisition, recruits and equipment expire.';
     this.renderReportStats('#run-end-stats',[['BATTLES WON',snapshot.battles],['SECTORS CLEARED',snapshot.bosses],['STARS',snapshot.stars],['PERMANENT REQ',`+${snapshot.chests}`],['ENEMY LOSSES',snapshot.combat?.enemyModelsLost ?? '—'],['OUR LOSSES',snapshot.combat?.playerModelsLost ?? '—']]);
     $('#run-end-button').textContent = 'RETURN TO TITAN';
     $('#run-end-button').dataset.action = 'home';
@@ -1895,28 +1956,24 @@ export class Game {
   }
 
   renderResearch() {
-    $('#research-currency').textContent = this.meta.currency;
-    const grid = $('#research-grid'); grid.innerHTML = '';
-    for (const research of RESEARCH) {
-      const level = this.meta.research[research.id] || 0;
-      const cost = research.costs[level];
-      const card = document.createElement('article'); card.className = 'research-card';
-      card.innerHTML = `<span class="research-icon">${research.icon}</span><div><h3>${research.name} <span class="research-level">LV ${level}/${research.max}</span></h3><p>${research.desc}</p></div>`;
-      const button = document.createElement('button');
-      button.textContent = level >= research.max ? 'MAX' : `${cost} BUY`;
-      button.disabled = level >= research.max || this.meta.currency < cost;
-      button.onclick = () => this.buyResearch(research.id);
-      card.append(button); grid.append(card);
+    const chapter=this.chapter();
+    $('#research-title').textContent=this.faction(this.run?.faction || this.selectedFaction).name+' · CHAPTER ARMOURY';
+    $('#research-currency').textContent=chapter.currency;
+    const grid=$('#research-grid');grid.innerHTML='';
+    for(const research of CHAPTER_UPGRADES) {
+      const level=chapter.research[research.id] || 0,cost=research.cost(level);
+      const card=document.createElement('article');card.className='research-card';
+      card.innerHTML='<span class="research-icon">'+research.icon+'</span><div><h3>'+research.name+' <span class="research-level">'+level+'/'+research.max+'</span></h3><p>'+research.desc+'</p></div>';
+      const button=document.createElement('button');button.textContent=level>=research.max?'MAX':cost+' BUY';button.disabled=level>=research.max || chapter.currency<cost;
+      button.onclick=()=>this.buyResearch(research.id);card.append(button);grid.append(card);
     }
   }
 
   buyResearch(id) {
-    const research = RESEARCH.find(item => item.id === id);
-    const level = this.meta.research[id] || 0;
-    const cost = research.costs[level];
-    if (level >= research.max || this.meta.currency < cost) return;
-    this.meta.currency -= cost;
-    this.meta.research[id] = level + 1;
-    this.save(); this.renderResearch();
+    const research=CHAPTER_UPGRADES.find(item=>item.id===id);if(!research)return;
+    const chapter=this.chapter(),level=chapter.research[id] || 0,cost=research.cost(level);
+    if(level>=research.max || chapter.currency<cost)return;
+    chapter.currency-=cost;chapter.research[id]=level+1;
+    this.save();this.renderResearch();
   }
 }

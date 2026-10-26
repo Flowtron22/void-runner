@@ -40,6 +40,7 @@ let rendered=0;game.renderRewardSegments=()=>rendered++;
 game.claimPostWarChoice('honour','veteran-aim');game.claimPostWarChoice('honour','veteran-aim');
 assert.deepEqual(game.run.protocols,['veteran-aim']);assert.equal(game.run.rewardContext.claimed.honour,1);assert.equal(rendered,1);
 game.run.rewardContext.claims={gear:1}; game.run.rewardContext.claimed={gear:0};
+game.run.rewardContext.wargear=['armour'];
 game.claimPostWarChoice('gear','armour');game.claimPostWarChoice('gear','armour');
 assert.equal(game.run.gear.length,1);
 // Full campaign resolution keeps the established permanent-Requisition rules.

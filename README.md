@@ -1,21 +1,25 @@
 # COMBAT PATROL — 40K Roguelike Campaign
 
+## Current rules — 26 October 2026
+
+This section supersedes older gameplay and implementation notes in this document.
+
+- Take Your Oath starts a Grey Knights mission at 500 points plus chapter capacity upgrades. Other chapters remain sealed. Points-tier selection is removed.
+- One full mission has four sectors. Each sector has three route battles and one boss destination. The fourth sector boss IS the Final Boss; there is no extra encounter.
+- Each secured sector banks 30 permanent Requisition. Three secured sectors retain 90 on withdrawal or failure; four pay 120. Boss tier does not multiply permanent rewards. Temporary mission Requisition expires without conversion.
+- Permanent wallets and upgrades are isolated in meta.chapters[faction]. Expanded Muster adds 150 army points per rank, costs 60 + 45 × current rank, and has 20 ranks. Infantry and Vehicle each have separate +1 attacks, +1 Toughness and +2 wounds upgrades (three ranks), with rising costs. Salvage and attempts are also available. Balance is provisional.
+- Old global progression migrates once to the active chapter, or Grey Knights without an active mission. Existing missions preserve their starting points floor and banked value. Missions already past sector four may finish their saved route. All new missions use four sectors.
+- Ordeal uses one compact portrait slot per independent squad, six columns and four rows (six rows above 1,800 capacity). First half frontline, second half rear. No rotation. Select a deployed portrait and tap an empty slot to move it. Attached leaders follow bodyguards. Stock, capacity, locks and occupied slots remain enforced.
+- Both armies use ranks: frontline screens targets, ranged units fire from either rank, melee requires frontline, and rear units advance when no living frontline remains. Enemy budget uses starting mission capacity rather than deliberately underfilled deployment.
+- Existing asymmetric constellation charts remain. Clicking a reachable system opens an in-CRT briefing with saved Requisition and reward previews. Start commits travel; System Chart cancels without advancing, spending or rerolling. Boss gates remain 0 / 5 / 8 collected stars, with lower unlocked tiers selectable.
+- Stratagem offers contain three distinct saved cards. Each slot independently rolls 22% Relic, falling back if a tier is exhausted. No fixed quota: all Normal or all Relic is possible. Choose exactly ONE; the entire offer closes. Relics support Infantry wards, Infantry/Vehicle builds, recovery and Requisition.
+- Rogue Trader stock has five saved RNG entries: each rolls 30% mission-only Imperial recruit, otherwise weapon boost/wargear. Multiple purchases are allowed; finite stock remains sold after reload. Gear costs 20–50; recruits cost about 60% of army points, minimum 50. Leaving resolves the visit. Recruits, equipment and buffs expire with the mission.
+- Four command-deck markers show mission progress, secured permanent rewards and temporary Requisition separately. All briefings, shop stock, portraits and claims remain inside shared CRT glass and scanlines.
+
+Implementation: js/core/Progression.js, js/core/RunRewards.js, css/progression.css and Game.js. Progression checks cover chapter isolation/migration, secured rewards, RNG extremes, stock persistence, rank targeting/advancement, immutable combat upgrades and fixed previews. Physical iPad Safari still requires device verification.
+
+
 A portrait-first Warhammer 40,000 army-building roguelike with automatic, visible D6 combat.
-
-## Current game
-
-- Start from Play, choose a 500 / 1,000 / 1,500 / 2,000 / 3,000-point campaign, then choose Ultramarines, Imperial Fists or Grey Knights.
-- Collect campaign Enhancements that improve the army while the selected base point scale stays fixed throughout the run.
-- Encounter enemies from the full 19-faction data roster.
-- Arrange units on a 6×5 deployment grid.
-- Ordeal keeps the formation case above a compact four-column portrait archive. Tap a portrait for its datasheet, then Draft and tap a grid cell; on touch screens, swipe to scroll or hold a portrait briefly and drag it into the case. A green/red footprint previews fit, and illegal drops do not change the formation.
-- Grey Knights now have 16 patterns. Interceptors, Paladins, Purgation and Purifier squads join the two starting squads in new and existing missions. Sealed characters remain inspectable and can arrive through mission rewards. Reference profiles and weapon lists link to the requested Wahapedia source; automatic combat retains one selected weapon per unit.
-- Travel through interactive Three.js galaxy and local-system charts with constrained pan, wheel/pinch zoom, emissive selectable stars, projected accessible labels, and camera approaches. See the full connected sector route, follow reachable systems, and unlock stronger sector bosses with collected stars. Future systems glow grey; large stars show difficulty.
-- Win at DISTRESS systems to rescue a random Imperial unique unit or epic hero for the current mission, across all its sectors. Recruits use normal army points and disappear when the mission ends.
-- Watch Attacks, Hits, Wounds, Saves and Damage roll automatically. Player combat dice receive a modest low-roll recovery advantage; enemy dice remain standard D6 rolls.
-- Review an illustrated CRT battle report with actual losses, survivors and wounds, then resolve 3–5 distinct Post-War Affairs claims after a victory: one Requisition cache, one Enhancement, one Stratagem, then Wargear and Force Recovery on richer routes. Each block closes after its single claim, and special route events resolve before travel continues.
-- Bank sector-boss rewards during the campaign. They become permanent research Requisition only after every required sector is completed; temporary run currency buys Wargear in field stores.
-- Save campaign data in browser-local storage, including partially resolved Post-War Affairs. Saves do not transfer through Git.
 
 The compact roster in `public/data/warhammer-roster.json` is derived from the local KS project at `D:/Projects/Minigames/KS`. Its source metadata identifies the pinned community dataset snapshot. This prototype is not an official rules or tournament-certification product.
 

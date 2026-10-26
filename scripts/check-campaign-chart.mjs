@@ -147,6 +147,7 @@ delete globalThis.document;
 // The merchant is a dedicated CRT screen. Saved stock, affordability and one claim persist.
 const store=Object.create(Game.prototype);
 store.run={currency:30,gear:[],pendingPostWar:{node:{id:'store-test',event:'store'},wasBoss:false}};
+store.run.pendingPostWar.storeOffers=[{id:'s1',kind:'gear',gearId:'armour',price:20},{id:'s2',kind:'gear',gearId:'adamantine',price:30},{id:'s3',kind:'gear',gearId:'shield',price:40}];
 store.save=()=>{};
 let storeAdvanced=0,storeScreen=null;
 store.advanceRoute=()=>storeAdvanced++;
@@ -166,7 +167,7 @@ store.purchaseStoreItem(stock[2].gearId);
 assert.equal(store.run.currency,30); assert.equal(store.run.gear.length,0); assert.equal(storeAdvanced,0);
 store.purchaseStoreItem(stock[0].gearId);
 assert.equal(store.run.currency,10); assert.equal(store.run.gear.length,1);
-assert.equal(store.run.pendingPostWar,null); assert.equal(storeAdvanced,1);
+assert.ok(store.run.pendingPostWar); assert.equal(storeAdvanced,0);
 store.purchaseStoreItem(stock[0].gearId); store.finishPostWarEvent();
 assert.equal(store.run.gear.length,1); assert.equal(storeAdvanced,1);
 store.run.pendingPostWar={node:{id:'store-skip',event:'store'},wasBoss:false};

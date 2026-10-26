@@ -12,3 +12,12 @@ export function placementIssue({unit, unlocked, deployed, cap, used, x, y, rotat
   })) return 'THAT SPACE IS OCCUPIED';
   return null;
 }
+
+export function rankPlacementIssue({unit,unlocked,deployed,cap,used,x,y,rows}) {
+  if(!unit || !unlocked)return 'PATTERN UNRECOVERED · FIND IN SECTOR';
+  if(deployed.filter(p=>p.unitId===unit.id).length>=unit.stock)return 'ALL COPIES DEPLOYED';
+  if(used+unit.points>cap)return `NEED ${used+unit.points-cap} MORE POINTS`;
+  if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||x>=6||y<0||y>=rows)return 'OUTSIDE FORMATION';
+  if(deployed.some(p=>!p.attachedTo && p.x===x && p.y===y))return 'THAT POSITION IS OCCUPIED';
+  return null;
+}

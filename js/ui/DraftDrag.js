@@ -37,9 +37,10 @@ export function bindDraftDrag(card, unit, game) {
     state.ghost.style.left=`${clientX-card.offsetWidth/2}px`;
     state.ghost.style.top=`${clientY-card.offsetHeight-15}px`;
     const inside=clientX>=rect.left && clientX<=rect.right && clientY>=rect.top && clientY<=rect.bottom;
-    const cellW=(rect.width-10)/6,cellH=(rect.height-8)/5;
+    const rows=game.formationRowCount?.() || 5;
+    const cellW=(rect.width-10)/6,cellH=(rect.height-(rows-1)*2)/rows;
     const x=Math.max(0,Math.min(6-w,Math.floor((clientX-rect.left)/(cellW+2))-Math.floor(w/2)));
-    const y=Math.max(0,Math.min(5-h,Math.floor((clientY-rect.top)/(cellH+2))-Math.floor(h/2)));
+    const y=Math.max(0,Math.min(rows-h,Math.floor((clientY-rect.top)/(cellH+2))-Math.floor(h/2)));
     state.drop=inside?{x,y}:null;
     let preview=grid.querySelector('.draft-preview');
     if(!preview){preview=document.createElement('div');preview.className='draft-preview';grid.append(preview);}
