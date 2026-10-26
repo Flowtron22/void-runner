@@ -386,7 +386,7 @@ export class Game {
 
   renderHome() {
     $('#resume-button').hidden = !this.run;
-    $('#new-run-button').textContent = this.run ? 'ACTIVE MISSION' : 'START';
+    $('#new-run-button').textContent = 'NEW GAME';
     $('#reduced-motion-toggle').checked = Boolean(this.meta.settings?.reducedMotion);
     this.renderHeader();
   }
@@ -437,7 +437,6 @@ export class Game {
   }
 
   beginSetup() {
-    if(this.run)return this.resumeRun();
     this.setupChoice = {tier:null,faction:null};
     this.renderSetup('faction');
     this.show('setup');
@@ -457,6 +456,8 @@ export class Game {
   }
 
   startRun() {
+    // Starting a replacement mission retains already secured chapter rewards.
+    if(this.run)this.chapter().currency+=this.run.chests || 0;
     const tier = CAMPAIGN_TIERS[0];
     this.selectedFaction = this.setupChoice.faction || 'grey-knights';
     const factionUnits = this.units.filter(unit => unit.faction === this.selectedFaction);
@@ -654,7 +655,7 @@ export class Game {
     const weapons=ref?.weapons || [unit.weapon];
     const weaponSection=(name,list)=>`<details><summary>${name}</summary><div class="datasheet-weapons">${list.length?list.map(w=>`<article><b>${escapeHTML(w.name)}</b><div class="weapon-values">${[['R',w.range?`${w.range}″`:'Melee'],['A',w.attacks],['BS/WS',`${w.hit}+`],['S',w.strength],['AP',w.ap],['D',w.damage]].map(([k,v])=>`<span><small>${k}</small>${escapeHTML(v)}</span>`).join('')}</div><small>${escapeHTML(w.keywords.join(' · '))}</small></article>`).join(''):'<p>None listed.</p>'}</div></details>`;
     const issue=this.draftAvailability(unit);
-    $('#datasheet-content').innerHTML=weaponSection('RANGED WEAPONS',weapons.filter(w=>w.range>0))+weaponSection('MELEE WEAPONS',weapons.filter(w=>w.range===0))+`<details><summary>ABILITIES</summary><p>${(ref?.abilities || unit.abilities).map(escapeHTML).join(' · ')}</p>${ref?.abilitySummary?`<p>${escapeHTML(ref.abilitySummary)}</p><p class="reference-note">REFERENCE ABILITIES</p>`:''}</details><details><summary>UNIT COMPOSITION</summary><p>${escapeHTML(ref?.composition || `${unit.models} model${unit.models===1?'':'s'}`)}</p>${unit.leader?`<p>LEADS: ${unit.leader.targets.map(id=>escapeHTML(this.unit(id)?.name || id)).join(' · ')}</p>`:''}</details><details open><summary>ORDEAL PROFILE</summary><p>${unit.points} PTS · ${unit.models} MODELS · ${this.run.rulesVersion===2?'1 FORMATION SLOT':unit.size.join('×')+' SPACE'} · STOCK ${unit.stock}</p><p>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · LD${unit.leadership}+ · OC${unit.oc}</p><p>COMBAT WEAPON: ${escapeHTML(unit.weapon.name)}</p>${ref?`<p class="reference-note">The reference weapons and ability names above describe the datasheet. Automatic combat uses this Ordeal profile and one weapon.</p><a href="${escapeHTML(ref.source)}" target="_blank" rel="noopener">OPEN SOURCE DATASHEET ↗</a>`:''}</details>`;
+    $('#datasheet-content').innerHTML=weaponSection('RANGED WEAPONS',weapons.filter(w=>w.range>0))+weaponSection('MELEE WEAPONS',weapons.filter(w=>w.range===0))+`<details><summary>ABILITIES</summary><p>${(ref?.abilities || unit.abilities).map(escapeHTML).join(' · ')}</p>${ref?.abilitySummary?`<p>${escapeHTML(ref.abilitySummary)}</p><p class="reference-note">REFERENCE ABILITIES</p>`:''}</details><details><summary>UNIT COMPOSITION</summary><p>${escapeHTML(ref?.composition || `${unit.models} model${unit.models===1?'':'s'}`)}</p>${unit.leader?`<p>LEADS: ${unit.leader.targets.map(id=>escapeHTML(this.unit(id)?.name || id)).join(' · ')}</p>`:''}</details><details open><summary>ORDEAL PROFILE</summary><p>${unit.points} PTS · ${unit.models} MODELS · ${this.run.rulesVersion===2?'1 FORMATION SLOT':unit.size.join('×')+' SPACE'} · STOCK ${unit.stock}</p><p>T${unit.defense.toughness} · SV${unit.defense.save}+ · W${unit.defense.wounds} · LD${unit.leadership}+ · OC${unit.oc}</p><p>COMBAT WEAPON: ${escapeHTML(unit.weapon.name)}</p>${ref?``:''}</details>`;
     $('#datasheet-draft').disabled=Boolean(issue);
     $('#datasheet-draft').textContent=issue || `DRAFT · ${unit.points} PTS`;
     this.show('datasheet');
@@ -807,7 +808,7 @@ export class Game {
     this.galaxyScene?.destroy();
     this.galaxyScene = null;
     const map = $('#sector-map');
-    $('#sector-title').textContent = 'MISSION · FOUR SECTORS';
+    $('#sector-title').textContent = 'MISSION';
     map.className = 'sector-map webgl-star-map';
     const activeIndex = Number.isInteger(this.run.region) ? this.run.region : null;
     if (activeIndex !== null && this.run.sectors[activeIndex]) this.run.sectors[activeIndex].status = 'available';
@@ -815,7 +816,7 @@ export class Game {
       const nextSector = this.run.sectors.find(sector => sector.status !== 'complete');
       if (nextSector) nextSector.status = 'available';
     }
-    map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout" aria-hidden="true"><span>ASTRONOMICAN LINK</span><b>SEGMENTUM CHART</b></div><div class="chart-compass" aria-hidden="true"><i></i><b>N</b></div>`;
+    map.innerHTML = `<canvas class="galaxy-webgl" aria-hidden="true"></canvas><div class="webgl-map-labels"></div><div class="webgl-map-vignette" aria-hidden="true"></div><div class="webgl-map-readout" aria-hidden="true"><span>ASTRONOMICAN LINK</span><b>SEGMENTUM CHART</b></div>`;
     const labelLayer = map.querySelector('.webgl-map-labels');
     const systems = [];
     this.run.sectors.forEach((sector,index) => {
@@ -1091,7 +1092,7 @@ export class Game {
     $('#system-title').textContent=node.name;
     $('#system-enemy').textContent=this.faction(node.enemyFaction).name+' · '+'★'.repeat(node.stars || 1)+' · THREAT '+Math.round(node.difficulty*100);
     $('#system-art').innerHTML=portraitMarkup('grey-knight-strike-squad',true);
-    $('#system-drops').innerHTML=this.rewardSegmentOptions(context).map(o=>'<article><b>'+escapeHTML(o.name)+'</b><p>'+(o.kind==='currency'?plan.req+' MISSION REQ · GUARANTEED':o.kind==='stratagem'?'CHOOSE ONE · '+plan.stratagems.map(id=>{const t=TACTICS.find(t=>t.id===id);return escapeHTML(t.tier.toUpperCase()+': '+t.name);}).join(' / '):escapeHTML(o.tag))+'</p></article>').join('')+'<article><b>'+(node.type==='boss'?'SECTOR MILESTONE':node.event==='store'?'ROGUE TRADER':node.event==='distress'?'DISTRESS RESCUE':'CONDITIONS')+'</b><p>'+(node.type==='boss'?'30 CHAPTER REQ SECURED ON SECTOR CLEAR':node.event==='store'?'RNG shop stock · Spend mission Requisition · Optional purchases':node.event==='distress'?'One random Imperial recruit for this mission after victory':'Standard engagement · Frontline screens the rear')+'</p></article>';
+    $('#system-drops').innerHTML=this.rewardSegmentOptions(context).map(o=>'<article><b>'+escapeHTML(o.name)+'</b>'+(o.kind==='currency'?'<p>'+plan.req+' MISSION REQ</p>':'')+'</article>').join('')+(node.type==='boss'?'<article><b>SECTOR MILESTONE</b><p>30 CHAPTER REQ</p></article>':node.event==='store'?'<article><b>ROGUE TRADER</b></article>':node.event==='distress'?'<article><b>DISTRESS RESCUE</b></article>':'');
     this.show('system');
   }
 
@@ -1679,7 +1680,7 @@ export class Game {
       const left = this.rewardRemaining(option.kind);
       if (!left) continue;
       const button = document.createElement('button');
-      button.className = 'reward-option pixel-panel';
+      button.className = 'reward-option reward-branch pixel-panel';
       button.title = option.desc;
       button.setAttribute('aria-label', `${option.name}: ${option.desc}`);
       button.innerHTML = this.rewardBranchMarkup(option.kind,option.name,option.desc,option.tag);

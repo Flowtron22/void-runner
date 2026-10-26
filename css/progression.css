@@ -35,3 +35,14 @@
 .store-item-sigil {height:56px;overflow:hidden;}
 #hub-screen .hub-stations {gap:5px;}
 #hub-screen .hub-station {min-height:48px;}
+
+/* Keep the terminal free of instructional captions. */
+#loadout-screen .case-axis, #loadout-screen .draft-hint,
+#reward-screen .reward-copy, #reward-screen .reward-ledger,
+#reward-screen .reward-branch .reward-text small,
+#reward-screen .reward-branch .reward-text em,
+#hub-screen .mission-progress, #hub-screen .mission-secured {display:none;}
+#hub-screen .hub-status {margin-top:auto;}
+#hub-screen .hub-stations {gap:0;}
+#hub-screen .hub-station {min-height:56px;}
+#hub-screen .abandon-run {min-height:32px;font-size:7px;}
