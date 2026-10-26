@@ -1,55 +1,34 @@
-# COMBAT PATROL — 40K Roguelike Campaign
+# COMBAT PATROL
 
-## Current rules — 26 October 2026
+A portrait-first 40K army-building roguelike with automatic visible D6 combat, presented inside one gothic CRT terminal.
 
-This section supersedes older gameplay and implementation notes in this document.
+Updated 26 October 2026. Latest gameplay/UI release: 81d4fac. Live: https://combatpatrol.vercel.app.
 
-- Take Your Oath starts a Grey Knights mission at 500 points plus chapter capacity upgrades. Other chapters remain sealed. Points-tier selection is removed.
-- One full mission has four sectors. Each sector has three route battles and one boss destination. The fourth sector boss IS the Final Boss; there is no extra encounter.
-- Each secured sector banks 30 permanent Requisition. Three secured sectors retain 90 on withdrawal or failure; four pay 120. Boss tier does not multiply permanent rewards. Temporary mission Requisition expires without conversion.
-- Permanent wallets and upgrades are isolated in meta.chapters[faction]. Expanded Muster adds 150 army points per rank, costs 60 + 45 × current rank, and has 20 ranks. Infantry and Vehicle each have separate +1 attacks, +1 Toughness and +2 wounds upgrades (three ranks), with rising costs. Salvage and attempts are also available. Balance is provisional.
-- Old global progression migrates once to the active chapter, or Grey Knights without an active mission. Existing missions preserve their starting points floor and banked value. Missions already past sector four may finish their saved route. All new missions use four sectors.
-- Ordeal uses one compact portrait slot per independent squad, six columns and four rows (six rows above 1,800 capacity). First half frontline, second half rear. No rotation. Select a deployed portrait and tap an empty slot to move it. Attached leaders follow bodyguards. Stock, capacity, locks and occupied slots remain enforced.
-- Both armies use ranks: frontline screens targets, ranged units fire from either rank, melee requires frontline, and rear units advance when no living frontline remains. Enemy budget uses starting mission capacity rather than deliberately underfilled deployment.
-- Existing asymmetric constellation charts remain. Clicking a reachable system opens an in-CRT briefing with saved Requisition and reward previews. Start commits travel; System Chart cancels without advancing, spending or rerolling. Boss gates remain 0 / 5 / 8 collected stars, with lower unlocked tiers selectable.
-- Stratagem offers contain three distinct saved cards. Each slot independently rolls 22% Relic, falling back if a tier is exhausted. No fixed quota: all Normal or all Relic is possible. Choose exactly ONE; the entire offer closes. Relics support Infantry wards, Infantry/Vehicle builds, recovery and Requisition.
-- Rogue Trader stock has five saved RNG entries: each rolls 30% mission-only Imperial recruit, otherwise weapon boost/wargear. Multiple purchases are allowed; finite stock remains sold after reload. Gear costs 20–50; recruits cost about 60% of army points, minimum 50. Leaving resolves the visit. Recruits, equipment and buffs expire with the mission.
-- Four command-deck markers show mission progress, secured permanent rewards and temporary Requisition separately. All briefings, shop stock, portraits and claims remain inside shared CRT glass and scanlines.
+## Current version
 
-Implementation: js/core/Progression.js, js/core/RunRewards.js, css/progression.css and Game.js. Progression checks cover chapter isolation/migration, secured rewards, RNG extremes, stock persistence, rank targeting/advancement, immutable combat upgrades and fixed previews. Physical iPad Safari still requires device verification.
+- Main menu uses RESUME and NEW GAME as separate actions. New Game opens TAKE YOUR OATH; Grey Knights are available, Ultramarines and Imperial Fists remain sealed.
+- New missions start at 500 points plus chapter capacity upgrades. Clear four sectors; the fourth sector boss is the Final Boss, with no extra encounter.
+- Each secured sector retains 30 permanent chapter Requisition, including when a run ends early. Three sectors earn 90; four earn 120. Temporary mission Requisition expires without conversion.
+- Chapter Armoury has +150 points per capacity rank and separate Infantry/Vehicle attacks, Toughness and wounds upgrades. Wallets/upgrades never carry across chapters. Costs increase with rank.
+- Ordeal uses compact squad portrait slots, without rotation. Frontline screens targets, ranged units fire from rear, rear melee waits and rear units advance when the front falls. Attached leaders follow their bodyguards.
+- Explore the saved asymmetric constellation chart. Future systems glow grey. Inspect rewards, Start Mission, or return to System Chart without committing or rerolling. Sector stars unlock boss tiers at 0 / 5 / 8.
+- Post-war Stratagem offers randomly mix Normal and Relic cards with no fixed quota. Choose one card only. Trader stock is also RNG: buy multiple recruits, weapon boosts or wargear with mission Requisition; sold stock persists. Recruits and gear last for that full mission only.
+- The Command Deck stations are back near the bottom. Marked instructional captions, verbose preview descriptions, map compass and duplicate Active Mission action are removed. Mechanical effects remain on actual choice cards; everything stays beneath CRT glass.
 
+Read [gdd.md](gdd.md) for current rules, costs, saves, code ownership and follow-ups. Read [artstyle.md](artstyle.md) before changing layout or artwork.
 
-A portrait-first Warhammer 40,000 army-building roguelike with automatic, visible D6 combat.
+## Run and validate
 
-The compact roster in `public/data/warhammer-roster.json` is derived from the local KS project at `D:/Projects/Minigames/KS`. Its source metadata identifies the pinned community dataset snapshot. This prototype is not an official rules or tournament-certification product.
+Use Node compatible with the lockfile (22.12+ is suitable). Run npm ci, then npm run dev; open http://127.0.0.1:4173. Validate with npm run check and npm run build.
 
-## Run locally
-
-```powershell
-npm ci
-npm run dev
-```
-
-Open `http://127.0.0.1:4173`.
-
-## Validate
-
-```powershell
-npm run check
-npm run build
-```
-
-Read [gdd.md](gdd.md) for the complete rules and handoff. Read [artstyle.md](artstyle.md) before changing the visual direction or creating production artwork.
+The compact checked-in roster contains 19 factions and 88 profiles, with 16 Grey Knights patterns and supplied individual portrait crops. Its pinned KS community-source metadata is included. The original D:/Projects/Minigames/KS directory is only needed for data re-extraction. This prototype implements a documented combat abstraction, not the complete tabletop ruleset.
 
 ## Continue on another PC
 
-```powershell
-git clone https://github.com/Flowtron22/void-runner.git
-cd void-runner
-npm ci
-npm run dev
-```
+Clone https://github.com/Flowtron22/void-runner, use main, run npm ci and read the three Markdown files before editing. Source/runtime assets are included. Browser-local progress does not transfer through Git and differs between localhost and production. Preserve unrelated user changes under ref/.
 
-Use branch `main`. All runtime data and art are included; the original `D:/Projects/Minigames/KS` directory is not needed to run the game. The GDD records current behavior, source entry points, save keys and known unfinished work. Browser saves and Vercel login/project linkage are local to each PC and are not in Git.
+Vercel project: interstellar-void under flowtron22. main pushes deploy https://combatpatrol.vercel.app using npm run build and dist/. Confirm deployment Ready and matching build before reporting live. Login/project linkage is local to each PC; never commit tokens or .vercel. No backend/cloud saves exist.
 
-Live game: [combatpatrol.vercel.app](https://combatpatrol.vercel.app).
+## Verification limits
+
+Checks cover routes, drafting, reports, chapter isolation, RNG offers, stock, rank combat and sector payouts. Browser QA includes narrow-phone layouts and the latest UI cleanup. Physical iPad Safari still needs verification; balance across repeated missions remains provisional.

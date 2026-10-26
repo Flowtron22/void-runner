@@ -1,25 +1,6 @@
 # COMBAT PATROL — Art Style and Interface Direction
 
-## Current rules — 26 October 2026
-
-This section supersedes older gameplay and implementation notes in this document.
-
-- Take Your Oath starts a Grey Knights mission at 500 points plus chapter capacity upgrades. Other chapters remain sealed. Points-tier selection is removed.
-- One full mission has four sectors. Each sector has three route battles and one boss destination. The fourth sector boss IS the Final Boss; there is no extra encounter.
-- Each secured sector banks 30 permanent Requisition. Three secured sectors retain 90 on withdrawal or failure; four pay 120. Boss tier does not multiply permanent rewards. Temporary mission Requisition expires without conversion.
-- Permanent wallets and upgrades are isolated in meta.chapters[faction]. Expanded Muster adds 150 army points per rank, costs 60 + 45 × current rank, and has 20 ranks. Infantry and Vehicle each have separate +1 attacks, +1 Toughness and +2 wounds upgrades (three ranks), with rising costs. Salvage and attempts are also available. Balance is provisional.
-- Old global progression migrates once to the active chapter, or Grey Knights without an active mission. Existing missions preserve their starting points floor and banked value. Missions already past sector four may finish their saved route. All new missions use four sectors.
-- Ordeal uses one compact portrait slot per independent squad, six columns and four rows (six rows above 1,800 capacity). First half frontline, second half rear. No rotation. Select a deployed portrait and tap an empty slot to move it. Attached leaders follow bodyguards. Stock, capacity, locks and occupied slots remain enforced.
-- Both armies use ranks: frontline screens targets, ranged units fire from either rank, melee requires frontline, and rear units advance when no living frontline remains. Enemy budget uses starting mission capacity rather than deliberately underfilled deployment.
-- Existing asymmetric constellation charts remain. Clicking a reachable system opens an in-CRT briefing with saved Requisition and reward previews. Start commits travel; System Chart cancels without advancing, spending or rerolling. Boss gates remain 0 / 5 / 8 collected stars, with lower unlocked tiers selectable.
-- Stratagem offers contain three distinct saved cards. Each slot independently rolls 22% Relic, falling back if a tier is exhausted. No fixed quota: all Normal or all Relic is possible. Choose exactly ONE; the entire offer closes. Relics support Infantry wards, Infantry/Vehicle builds, recovery and Requisition.
-- Rogue Trader stock has five saved RNG entries: each rolls 30% mission-only Imperial recruit, otherwise weapon boost/wargear. Multiple purchases are allowed; finite stock remains sold after reload. Gear costs 20–50; recruits cost about 60% of army points, minimum 50. Leaving resolves the visit. Recruits, equipment and buffs expire with the mission.
-- Four command-deck markers show mission progress, secured permanent rewards and temporary Requisition separately. All briefings, shop stock, portraits and claims remain inside shared CRT glass and scanlines.
-
-Implementation: js/core/Progression.js, js/core/RunRewards.js, css/progression.css and Game.js. Progression checks cover chapter isolation/migration, secured rewards, RNG extremes, stock persistence, rank targeting/advancement, immutable combat upgrades and fixed previews. Physical iPad Safari still requires device verification.
-
-## Earlier reference and implementation history
-
+Updated 26 October 2026. Current gameplay/UI baseline: 81d4fac. Gameplay rules and upgrade balance belong in [gdd.md](gdd.md).
 
 This document is the visual source of truth for the game. Read it before changing UI, creating portraits, commissioning illustration, generating assets, or adding effects. The reference archive lives in `ref/`, with the primary interface and portrait studies in `ref/GK/RT_UI/` and the current Photoshop composition targets in `ref/GK/GK_UI/`.
 
@@ -178,11 +159,11 @@ Sound should match physical causes: switch clacks, relay ticks, low transformer 
 
 ### Main menu
 
-Place navigation in a substantial shipboard machine while a large environmental view establishes the vessel. The terminal owns the menu; the background supplies scale and atmosphere. The selected command illuminates like a glass key or powered module.
+Place navigation in a substantial shipboard machine while a large environmental view establishes the vessel. The terminal owns the menu; the background supplies scale and atmosphere. The selected command illuminates like a glass key or powered module. Use separate RESUME and NEW GAME actions; do not label a second resume action ACTIVE MISSION.
 
 ### Command deck
 
-Treat Ordeal, Research, and Operation as three stations or command channels within one bridge environment. Preserve their consistent location. Status values live on an embedded instrument strip rather than a generic dashboard card.
+Treat Ordeal, Research and Operation as three stations near the lower CRT, preserving their restored position. Keep the army/chapter strip above them and a concise END RUN control below. The four-marker progress strip and explanatory balance caption are hidden in the latest UI. Do not move the stations upward to fill the environment artwork.
 
 ### Galaxy and sector navigation
 
@@ -217,7 +198,7 @@ Keep the renderer practical on mobile. Load the WebGL module only when Operation
 
 ### Deployment and army management
 
-Use a tactical chart table or armoury terminal. Units appear as painted dossiers, pict feeds, or heraldic identification plates. Large walkers and knights must occupy visibly larger grid footprints; a single character uses the established 4×4 tile footprint rule where defined by gameplay. Locked units need a clear operational reason such as unrecovered pattern, insufficient allowance, or unavailable stock.
+Use a tactical chart table or armoury terminal. Units appear as painted dossiers, pict feeds, or heraldic identification plates. Every independent squad, character or vehicle occupies one compact portrait slot; unit scale is expressed by artwork and characteristics rather than larger footprints. Attached leaders share their bodyguard's slot. Keep sealed, unaffordable and exhausted stock states clear without adding instructional prose.
 
 ### Battle
 
@@ -293,7 +274,7 @@ A finished screen must pass these questions:
 
 Preserve the existing CRT, star signals, pan/zoom and portrait composition. Reveal the entire saved sector network with thin dashed links, a clear start/current position, and future systems glowing neutral grey. Reachable signals retain their existing emission. Difficulty stars occupy their own larger line; keep destination names subordinate to the decision and avoid crowded faction text on locked systems. Do not label ordinary systems POST-WAR CHOICE. DISTRESS marks a survivor rescue, FIELD STORE a supply event. Every signal remains a projected semantic control; unavailable systems are visibly present and disabled.
 
-The compact sector chart uses nine regular battle beacons and a single, clearly labelled FINAL SYSTEM. Keep the boss-tier choice inside its own CRT screen, with large one/two/three-star options, current collected stars, explicit lock requirements and a consistent Cancel return control. Never represent boss difficulty as three separate final destinations. Deployment exposes Cancel beside Battle rather than trapping navigation behind an army-validity requirement.
+The compact sector chart uses nine regular battle beacons and a single, clearly labelled FINAL SYSTEM. Keep the boss-tier choice inside its own CRT screen, with large one/two/three-star options, current collected stars, explicit lock requirements and a consistent SYSTEM CHART return control. Never represent boss difficulty as three separate final destinations. Deployment exposes SYSTEM CHART beside Battle rather than trapping navigation behind an army-validity requirement.
 
 ### Constellation composition — 25 October 2026
 
@@ -301,10 +282,25 @@ Do not align chart systems in symmetrical columns or evenly spaced rows. Use sta
 
 ### Ordeal portrait archive — 25 October 2026
 
-Retain the formation case at the top and use compact vertical portrait cards below it. Four columns fit the CRT at phone width; only essential names, points, footprint and stock/sealed state belong on cards. Full rules belong in a separate full-screen CRT datasheet with expandable sections. Keep available patterns first, retain sealed portraits for inspection, and preserve roster scroll when returning. Drag previews should fill the exact rectangular footprint and use restrained green/red emission. The user explicitly permits model-reference portraits for this feature; existing original artwork remains the fallback where a matching image is unavailable.
+Retain the formation case at the top and use compact vertical portrait cards below it. Four columns fit the CRT at phone width; only essential names, points, slot and stock/sealed state belong on cards. Full rules belong in a separate full-screen CRT datasheet with expandable sections. Keep available patterns first, retain sealed portraits for inspection, and preserve roster scroll when returning. Drag previews should fill the exact single squad slot and use restrained green/red emission. The user explicitly permits model-reference portraits for this feature; existing original artwork remains the fallback where a matching image is unavailable.
 
 Portrait framing must focus on the face or helmet and include at least the upper torso. Author the crop for each image rather than relying on a shared center crop. Keep the same focal area readable in tall cards and wider datasheet views. Use the supplied `ref/GK/GK_potrait` artwork for Grey Knights portraits; preserve original source files.
 
 ### Combat debrief — 26 October 2026
 
-Keep the result artwork, calculated combat record and illustrated reward branches within one CRT screen. Use the supplied vanquished-daemon painting for victory and burial painting for failure. Apply the same phosphor treatment and edge falloff as directives. The content scrolls inside the glass; the physical chassis remains fixed. Pair each post-war choice with an illustration and readable rule text, and connect choices to the Post-War Affairs root with restrained branch lines. Defeat and campaign completion use full screens, never top-layer outcome dialogs.
+Keep the result artwork, calculated combat record and illustrated reward branches within one CRT screen. Use the supplied vanquished-daemon painting for victory and burial painting for failure. Apply the same phosphor treatment and edge falloff as directives. The content scrolls inside the glass; the physical chassis remains fixed. Pair each actual reward choice with an illustration and readable mechanical effect. The category overview keeps images, names and actions without instructional descriptions, choice captions or score ledger. Connect it to the Post-War Affairs root with restrained branch lines. Defeat and campaign completion use full screens, never top-layer outcome dialogs.
+
+
+## Current UI contract — 26 October 2026
+
+- Everything, including titles, item effects, portraits and buttons, belongs beneath the shared CRT glass/scanlines. Preserve transparent surroundings; never reintroduce an opaque black outer canvas or battle edge lines.
+- Remove explanatory helper prose rather than filling spare space. Preserve essential values, names, effects and actionable controls. Developer implementation explanations belong in Markdown, not player screens.
+- Deployment keeps the formation case over a four-column vertical portrait archive. Each squad uses one compact slot: six columns, four rows, expanding to six rows above 1,800 capacity. No Rotate, row-instruction caption or drag hint. Keep subtle front/rear tint and essential token overlays.
+- Datasheets retain rules and characteristics; omit the simulation explanation and source-link footer. Face/helmet-to-torso crops remain individually authored, including dedicated squad art. Preserve original supplied files.
+- Operation heading is MISSION, without a FOUR SECTORS suffix or compass. Preserve irregular constellation placement, spacing, nearby initial framing, grey future signals and large difficulty stars. Return controls read SYSTEM CHART.
+- System preview shows reward-category names and numeric Requisition without candidate lists or procedural captions. Keep START MISSION and SYSTEM CHART visible inside the glass.
+- The post-war overview omits helper descriptions, resolved-count instructions, choice-count captions and the score ledger. Actual choice cards retain mechanical effects and Normal/Relic tier labels, with restrained amber emission for Relics. Do not hide effects needed to choose a build.
+- Rogue Trader retains its portrait above saved stock, prices and SOLD OUT states. Multiple purchases remain possible. All content scrolls within the CRT.
+- Preserve the supplied victory/failure art and numerical battle report. Outcome and briefing screens replace prior content instead of floating above it.
+
+Check layout at 320, 390 and 480 CSS px and with reduced motion. Real iPad Safari cloud/touch behavior remains a device-verification follow-up. These current rules replace earlier presentation proposals; consult Git history for superseded layouts.
