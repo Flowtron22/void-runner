@@ -1,5 +1,5 @@
-// Litany of the Veiled Star — original dark liturgical ambience for COMBAT PATROL.
-// The sacred/ominous reference informs texture and pacing only; all musical material is new.
+// Processional of the Iron Saint — original military-ecclesiastical score for COMBAT PATROL.
+// Martial cadence and cathedral registration define the mood; all musical material is new.
 // npm run audio:render; optional --wav-only, --wav <path>, --out <path>.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 
-export const SCORE = Object.freeze({ title:'Litany of the Veiled Star', bpm:60, beatsPerBar:4, bars:16, rate:44100, seed:0x5645494c, duration:64 });
+export const SCORE = Object.freeze({ title:'Processional of the Iron Saint', bpm:75, beatsPerBar:4, bars:20, rate:44100, seed:0x4f524741, duration:64 });
 const TAU = Math.PI * 2;
 const midi = note => 440 * 2 ** ((note - 69) / 12);
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -86,39 +86,72 @@ export function renderTrack({ rate=SCORE.rate, seed=SCORE.seed }={}) {
       write(i,shaped/air.length*amp*breathe,0,.98);
     }
   }
+  function warDrum(start,note=38,amp=.08,pan=0) {
+    const offset=Math.round(start*rate),seconds=1.45,frequency=midi(note);
+    for(let i=0;i<seconds*rate;i++) {
+      const t=i/rate,phase=TAU*frequency*(t+.24*t*t);
+      const body=(Math.sin(phase)+.28*Math.sin(phase*1.51)+.12*Math.sin(phase*2.07))*Math.exp(-t*3.15);
+      const strike=Math.sin(TAU*frequency*5.7*t)*Math.exp(-t*28);
+      write(offset+i,(body+strike*.22)*amp*Math.min(1,t*190),pan,.7);
+    }
+  }
+  function fieldSnare(start,amp=.025,pan=.12) {
+    const offset=Math.round(start*rate),seconds=.26;
+    let noiseState=(seed^offset)>>>0,previous=0;
+    for(let i=0;i<seconds*rate;i++) {
+      noiseState=(Math.imul(noiseState,1664525)+1013904223)>>>0;
+      const white=noiseState/2147483648-1,bright=white-previous*.72;previous=white;
+      const t=i/rate,envelope=Math.exp(-t*19)*Math.min(1,t*260);
+      const wires=Math.sin(TAU*196*t)*Math.exp(-t*12);
+      write(offset+i,(bright*.76+wires*.24)*amp*envelope,pan,.48);
+    }
+  }
 
-  // Original D-modal litany: slow harmonic fields instead of a beat-led song form.
-  const roots=[38,36,41,33,34,36,33,38];
-  const chords=[[50,53,57],[48,53,55],[53,57,60],[45,48,52],
-    [46,50,53],[48,52,55],[45,50,52],[50,53,57]];
+  // Original D-minor processional with a martial dominant and broad cathedral voicings.
+  const roots=[38,34,36,38,41,31,34,36,33,38];
+  const chords=[[50,53,57],[46,50,53],[48,52,55],[50,53,57],[53,57,60],
+    [43,46,50],[46,50,53],[48,52,55],[45,49,52],[50,53,57]];
   const phrases=[
-    [[.4,69,2.6],[3.4,67,1.8],[5.7,65,1.8]],
-    [[.2,67,2.3],[3.1,65,1.7],[5.2,62,2.4]],
-    [[.5,65,1.8],[2.8,69,2.4],[5.7,67,1.6]],
-    [[.3,64,2.6],[3.4,62,1.8],[5.8,60,1.7]],
-    [[.4,62,2.1],[3.0,65,2.5],[6.0,69,1.5]],
-    [[.2,67,2.5],[3.3,64,1.8],[5.6,62,2.0]],
-    [[.5,65,1.7],[2.8,62,2.2],[5.5,61,1.9]],
-    [[.2,62,2.2],[3.0,65,1.8],[5.3,62,2.7]]
+    [[.35,62,1.35],[2.25,65,1.25],[4.35,69,1.65]],
+    [[.25,65,1.45],[2.25,62,1.25],[4.25,58,1.75]],
+    [[.3,60,1.3],[2.2,64,1.35],[4.3,67,1.65]],
+    [[.2,69,1.5],[2.35,67,1.15],[4.2,65,1.8]],
+    [[.3,65,1.25],[2.2,69,1.5],[4.45,72,1.45]],
+    [[.25,70,1.4],[2.25,67,1.2],[4.2,65,1.75]],
+    [[.3,65,1.3],[2.25,62,1.25],[4.25,58,1.7]],
+    [[.25,64,1.3],[2.2,67,1.3],[4.3,72,1.6]],
+    [[.3,69,1.35],[2.25,73,1.2],[4.2,72,1.75]],
+    [[.2,69,1.35],[2.15,65,1.3],[4.2,62,1.9]]
   ];
   roomAir();
-  for(let field=0;field<8;field++) {
+  for(let field=0;field<10;field++) {
     const start=field*2*bar, span=2*bar+.9;
-    const intensity=[.58,.68,.82,.94,1,1,.84,.62][field];
-    voice(start,span,roots[field],{kind:'pedal',amp:.026*intensity,attack:1.8,release:2.0,room:.93});
-    voice(start+.1,span,roots[field]+12,{kind:'bow',amp:.033*intensity,pan:-.28,attack:1.3,release:1.8,room:.9});
-    chords[field].forEach((note,i)=>voice(start+.18,span,note,{kind:'choir',amp:.031*intensity,
-      pan:(i-1)*.38,attack:1.7,release:2.0,room:.97}));
-    if(field>=2 && field<=6) chords[field].slice(0,2).forEach((note,i)=>voice(start+.7,span-.5,note+12,
-      {kind:'choir',amp:.017*intensity,pan:i? .42:-.42,attack:2.4,release:2.2,room:1}));
+    const intensity=[.58,.64,.72,.8,.9,.98,1,.98,.9,.7][field];
+    voice(start,span,roots[field],{kind:'pedal',amp:.047*intensity,attack:.18,release:.9,room:.82});
+    voice(start+.06,span,roots[field]+12,{kind:'organ',amp:.052*intensity,pan:-.22,attack:.22,release:.85,room:.86});
+    chords[field].forEach((note,i)=>voice(start+.08,span,note,{kind:'organ',amp:.042*intensity,
+      pan:(i-1)*.28,attack:.16,release:.82,room:.9}));
+    chords[field].forEach((note,i)=>voice(start+.24,span-.2,note-12,{kind:'choir',amp:.026*intensity,
+      pan:(i-1)*.4,attack:1.1,release:1.35,room:1}));
+    if(field>=3 && field<=8) chords[field].slice(0,2).forEach((note,i)=>voice(start+.35,span-.4,note+12,
+      {kind:'choir',amp:.019*intensity,pan:i?.46:-.46,attack:1.4,release:1.5,room:1}));
     for(const [at,note,seconds] of phrases[field]) {
       const timing=(random()-.5)*.025;
-      voice(start+at+timing,seconds,note,{kind:'choir',amp:.063*intensity,pan:.06,
-        attack:.75,release:.95,room:1});
-      voice(start+at+.08,seconds+.35,note-12,{kind:'bow',amp:.019*intensity,pan:-.12,
-        attack:1.0,release:1.1,room:.94});
+      voice(start+at+timing,seconds,note,{kind:'organ',amp:.075*intensity,pan:.05,
+        attack:.055,release:.28,room:.92});
+      if(field>=2)voice(start+at+.06,seconds+.3,note-12,{kind:'choir',amp:.025*intensity,pan:-.08,
+        attack:.42,release:.62,room:1});
     }
-    if([0,3,5,7].includes(field)) sanctuaryBell(start+.15,chords[field][0]+12,.027*intensity,field%2? .32:-.32);
+    for(let localBar=0;localBar<2;localBar++) {
+      const barStart=start+localBar*bar;
+      warDrum(barStart,roots[field],.082*intensity,-.08);
+      warDrum(barStart+2*beat,roots[field],.056*intensity,.08);
+      fieldSnare(barStart+beat,.02*intensity,.18);
+      fieldSnare(barStart+3*beat,.028*intensity,-.14);
+      for(const pulse of [0,2])chords[field].forEach((note,i)=>voice(barStart+pulse*beat,.58*beat,note,
+        {kind:'organ',amp:.055*intensity,pan:(i-1)*.25,attack:.025,release:.16,room:.78}));
+    }
+    if([0,4,7,9].includes(field)) sanctuaryBell(start+.08,chords[field][0]+12,.025*intensity,field%2?.32:-.32);
   }
 
   // Early stone-wall reflections plus a warm, long cathedral tail.
