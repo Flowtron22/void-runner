@@ -6,11 +6,12 @@ export const SFX_NAMES=Object.freeze([
 
 const INTERACTIVE='button, input, [role="button"], [data-chart-system], .unit-card, .roster-card';
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+const MASTER_GAIN=1.25;
 
 export class AudioSystem {
   constructor({muted=false,contextFactory=null,onError=()=>{}}={}) {
     this.muted=muted;this.contextFactory=contextFactory;this.onError=onError;
-    this.ctx=null;this.master=null;this.noiseBuffer=null;this.controller=null;
+    this.ctx=null;this.master=null;this.compressor=null;this.noiseBuffer=null;this.controller=null;
     this.lastHover=null;this.lastHoverAt=0;
   }
 
@@ -21,16 +22,19 @@ export class AudioSystem {
         const Factory=this.contextFactory || window.AudioContext || window.webkitAudioContext;
         if(!Factory)return null;
         this.ctx=typeof Factory==='function' ? new Factory() : Factory;
-        this.master=this.ctx.createGain();this.master.gain.value=.52;this.master.connect(this.ctx.destination);
+        this.master=this.ctx.createGain();this.master.gain.value=MASTER_GAIN;
+        this.compressor=this.ctx.createDynamicsCompressor();
+        this.compressor.threshold.value=-14;this.compressor.knee.value=12;this.compressor.ratio.value=4;
+        this.compressor.attack.value=.003;this.compressor.release.value=.16;
+        this.master.connect(this.compressor).connect(this.ctx.destination);
       }
-      if(this.ctx.state==='suspended')this.ctx.resume().catch(this.onError);
       return this.ctx;
     } catch(error) {this.onError(error);return null;}
   }
 
   setMuted(muted) {
     this.muted=Boolean(muted);
-    if(this.master)this.master.gain.setTargetAtTime(this.muted?0:.52,this.ctx.currentTime,.015);
+    if(this.master)this.master.gain.setTargetAtTime(this.muted?0:MASTER_GAIN,this.ctx.currentTime,.015);
   }
 
   oscillator({frequency=220,to=frequency,duration=.08,type='sine',gain=.04,at=0,detune=0}={}) {
@@ -59,11 +63,16 @@ export class AudioSystem {
   }
 
   play(name='click',{intensity=1}={}) {
-    if(this.muted || !SFX_NAMES.includes(name) || !this.unlock())return false;
+    if(this.muted || !SFX_NAMES.includes(name))return false;
+    const ctx=this.unlock();if(!ctx)return false;
+    if(ctx.state==='suspended') {
+      ctx.resume().then(()=>{if(!this.muted && this.ctx===ctx)this.play(name,{intensity});}).catch(this.onError);
+      return true;
+    }
     const level=clamp(intensity,.35,1.4);
     try {
       switch(name) {
-        case 'hover': this.oscillator({frequency:880,to:690,duration:.025,type:'sine',gain:.009*level});break;
+        case 'hover': this.oscillator({frequency:880,to:690,duration:.032,type:'sine',gain:.022*level});break;
         case 'click':
           this.noise({duration:.035,gain:.038*level,lowpass:1450});this.oscillator({frequency:155,to:92,duration:.055,type:'triangle',gain:.028*level});break;
         case 'confirm':
@@ -144,7 +153,7 @@ export class AudioSystem {
   }
 
   dispose() {
-    this.controller?.abort();this.controller=null;const ctx=this.ctx;this.ctx=null;this.master=null;this.noiseBuffer=null;
+    this.controller?.abort();this.controller=null;const ctx=this.ctx;this.ctx=null;this.master=null;this.compressor=null;this.noiseBuffer=null;
     if(ctx && ctx.state!=='closed')ctx.close().catch(this.onError);
   }
 }
