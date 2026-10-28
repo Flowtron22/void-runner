@@ -37,7 +37,7 @@ Checks cover routes, drafting, reports, chapter isolation, RNG offers, stock, ra
 
 ## Original procedural music — 28 October 2026
 
-`Vigil of the Void` is a new 64-second, 120 BPM half-time gothic sci-fi score, synthesized entirely in Node.js without samples or external music. It plays continuously across game screens after the first user interaction. Settings → MUSIC toggles playback and remembers the preference; hidden tabs pause. No existing layout or gameplay wording was changed, apart from adding this setting.
+`The Last Reliquary` is an original 64-second gothic waltz in 3/4 at 90 BPM, synthesized entirely in Node.js without samples or external music. A delicate music-box melody opens into pipe organ, wordless choir-like harmonics, cello and long cathedral reverb, with only sparse timpani. It replaces the rejected electronic/airy first mix; the user's haunted nautical-gothic reference informed the mood, not the melody. It plays continuously across game screens after the first user interaction. Settings → MUSIC toggles playback and remembers the preference; hidden tabs pause. No UI layout or text placement changed for this replacement. Cache revision: `20261028-2`.
 
 Run `npm run audio:render` to regenerate the WAV master (`output/audio/combat-patrol-bgm.wav`, ignored) and runtime AAC (`assets/audio/combat-patrol-bgm.m4a`). Run `npm run audio:check` for deterministic synthesis and playback regression checks. FFmpeg comes from the pinned `ffmpeg-static` dev dependency; `FFMPEG_PATH` can override it. The encoded file is measured after compression and adjusted to −1.8 dBTP. Metrics and the master SHA-256 are stored alongside the M4A. See GDD section 12 for the audio contract.
 

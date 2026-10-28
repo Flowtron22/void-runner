@@ -1,4 +1,4 @@
-// Vigil of the Void — original procedural score for COMBAT PATROL.
+// The Last Reliquary — original gothic organ/music-box waltz for COMBAT PATROL.
 // Technical approach informed by PNT's renderer; harmony, melody and rhythm are new.
 // npm run audio:render; optional --wav-only, --wav <path>, --out <path>.
 import fs from 'node:fs';
@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 
-export const SCORE = Object.freeze({ title:'Vigil of the Void', bpm:120, bars:32, rate:44100, seed:0x56494749, duration:64 });
+export const SCORE = Object.freeze({ title:'The Last Reliquary', bpm:90, beatsPerBar:3, bars:32, rate:44100, seed:0x52454c49, duration:64 });
 const TAU = Math.PI * 2;
 const midi = note => 440 * 2 ** ((note - 69) / 12);
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -19,7 +19,7 @@ export function renderTrack({ rate=SCORE.rate, seed=SCORE.seed }={}) {
   const send = [new Float64Array(length), new Float64Array(length)];
   let state = seed >>> 0;
   const random = () => ((state = (Math.imul(state,1664525) + 1013904223) >>> 0) / 4294967296);
-  const beat = 60 / SCORE.bpm, bar = beat * 4;
+  const beat = 60 / SCORE.bpm, bar = beat * SCORE.beatsPerBar;
   // Circular writes preserve notes, percussion and reverberation across the seam.
   function write(index, value, pan=0, room=.3) {
     index = ((index % length) + length) % length;
@@ -27,105 +27,108 @@ export function renderTrack({ rate=SCORE.rate, seed=SCORE.seed }={}) {
     dry[0][index] += l; dry[1][index] += r;
     send[0][index] += l*room; send[1][index] += r*room;
   }
-  function voice(start, seconds, note, {kind='bow', amp=.04, pan=0, attack=.18, release=.4, room=.4}={}) {
+  function voice(start, seconds, note, {kind='organ', amp=.04, pan=0, attack=.18, release=.4, room=.65}={}) {
     const offset = Math.round(start*rate), count = Math.round(seconds*rate), frequency=midi(note);
     const phaseOffset = random()*TAU;
+    // Vowel-shaped harmonic bands approximate a distant, wordless human choir.
+    // They are synthesized oscillators, not voice samples or an existing recording.
+    const formants=Array.from({length:14},(_,i)=>{
+      const partial=i+1, hz=frequency*partial;
+      return (.12+1.2*Math.exp(-.5*((hz-620)/135)**2)+.7*Math.exp(-.5*((hz-1100)/190)**2)+.24*Math.exp(-.5*((hz-2350)/330)**2))/partial;
+    });
+    const formantSum=formants.reduce((a,b)=>a+b,0);
+    let movingPhase=phaseOffset;
     for (let i=0; i<count; i++) {
-      const t=i/rate, p=t/seconds;
+      const t=i/rate;
       const envelope=Math.sin(Math.min(1,t/attack)*Math.PI/2)*Math.sin(Math.min(1,(seconds-t)/release)*Math.PI/2);
-      const vibrato = kind==='bass' ? 0 : .0035*Math.sin(TAU*4.7*t)*Math.min(1,t*.8);
-      const phase=TAU*frequency*t + vibrato + phaseOffset;
+      movingPhase+=TAU*frequency*(1+(kind==='bow'?.003:kind==='choir'?.0018:0)*Math.sin(TAU*5.15*t)*Math.min(1,t))/rate;
+      const phase=movingPhase;
       let value;
-      if (kind==='pad') {
-        value=.46*Math.sin(phase)+.28*Math.sin(phase+TAU*.14*t)+.16*Math.sin(phase-TAU*.19*t)+.07*Math.sin(phase*2)+.03*Math.sin(phase*3);
-        value*=.92+.08*Math.sin(TAU*.125*t+phaseOffset);
-      } else if (kind==='bass') {
-        value=.86*Math.sin(phase)+.10*Math.sin(phase*2)+.04*Math.sin(phase*3);
-      } else if (kind==='horn') {
-        value=.64*Math.sin(phase)+.22*Math.sin(phase*2)+.10*Math.sin(phase*3)+.04*Math.sin(phase*4);
+      if(kind==='organ') {
+        // 16', 8', 4' and restrained mutation stops: steady pipes, no synth LFO.
+        value=.12*Math.sin(phase*.5)+.48*Math.sin(phase)+.19*Math.sin(phase*2)
+          +.10*Math.sin(phase*3)+.055*Math.sin(phase*4)+.025*Math.sin(phase*6)
+          +.02*Math.sin(phase+TAU*.09*t);
+      } else if(kind==='pedal') {
+        value=.78*Math.sin(phase)+.16*Math.sin(phase*2)+.06*Math.sin(phase*3);
+      } else if(kind==='choir') {
+        value=0;
+        for(let h=0;h<formants.length;h++) value+=formants[h]*Math.sin(phase*(h+1));
+        value/=formantSum;
+        value*=.94+.06*Math.sin(TAU*.31*t+phaseOffset);
       } else {
-        value=.72*Math.sin(phase)+.18*Math.sin(phase*2)+.07*Math.sin(phase*3)+.03*Math.sin(phase*4);
-        value*=.96+.04*Math.sin(TAU*5.1*t);
+        value=(Math.sin(phase)+.45*Math.sin(phase*2)+.27*Math.sin(phase*3)+.16*Math.sin(phase*4)
+          +.11*Math.sin(phase*5)+.07*Math.sin(phase*6)+.04*Math.sin(phase*7)+.03*Math.sin(phase*8))/2.13;
+        value*=.97+.03*Math.sin(TAU*5.6*t);
       }
-      write(offset+i,value*amp*envelope*(kind==='horn'?Math.sin(Math.PI*p)**.35:1),pan,room);
+      write(offset+i,value*amp*envelope,pan,room);
     }
   }
-  function mallet(start, note, amp=.035, pan=0) {
-    const offset=Math.round(start*rate), frequency=midi(note), seconds=2.6;
+  function musicBox(start, note, amp=.10, pan=0) {
+    const offset=Math.round(start*rate), frequency=midi(note), seconds=4.2;
     for(let i=0;i<seconds*rate;i++) {
-      const t=i/rate, attack=1-Math.exp(-t*210);
-      const value=Math.sin(TAU*frequency*t)*Math.exp(-t*2.4)*.76
-        +Math.sin(TAU*frequency*2.756*t)*Math.exp(-t*5)*.16
-        +Math.sin(TAU*frequency*4.123*t)*Math.exp(-t*8)*.06
-        +Math.sin(TAU*frequency*6.14*t)*Math.exp(-t*13)*.02;
-      write(offset+i,value*amp*attack,pan,.72);
+      const t=i/rate, attack=1-Math.exp(-t*400);
+      const value=Math.sin(TAU*frequency*t)*Math.exp(-t*1.55)*.68
+        +Math.sin(TAU*frequency*2*t)*Math.exp(-t*2.7)*.16
+        +Math.sin(TAU*frequency*3.997*t)*Math.exp(-t*4.9)*.10
+        +Math.sin(TAU*frequency*5.403*t)*Math.exp(-t*8)*.045
+        +Math.sin(TAU*frequency*8.105*t)*Math.exp(-t*13)*.015;
+      write(offset+i,value*amp*attack*Math.min(1,(seconds-t)/.14),pan,.67);
     }
   }
-  function drum(start, {kind='kick', amp=.16, pan=0}={}) {
-    const offset=Math.round(start*rate), seconds=kind==='snare'?.22:kind==='hat'?.11:.5;
-    let phase=0, low=0, old=0;
+  function timpani(start, note, amp=.08) {
+    const offset=Math.round(start*rate), seconds=2.4, frequency=midi(note);
     for(let i=0;i<seconds*rate;i++) {
-      const t=i/rate, noise=random()*2-1;
-      low+=.10*(noise-low);
-      let value;
-      if(kind==='kick') {
-        phase+=TAU*(44+58*Math.exp(-t*32))/rate;
-        value=Math.sin(phase)*Math.exp(-t*11)+low*.06*Math.exp(-t*30);
-      } else if(kind==='snare') {
-        value=(low*.82+Math.sin(TAU*174*t)*.18)*Math.exp(-t*20);
-      } else if(kind==='hat') {
-        value=(noise-old)*Math.exp(-t*52)*.16; old=noise;
-      } else {
-        phase+=TAU*(77+17*Math.exp(-t*16))/rate;
-        value=(Math.sin(phase)*.92+low*.08)*Math.exp(-t*10);
-      }
-      write(offset+i,value*amp*Math.min(1,t*900),pan,kind==='kick'?.06:.25);
+      const t=i/rate;
+      const body=Math.sin(TAU*frequency*t)*Math.exp(-t*2.6)
+        +.24*Math.sin(TAU*frequency*1.47*t)*Math.exp(-t*3.9)
+        +.12*Math.sin(TAU*frequency*2.1*t)*Math.exp(-t*7);
+      write(offset+i,body*amp*Math.min(1,t*180)*Math.min(1,(seconds-t)/.2),-.1,.8);
     }
   }
 
-  // Eight four-bar harmonic fields: D minor/modal suspensions, not the PNT score.
-  const roots=[38,34,41,36,31,34,33,33];
-  const chords=[[50,53,57,64],[46,53,60,65],[53,57,60,67],[48,55,62,64],
-    [43,50,57,62],[46,53,57,60],[45,52,55,62],[45,52,58,62]];
+  // New C-minor elegy with inversions, a Neapolitan turn and G7(b9) cadence.
+  // These notes are newly composed, not a transcription of a film theme.
+  const roots=[36,34,32,31,29,37,31,36];
+  const chords=[[48,51,55,60],[46,51,55,58],[44,48,51,56],[43,48,51,55],
+    [41,44,48,53],[49,53,56,61],[43,47,50,56],[48,51,55,60]];
   const phrases=[
-    [[1,74,2.1],[6,69,1.4],[11,72,2.4]],
-    [[2,65,2.5],[8,67,1.4],[12,69,2.0]],
-    [[0,72,2.6],[7,69,1.8],[12,67,2.2]],
-    [[3,64,2.0],[8,67,2.6],[13,62,1.1]],
-    [[1,69,2.8],[7,70,1.9],[12,65,2.3]],
-    [[2,65,2.2],[8,69,2.4],[13,72,1.3]],
-    [[0,67,2.7],[7,64,2.1],[12,62,2.0]],
-    [[2,64,2.6],[8,61,1.8],[12,69,2.1]]
+    [[0,79,.8],[1,75,1],[2.5,74,.45],[3,80,1.3],[5,79,.7],[6,72,2],[9,74,.8],[10,75,1.4]],
+    [[0,77,.9],[1.5,75,.7],[3,70,1.2],[5,74,.7],[6,75,1.5],[9,79,2.2]],
+    [[0,80,1.1],[2,79,.9],[3,75,1.5],[6,72,1.5],[8,70,1],[9,68,1.8]],
+    [[.5,74,.8],[2,75,.8],[3,79,1.4],[6,77,.9],[7.5,75,.9],[9,74,1.6]],
+    [[0,77,1.4],[3,72,1.2],[5,68,.8],[6,75,1.3],[9,72,2]],
+    [[0,77,1],[1.5,73,.8],[3,80,1.1],[6,77,1.5],[9,73,2]],
+    [[0,74,1],[2,71,.8],[3,68,1.7],[6,74,1.5],[9,71,1.3]],
+    [[0,75,1.4],[3,74,.9],[4.5,72,1.1],[6,67,1.4],[9,72,2.6]]
   ];
   for(let field=0;field<8;field++) {
     const start=field*4*bar;
-    chords[field].forEach((note,i)=>voice(start,4*bar+1.5,note,{kind:'pad',amp:.046,pan:(i-1.5)*.29,attack:1.15,release:1.5,room:.56}));
+    // Opening/ending are intimate; the central sixteen bars bring the organ forward.
+    const organLevel=[.034,.043,.069,.078,.078,.069,.055,.034][field];
+    voice(start,4*bar+.65,roots[field],{kind:'pedal',amp:.045,attack:.24,release:.65,room:.55});
+    chords[field].forEach((note,i)=>voice(start,4*bar+.62,note,{kind:'organ',amp:organLevel,pan:(i-1.5)*.2,attack:.24,release:.62,room:.8}));
+    if(field>=2 && field<=6) {
+      [chords[field][0]+12,chords[field][1]+12,chords[field][2]+12].forEach((note,i)=>{
+        voice(start+.25,4*bar+1,note,{kind:'choir',amp:.035,pan:(i-1)*.35,attack:1.2,release:1.4,room:.9});
+      });
+    }
+    voice(start+.2,4*bar+.8,roots[field]+12,{kind:'bow',amp:field>=2&&field<=6?.045:.027,pan:-.28,attack:.65,release:1.0,room:.75});
     for(const [at,note,beats] of phrases[field]) {
-      voice(start+at*beat,beats*beat+.55,note,{kind:'bow',amp:field>3?.032:.027,pan:.12,attack:.32,release:.55,room:.64});
+      const timing=(random()-.5)*.014;
+      musicBox(start+at*beat+timing,note,field>=2&&field<=5?.095:.13,at%3===0?-.12:.12);
+      if(field>=2&&field<=5) voice(start+at*beat,beats*beat+.18,note-12,{kind:'organ',amp:.067,pan:.08,attack:.065,release:.21,room:.82});
     }
-    for(const [at,interval,pan] of [[.5,24,-.46],[5.5,31,.48],[10,27,-.26],[14.5,36,.3]]) {
-      mallet(start+at*beat,roots[field]+interval,.029+(field===4?.005:0),pan);
+    // Gentle beats two/three establish a swaying waltz, not a drum-machine groove.
+    for(let localBar=0;localBar<4;localBar++) for(const offbeat of [1,2]) {
+      for(let i=1;i<4;i++) voice(start+localBar*bar+offbeat*beat,.53,chords[field][i],{
+        kind:'organ',amp:organLevel*.36,pan:(i-2)*.24,attack:.06,release:.27,room:.8});
     }
-    if([2,5,7].includes(field)) {
-      voice(start+6*beat,3.8,roots[field]+19,{kind:'horn',amp:.027,pan:-.18,attack:.8,release:1.1,room:.62});
-      voice(start+11*beat,2.9,roots[field]+24,{kind:'horn',amp:.019,pan:.2,attack:.7,release:1.1,room:.65});
-    }
-  }
-  for(let b=0;b<SCORE.bars;b++) {
-    const start=b*bar, field=Math.floor(b/4), root=roots[field];
-    drum(start,{amp:.19});
-    // One soft backbeat on beat THREE: true half-time, rather than beats 2 and 4.
-    drum(start+2*beat,{kind:'snare',amp:.15,pan:.04});
-    if(b%2===1) drum(start+3.5*beat,{amp:.085});
-    drum(start+1.5*beat,{kind:'tundra',amp:.065,pan:-.3});
-    if(b%4===3) drum(start+3.25*beat,{kind:'tundra',amp:.052,pan:.29});
-    for(const at of [0,1,2,3]) drum(start+(at+.5)*beat,{kind:'hat',amp:.035,pan:at%2?.32:-.32});
-    voice(start,1.55*beat,root,{kind:'bass',amp:.12,pan:-.025,attack:.035,release:.24,room:.05});
-    voice(start+2.5*beat,1.35*beat,root+(b%4===3?7:0),{kind:'bass',amp:.079,pan:.025,attack:.045,release:.22,room:.08});
+    if([2,4,6].includes(field)) timpani(start,roots[field],.075);
   }
 
-  // Diffuse, low-passed stereo room; every tap wraps into the next loop.
-  const taps=[[.037,.23],[.071,.19],[.149,.16],[.223,.14],[.373,.11],[.557,.08],[.823,.06],[1.171,.035]];
+  // Early stone-wall reflections plus a warm, long cathedral tail.
+  const taps=[[.043,.16],[.089,.13],[.157,.10],[.231,.08],[.347,.06],[.499,.04]];
   for(let ch=0;ch<2;ch++) {
     let low=0;
     const filtered=new Float64Array(length), input=send[ch];
@@ -133,6 +136,18 @@ export function renderTrack({ rate=SCORE.rate, seed=SCORE.seed }={}) {
     for(let n=0;n<taps.length;n++) {
       const [delay,gain]=taps[n], shift=Math.round((delay+ch*.009*(n%3))*rate), out=dry[n%2?1-ch:ch];
       for(let i=0;i<length;i++) out[(i+shift)%length]+=filtered[i]*gain;
+    }
+    // Periodically warmed feedback combs: long decay with no cut-off at the loop.
+    for(const [j,delay] of [.0793,.0971,.1139,.1313].entries()) {
+      const size=Math.round((delay+ch*.0031)*rate), memory=new Float64Array(size);
+      const feedback=.86+j*.013, predelay=Math.round(.032*rate);
+      let cursor=0, damping=0;
+      for(let pass=0;pass<2;pass++) for(let i=0;i<length;i++) {
+        const reflection=memory[cursor];damping+=.21*(reflection-damping);
+        memory[cursor]=input[(i-predelay+length)%length]+damping*feedback;
+        cursor=(cursor+1)%size;
+        if(pass)dry[ch][i]+=reflection*.20;
+      }
     }
   }
   const result=[new Float32Array(length),new Float32Array(length)];

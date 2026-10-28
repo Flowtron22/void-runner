@@ -9,6 +9,8 @@ const wav=encodeWav(a), hash=bytes=>createHash('sha256').update(bytes).digest('h
 assert.equal(hash(wav),hash(encodeWav(b)),'same seed produces identical PCM');
 assert.notEqual(hash(wav),hash(encodeWav(renderTrack({rate:8000,seed:SCORE.seed+1}))),'seed influences synthesis');
 assert.equal(a.channels[0].length,64*8000);
+assert.equal(SCORE.bpm,90);assert.equal(SCORE.beatsPerBar,3);
+assert.equal(SCORE.bars*SCORE.beatsPerBar*60/SCORE.bpm,SCORE.duration,'32-bar waltz is exactly 64 seconds');
 assert.equal(wav.toString('ascii',0,4),'RIFF');
 assert.equal(wav.readUInt16LE(22),2,'stereo master');
 assert.equal(wav.readUInt16LE(34),16,'16-bit master');
@@ -33,7 +35,7 @@ if(fs.existsSync(masterFile)) {
   const master=fs.readFileSync(masterFile);
   for(let ch=0;ch<2;ch++) assert.ok(Math.abs(master.readInt16LE(44+ch*2)-master.readInt16LE(master.length-4+ch*2))/32768<.004,'production master seam remains below -48 dBFS');
 }
-assert.match(MUSIC_URL,/\.m4a\?v=20261028-1$/,'explicit cache revision');
+assert.match(MUSIC_URL,/\.m4a\?v=20261028-2$/,'replacement track has a fresh cache revision');
 const metrics=JSON.parse(fs.readFileSync(new URL('../assets/audio/combat-patrol-bgm.metrics.json',import.meta.url)));
 assert.equal(metrics.duration,64);assert.equal(metrics.channels,2);
 assert.ok(metrics.truePeakDBTP>=-2.05 && metrics.truePeakDBTP<=-1.5);
