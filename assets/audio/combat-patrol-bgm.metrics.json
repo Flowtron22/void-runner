@@ -1,0 +1,18 @@
+{
+  "title": "Vigil of the Void",
+  "bpm": 120,
+  "bars": 32,
+  "rate": 44100,
+  "seed": 1447642953,
+  "duration": 64,
+  "channels": 2,
+  "codec": "AAC-LC",
+  "targetBitrate": 192000,
+  "integratedLUFS": -15.18,
+  "truePeakDBTP": -1.8,
+  "averageDBFS": -15.9,
+  "samplePeakDBFS": -1.8,
+  "bytes": 1631642,
+  "masterSHA256": "2721f61b88873d55816b1353d7a064be99cda5d7b2dc681811066af7bfdf0b03",
+  "encodedGainDB": 0.4
+}

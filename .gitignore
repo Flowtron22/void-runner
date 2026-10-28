@@ -4,3 +4,4 @@ dist/
 npm-debug.log*
 .vercel
 .env*
+output/audio/
