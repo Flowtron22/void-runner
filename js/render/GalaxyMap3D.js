@@ -129,6 +129,7 @@ export class GalaxyMap3D {
     this.cameraGoal = new THREE.Vector3(0,initialVerticalFocus,mode === 'galaxy' ? 29 : 23);
     this.travel = null;
     this.drag = null;
+    this.lastZoomSound = 0;
     this.scene = new THREE.Scene();
     const spaceColor = new THREE.Color(mode === 'galaxy' ? 0x020307 : 0x01060a);
     this.scene.fog = new THREE.FogExp2(spaceColor,this.routeChart ? .009 : mode === 'galaxy' ? .018 : .025);
@@ -272,7 +273,8 @@ export class GalaxyMap3D {
 
   zoomBounds() { return this.routeChart ? [Math.max(10,this.nearDistance * .7), this.chartDistance * 1.08] : [12,38]; }
 
-  setZoom(distance) {
+  setZoom(distance, sound=false) {
+    const previous=this.cameraGoal.z;
     this.travel = null;
     this.viewport.classList.remove('webgl-travelling');
     this.cameraGoal.z = clamp(distance,...this.zoomBounds());
@@ -280,6 +282,11 @@ export class GalaxyMap3D {
       const amount = clamp((this.cameraGoal.z-this.zoomFocusDistance)/Math.max(1,this.chartDistance-this.zoomFocusDistance),0,1);
       this.target.lerpVectors(this.zoomFocus,this.chartCenter,amount);
       this.cameraGoal.x=this.target.x; this.cameraGoal.y=this.target.y;
+    }
+    const now=performance.now();
+    if(sound && Math.abs(previous-this.cameraGoal.z)>.15 && now-this.lastZoomSound>90) {
+      window.voidRunnerSfx?.play(this.cameraGoal.z<previous?'zoomIn':'zoomOut');
+      this.lastZoomSound=now;
     }
   }
 
@@ -291,8 +298,11 @@ export class GalaxyMap3D {
     }
     this.canvas.addEventListener('wheel',event => {
       event.preventDefault();
-      this.setZoom(this.cameraGoal.z + Math.sign(event.deltaY)*Math.max(1.8,this.cameraGoal.z*.09));
+      this.setZoom(this.cameraGoal.z + Math.sign(event.deltaY)*Math.max(1.8,this.cameraGoal.z*.09),true);
     },{passive:false,signal});
+    this.canvas.addEventListener('dblclick',event => {
+      event.preventDefault();window.voidRunnerSfx?.play('double');this.setZoom(this.cameraGoal.z*.8,true);
+    },{signal});
     this.canvas.addEventListener('pointerdown',event => {
       this.travel = null; this.viewport.classList.remove('webgl-travelling');
       this.pointerMap.set(event.pointerId,{x:event.clientX,y:event.clientY});
@@ -310,7 +320,7 @@ export class GalaxyMap3D {
       if (this.pointerMap.size === 2 && this.pinch) {
         const [a,b] = [...this.pointerMap.values()];
         const distance = Math.hypot(a.x-b.x,a.y-b.y);
-        this.setZoom(this.pinch.z*this.pinch.distance/Math.max(distance,1));
+        this.setZoom(this.pinch.z*this.pinch.distance/Math.max(distance,1),true);
         return;
       }
       if (!this.drag) return;

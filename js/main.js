@@ -1,6 +1,7 @@
 import { Game } from './core/Game.js';
 import { TerminalRenderer } from './render/TerminalRenderer.js';
 import { MusicSystem } from './core/MusicSystem.js';
+import { AudioSystem } from './core/AudioSystem.js';
 
 window.addEventListener('DOMContentLoaded', async () => {
   let terminal = null;
@@ -15,6 +16,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.voidRunner = new Game(roster);
   window.voidRunnerTerminal = terminal;
   const game=window.voidRunner;
+  const sfx=new AudioSystem({muted:Boolean(game.meta.settings.sfxMuted),onError:error=>console.warn('Sound effects unavailable:',error.message)});
+  const sfxToggle=document.querySelector('#sfx-toggle');
+  sfxToggle.checked=!sfx.muted;
+  sfxToggle.addEventListener('change',()=>{
+    game.meta.settings.sfxMuted=!sfxToggle.checked;
+    sfx.setMuted(game.meta.settings.sfxMuted);
+    game.save();
+  });
+  sfx.bind();
+  window.voidRunnerSfx=sfx;
   const music=new MusicSystem({muted:Boolean(game.meta.settings.musicMuted),onError:error=>console.warn('Background music unavailable:',error.message)});
   const musicToggle=document.querySelector('#music-toggle');
   musicToggle.checked=!music.muted;
@@ -25,5 +36,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   music.bind();
   window.voidRunnerMusic=music;
-  window.addEventListener('pagehide',event=>{if(!event.persisted)music.dispose();});
+  window.addEventListener('pagehide',event=>{if(!event.persisted){music.dispose();sfx.dispose();}});
 });

@@ -1,5 +1,5 @@
-// The Last Reliquary — original gothic organ/music-box waltz for COMBAT PATROL.
-// Technical approach informed by PNT's renderer; harmony, melody and rhythm are new.
+// Litany of the Veiled Star — original dark liturgical ambience for COMBAT PATROL.
+// The sacred/ominous reference informs texture and pacing only; all musical material is new.
 // npm run audio:render; optional --wav-only, --wav <path>, --out <path>.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 
-export const SCORE = Object.freeze({ title:'The Last Reliquary', bpm:90, beatsPerBar:3, bars:32, rate:44100, seed:0x52454c49, duration:64 });
+export const SCORE = Object.freeze({ title:'Litany of the Veiled Star', bpm:60, beatsPerBar:4, bars:16, rate:44100, seed:0x5645494c, duration:64 });
 const TAU = Math.PI * 2;
 const midi = note => 440 * 2 ** ((note - 69) / 12);
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -64,67 +64,61 @@ export function renderTrack({ rate=SCORE.rate, seed=SCORE.seed }={}) {
       write(offset+i,value*amp*envelope,pan,room);
     }
   }
-  function musicBox(start, note, amp=.10, pan=0) {
-    const offset=Math.round(start*rate), frequency=midi(note), seconds=4.2;
+  function sanctuaryBell(start, note, amp=.045, pan=0) {
+    const offset=Math.round(start*rate), frequency=midi(note), seconds=7.5;
     for(let i=0;i<seconds*rate;i++) {
-      const t=i/rate, attack=1-Math.exp(-t*400);
-      const value=Math.sin(TAU*frequency*t)*Math.exp(-t*1.55)*.68
-        +Math.sin(TAU*frequency*2*t)*Math.exp(-t*2.7)*.16
-        +Math.sin(TAU*frequency*3.997*t)*Math.exp(-t*4.9)*.10
-        +Math.sin(TAU*frequency*5.403*t)*Math.exp(-t*8)*.045
-        +Math.sin(TAU*frequency*8.105*t)*Math.exp(-t*13)*.015;
-      write(offset+i,value*amp*attack*Math.min(1,(seconds-t)/.14),pan,.67);
+      const t=i/rate, attack=1-Math.exp(-t*90);
+      const value=Math.sin(TAU*frequency*t)*Math.exp(-t*.58)*.54
+        +Math.sin(TAU*frequency*2.012*t)*Math.exp(-t*.87)*.18
+        +Math.sin(TAU*frequency*2.706*t)*Math.exp(-t*1.08)*.13
+        +Math.sin(TAU*frequency*4.193*t)*Math.exp(-t*1.6)*.08
+        +Math.sin(TAU*frequency*5.431*t)*Math.exp(-t*2.1)*.04;
+      write(offset+i,value*amp*attack*Math.min(1,(seconds-t)/.35),pan,.94);
     }
   }
-  function timpani(start, note, amp=.08) {
-    const offset=Math.round(start*rate), seconds=2.4, frequency=midi(note);
-    for(let i=0;i<seconds*rate;i++) {
-      const t=i/rate;
-      const body=Math.sin(TAU*frequency*t)*Math.exp(-t*2.6)
-        +.24*Math.sin(TAU*frequency*1.47*t)*Math.exp(-t*3.9)
-        +.12*Math.sin(TAU*frequency*2.1*t)*Math.exp(-t*7);
-      write(offset+i,body*amp*Math.min(1,t*180)*Math.min(1,(seconds-t)/.2),-.1,.8);
+  function roomAir(amp=.001) {
+    // Integer-cycle partials create a noise-like chapel hush that is exactly periodic.
+    const air=Array.from({length:10},()=>({cycles:1800+Math.floor(random()*42000),phase:random()*TAU}));
+    for(let i=0;i<length;i++) {
+      let shaped=0;
+      for(const partial of air) shaped+=Math.sin(TAU*partial.cycles*i/length+partial.phase);
+      const breathe=.72+.28*Math.sin(TAU*4*i/length);
+      write(i,shaped/air.length*amp*breathe,0,.98);
     }
   }
 
-  // New C-minor elegy with inversions, a Neapolitan turn and G7(b9) cadence.
-  // These notes are newly composed, not a transcription of a film theme.
-  const roots=[36,34,32,31,29,37,31,36];
-  const chords=[[48,51,55,60],[46,51,55,58],[44,48,51,56],[43,48,51,55],
-    [41,44,48,53],[49,53,56,61],[43,47,50,56],[48,51,55,60]];
+  // Original D-modal litany: slow harmonic fields instead of a beat-led song form.
+  const roots=[38,36,41,33,34,36,33,38];
+  const chords=[[50,53,57],[48,53,55],[53,57,60],[45,48,52],
+    [46,50,53],[48,52,55],[45,50,52],[50,53,57]];
   const phrases=[
-    [[0,79,.8],[1,75,1],[2.5,74,.45],[3,80,1.3],[5,79,.7],[6,72,2],[9,74,.8],[10,75,1.4]],
-    [[0,77,.9],[1.5,75,.7],[3,70,1.2],[5,74,.7],[6,75,1.5],[9,79,2.2]],
-    [[0,80,1.1],[2,79,.9],[3,75,1.5],[6,72,1.5],[8,70,1],[9,68,1.8]],
-    [[.5,74,.8],[2,75,.8],[3,79,1.4],[6,77,.9],[7.5,75,.9],[9,74,1.6]],
-    [[0,77,1.4],[3,72,1.2],[5,68,.8],[6,75,1.3],[9,72,2]],
-    [[0,77,1],[1.5,73,.8],[3,80,1.1],[6,77,1.5],[9,73,2]],
-    [[0,74,1],[2,71,.8],[3,68,1.7],[6,74,1.5],[9,71,1.3]],
-    [[0,75,1.4],[3,74,.9],[4.5,72,1.1],[6,67,1.4],[9,72,2.6]]
+    [[.4,69,2.6],[3.4,67,1.8],[5.7,65,1.8]],
+    [[.2,67,2.3],[3.1,65,1.7],[5.2,62,2.4]],
+    [[.5,65,1.8],[2.8,69,2.4],[5.7,67,1.6]],
+    [[.3,64,2.6],[3.4,62,1.8],[5.8,60,1.7]],
+    [[.4,62,2.1],[3.0,65,2.5],[6.0,69,1.5]],
+    [[.2,67,2.5],[3.3,64,1.8],[5.6,62,2.0]],
+    [[.5,65,1.7],[2.8,62,2.2],[5.5,61,1.9]],
+    [[.2,62,2.2],[3.0,65,1.8],[5.3,62,2.7]]
   ];
+  roomAir();
   for(let field=0;field<8;field++) {
-    const start=field*4*bar;
-    // Opening/ending are intimate; the central sixteen bars bring the organ forward.
-    const organLevel=[.034,.043,.069,.078,.078,.069,.055,.034][field];
-    voice(start,4*bar+.65,roots[field],{kind:'pedal',amp:.045,attack:.24,release:.65,room:.55});
-    chords[field].forEach((note,i)=>voice(start,4*bar+.62,note,{kind:'organ',amp:organLevel,pan:(i-1.5)*.2,attack:.24,release:.62,room:.8}));
-    if(field>=2 && field<=6) {
-      [chords[field][0]+12,chords[field][1]+12,chords[field][2]+12].forEach((note,i)=>{
-        voice(start+.25,4*bar+1,note,{kind:'choir',amp:.035,pan:(i-1)*.35,attack:1.2,release:1.4,room:.9});
-      });
+    const start=field*2*bar, span=2*bar+.9;
+    const intensity=[.58,.68,.82,.94,1,1,.84,.62][field];
+    voice(start,span,roots[field],{kind:'pedal',amp:.026*intensity,attack:1.8,release:2.0,room:.93});
+    voice(start+.1,span,roots[field]+12,{kind:'bow',amp:.033*intensity,pan:-.28,attack:1.3,release:1.8,room:.9});
+    chords[field].forEach((note,i)=>voice(start+.18,span,note,{kind:'choir',amp:.031*intensity,
+      pan:(i-1)*.38,attack:1.7,release:2.0,room:.97}));
+    if(field>=2 && field<=6) chords[field].slice(0,2).forEach((note,i)=>voice(start+.7,span-.5,note+12,
+      {kind:'choir',amp:.017*intensity,pan:i? .42:-.42,attack:2.4,release:2.2,room:1}));
+    for(const [at,note,seconds] of phrases[field]) {
+      const timing=(random()-.5)*.025;
+      voice(start+at+timing,seconds,note,{kind:'choir',amp:.063*intensity,pan:.06,
+        attack:.75,release:.95,room:1});
+      voice(start+at+.08,seconds+.35,note-12,{kind:'bow',amp:.019*intensity,pan:-.12,
+        attack:1.0,release:1.1,room:.94});
     }
-    voice(start+.2,4*bar+.8,roots[field]+12,{kind:'bow',amp:field>=2&&field<=6?.045:.027,pan:-.28,attack:.65,release:1.0,room:.75});
-    for(const [at,note,beats] of phrases[field]) {
-      const timing=(random()-.5)*.014;
-      musicBox(start+at*beat+timing,note,field>=2&&field<=5?.095:.13,at%3===0?-.12:.12);
-      if(field>=2&&field<=5) voice(start+at*beat,beats*beat+.18,note-12,{kind:'organ',amp:.067,pan:.08,attack:.065,release:.21,room:.82});
-    }
-    // Gentle beats two/three establish a swaying waltz, not a drum-machine groove.
-    for(let localBar=0;localBar<4;localBar++) for(const offbeat of [1,2]) {
-      for(let i=1;i<4;i++) voice(start+localBar*bar+offbeat*beat,.53,chords[field][i],{
-        kind:'organ',amp:organLevel*.36,pan:(i-2)*.24,attack:.06,release:.27,room:.8});
-    }
-    if([2,4,6].includes(field)) timpani(start,roots[field],.075);
+    if([0,3,5,7].includes(field)) sanctuaryBell(start+.15,chords[field][0]+12,.027*intensity,field%2? .32:-.32);
   }
 
   // Early stone-wall reflections plus a warm, long cathedral tail.
@@ -160,6 +154,15 @@ export function renderTrack({ rate=SCORE.rate, seed=SCORE.seed }={}) {
       const sample=Math.tanh(dry[ch][i]*1.12);
       high=hp*(high+sample-previous);previous=sample;low+=lp*(high-low);
       if(pass) {result[ch][i]=low;peak=Math.max(peak,Math.abs(low));}
+    }
+  }
+  // Remove the minute endpoint offset left by recursive filters without fading the loop edges.
+  peak=0;
+  for(const channel of result) {
+    const closure=channel[0]-channel[length-1];
+    for(let i=0;i<length;i++) {
+      channel[i]+=closure*i/(length-1);
+      peak=Math.max(peak,Math.abs(channel[i]));
     }
   }
   const gain=10**(-2.2/20)/Math.max(peak,.0001);

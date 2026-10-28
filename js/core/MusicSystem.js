@@ -1,5 +1,5 @@
 // A single loop for the whole game. No screen transitions restart the score.
-export const MUSIC_URL = `${new URL('../../assets/audio/combat-patrol-bgm.m4a',import.meta.url).href}?v=20261028-2`;
+export const MUSIC_URL = `${new URL('../../assets/audio/combat-patrol-bgm.m4a',import.meta.url).href}?v=20261028-3`;
 export const MUSIC_LOOP_SECONDS = 64;
 
 export class MusicSystem {

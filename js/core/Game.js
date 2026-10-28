@@ -279,6 +279,8 @@ export class Game {
     return unit;
   }
 
+  sfx(name,detail={}) { globalThis.window?.voidRunnerSfx?.play(name,detail); }
+
   setupBattleStage(enemyFaction) {
     if (!window.matchMedia('(min-width:1100px)').matches) return;
     const assignments = [['player', this.run.faction, 'right'], ['enemy', enemyFaction, 'left']];
@@ -313,6 +315,7 @@ export class Game {
     const stage = $('#desktop-battle-stage');
     const frame = $('#app');
     const heavy = plan.targetRef.dead || plan.devastating > 0 || plan.lethal > 0;
+    this.sfx(heavy?'impactHeavy':'impact',{intensity:Math.min(1.35,.65+plan.damageLost*.08)});
     stage.classList.remove('impact-player', 'impact-enemy', 'impact-heavy');
     frame.classList.remove('combat-shake', 'combat-shake-heavy');
     void stage.offsetWidth;
@@ -330,6 +333,7 @@ export class Game {
   }
 
   show(name) {
+    const previousScreen=this.currentScreen;
     if (name !== 'sector') {
       $('#sector-screen').classList.remove('sector-entering');
       $('#sector-screen').removeAttribute('aria-busy');
@@ -353,6 +357,7 @@ export class Game {
     document.body.classList.toggle('star-chart-open', name === 'sector' || name === 'map');
     if (name !== 'battle') this.clearBattleStage();
     this.currentScreen = name;
+    if(previousScreen!==name) this.sfx(name==='mission'?'transmission':name==='battle'?'battleStart':'screen');
     if (this.run && name !== 'battle') { this.run.lastScreen = name; this.save({silent:true}); }
     if (activeScreen) {
       activeScreen.scrollTop = 0;
@@ -762,23 +767,25 @@ export class Game {
     const unit = this.unit(this.selectedBlueprint);
     if (!unit) return;
     const issue=this.draftIssue(unit,x,y);
-    if(issue) { $('#prep-status').textContent=issue; return; }
+    if(issue) { $('#prep-status').textContent=issue; this.sfx('warning'); return; }
     this.run.deployed.push({ id: `${unit.id}-${Date.now()}-${Math.random()}`, unitId: unit.id, x, y, rank:y<this.formationRowCount()/2?'front':'rear', rotated:false });
     this.selectedPlaced = this.run.deployed.at(-1).id;
     this.selectedBlueprint = null;
+    this.sfx('place');
     this.save();
     this.renderLoadout();
   }
 
   attachLeader(leader, bodyguard) {
-    if (!leader.leader.targets.includes(bodyguard.unitId)) { $('#prep-status').textContent = `${leader.name.toUpperCase()} CANNOT LEAD THAT UNIT`; return; }
-    if (this.run.deployed.some(item => item.attachedTo === bodyguard.id)) { $('#prep-status').textContent = 'THAT UNIT ALREADY HAS A LEADER'; return; }
-    if (this.usedPoints() + leader.points > this.run.cap) { $('#prep-status').textContent = 'NOT ENOUGH POINTS FOR THAT LEADER'; return; }
+    if (!leader.leader.targets.includes(bodyguard.unitId)) { $('#prep-status').textContent = `${leader.name.toUpperCase()} CANNOT LEAD THAT UNIT`; this.sfx('warning'); return; }
+    if (this.run.deployed.some(item => item.attachedTo === bodyguard.id)) { $('#prep-status').textContent = 'THAT UNIT ALREADY HAS A LEADER'; this.sfx('warning'); return; }
+    if (this.usedPoints() + leader.points > this.run.cap) { $('#prep-status').textContent = 'NOT ENOUGH POINTS FOR THAT LEADER'; this.sfx('warning'); return; }
     const deployedCount = this.run.deployed.filter(item => item.unitId === leader.id).length;
     if (deployedCount >= leader.stock) return;
     this.run.deployed.push({id:`${leader.id}-${Date.now()}`,unitId:leader.id,x:bodyguard.x,y:bodyguard.y,rank:bodyguard.rank,rotated:false,attachedTo:bodyguard.id});
     this.selectedBlueprint = null;
     this.selectedPlaced = this.run.deployed.at(-1).id;
+    this.sfx('place');
     this.save();
     this.renderLoadout();
   }
@@ -794,13 +801,14 @@ export class Game {
   }
 
   equipGear(index) {
-    if (!this.selectedPlaced) { $('#prep-status').textContent = 'SELECT A DEPLOYED UNIT FIRST'; return; }
+    if (!this.selectedPlaced) { $('#prep-status').textContent = 'SELECT A DEPLOYED UNIT FIRST'; this.sfx('warning'); return; }
     const item = this.run.gear[index];
     if (item.equippedTo === this.selectedPlaced) item.equippedTo = null;
     else {
       for (const gear of this.run.gear) if (gear.equippedTo === this.selectedPlaced) gear.equippedTo = null;
       item.equippedTo = this.selectedPlaced;
     }
+    this.sfx('equip');
     this.save();
     this.renderLoadout();
   }
@@ -1329,6 +1337,7 @@ export class Game {
     this.battle.lastRoll = this.battle.currentPlan;
     this.battle.visibleStage = 0;
     this.fireBattleBeam(actor.side);
+    this.sfx(actor.side==='player'?'attackPlayer':'attackEnemy');
     this.renderBattle();
     clearTimeout(this.battleTimer);
     this.battleTimer = setTimeout(() => this.advanceDiceStage(), this.stageDelay());
@@ -1339,6 +1348,7 @@ export class Game {
     if (this.battle.visibleStage < 4) {
       this.battle.visibleStage++;
       if (this.battle.visibleStage === 4) this.applyDiceAttack(this.battle.currentPlan);
+      else this.sfx('dice');
       this.renderBattle();
       this.battleTimer = setTimeout(() => this.advanceDiceStage(), this.stageDelay());
       return;
@@ -1622,6 +1632,7 @@ export class Game {
     if (!this.battle || this.battle.resolving) return;
     clearTimeout(this.battleTimer);
     this.battle.resolving = true;
+    this.sfx(victory?'victory':'defeat');
     const node = this.battle.node;
     this.run.lastBattleReport=summarizeBattle(this.battle,victory);
     this.run.combatTotals=addCombatTotals(this.run.combatTotals,this.run.lastBattleReport);
@@ -1782,6 +1793,7 @@ export class Game {
     }
     if (kind === 'gear') this.run.gear.push({gearId:id,equippedTo:null,id:`${id}-${Date.now()}`});
     this.run.rewardContext.claimed[kind]++;
+    this.sfx('reward');
     this.save();
     this.renderRewardSegments();
   }
@@ -1893,7 +1905,7 @@ export class Game {
       if(!WARGEAR.some(g=>g.id===offer.gearId))return;
       this.run.gear.push({gearId:offer.gearId,equippedTo:null,id:offer.gearId+'-'+Date.now()});
     }
-    this.run.currency-=offer.price;offer.sold=true;this.save();this.openStoreEvent();
+    this.run.currency-=offer.price;offer.sold=true;this.sfx('purchase');this.save();this.openStoreEvent();
   }
 
   finishPostWarEvent() {

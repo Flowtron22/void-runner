@@ -10,7 +10,7 @@
     "check": "node --check js/main.js && node --check js/core/Game.js && node --check js/data/units.js && node --check js/render/TerminalRenderer.js && node --check js/render/GalaxyMap3D.js && node scripts/check-campaign-chart.mjs && node scripts/check-draft.mjs && node scripts/check-debrief.mjs && node scripts/check-progression.mjs && node scripts/check-balance.mjs && node scripts/check-battle-art.mjs",
     "balance:simulate": "node scripts/simulate-balance.mjs",
     "audio:render": "node tools/render-combat-patrol-bgm.mjs",
-    "audio:check": "node --check tools/render-combat-patrol-bgm.mjs && node --check js/core/MusicSystem.js && node scripts/check-music.mjs"
+    "audio:check": "node --check tools/render-combat-patrol-bgm.mjs && node --check js/core/MusicSystem.js && node --check js/core/AudioSystem.js && node scripts/check-music.mjs && node scripts/check-sfx.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"
